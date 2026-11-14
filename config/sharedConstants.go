@@ -33,6 +33,7 @@ type headerConstants struct {
 	corsAllowMethods     string
 	corsAllowHeaders     string
 	corsMaxAge           string
+	corsExposeHeaders    string
 	vary                 string
 	trueValue            string
 }
@@ -109,6 +110,7 @@ var headerConstI = headerConstants{
 	corsAllowMethods:     "Access-Control-Allow-Methods",
 	corsAllowHeaders:     "Access-Control-Allow-Headers",
 	corsMaxAge:           "Access-Control-Max-Age",
+	corsExposeHeaders:    "Access-Control-Expose-Headers",
 	vary:                 "Vary",
 	trueValue:            "true",
 }
@@ -206,6 +208,7 @@ func GetCORSAllowCredentialsHeader() string { return headerConstI.corsAllowCrede
 func GetCORSAllowMethodsHeader() string     { return headerConstI.corsAllowMethods }
 func GetCORSAllowHeadersHeader() string     { return headerConstI.corsAllowHeaders }
 func GetCORSMaxAgeHeader() string           { return headerConstI.corsMaxAge }
+func GetCORSExposeHeadersHeader() string    { return headerConstI.corsExposeHeaders }
 func GetVaryHeader() string                 { return headerConstI.vary }
 func GetTrueValue() string                  { return headerConstI.trueValue }
 

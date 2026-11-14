@@ -25,6 +25,7 @@ type ProviderPolicy struct {
 	Timeout      time.Duration
 	RateLimit    int
 	RateWindow   time.Duration
+	RateBurst    int
 	DailyCredits int
 }
 
@@ -64,6 +65,7 @@ func loadEnrichmentConfig() {
 			Timeout:      timeout,
 			RateLimit:    getEnvIntWithDefault(code+"_RATE_LIMIT", 50),
 			RateWindow:   getEnvDurationWithDefault(code+"_RATE_WINDOW", time.Minute),
+			RateBurst:    max(getEnvIntWithDefault(code+"_RATE_BURST", 10), 1),
 			DailyCredits: getEnvIntWithDefault(code+"_DAILY_CREDITS", 200),
 		}
 	}
@@ -150,4 +152,13 @@ func GetSignalHireCallbackURL() string {
 
 	return enrichmentConfigI.publicBaseURL + constI.http.apiBasePath + signalHireWebhookPath +
 		"?" + webhookTokenParam + "=" + enrichmentConfigI.signalHireWebhookSecret
+}
+
+func (p ProviderPolicy) RateLimitPolicy() RateLimitPolicy {
+	return RateLimitPolicy{
+		Name:   RateLimitPolicyName(enrichmentRateNamespace),
+		Limit:  p.RateLimit,
+		Period: p.RateWindow,
+		Burst:  p.RateBurst,
+	}
 }

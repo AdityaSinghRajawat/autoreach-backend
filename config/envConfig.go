@@ -27,8 +27,6 @@ type httpConfig struct {
 	shutdownTimeout    time.Duration
 	maxBodyBytes       int64
 	corsAllowedOrigins []string
-	rateLimitRequests  int
-	rateLimitWindow    time.Duration
 }
 
 type dbConfig struct {
@@ -57,10 +55,8 @@ type secretConfig struct {
 }
 
 type authConfig struct {
-	accessTokenTTL    time.Duration
-	refreshTokenTTL   time.Duration
-	rateLimitRequests int
-	rateLimitWindow   time.Duration
+	accessTokenTTL  time.Duration
+	refreshTokenTTL time.Duration
 }
 
 type concurrencyConfig struct {
@@ -134,6 +130,7 @@ func Init() {
 		loadEnrichmentConfig()
 		loadStorageConfig()
 		loadAuthorizationPolicy()
+		loadRateLimitConfig()
 		enforceProductionRequirements()
 	})
 }
@@ -215,8 +212,6 @@ func loadEnvConfig() envConfig {
 			shutdownTimeout:    getEnvDurationWithDefault("HTTP_SHUTDOWN_TIMEOUT", 20*time.Second),
 			maxBodyBytes:       getEnvInt64WithDefault("HTTP_MAX_BODY_BYTES", 5<<20),
 			corsAllowedOrigins: getEnvListWithDefault("CORS_ALLOWED_ORIGINS", nil),
-			rateLimitRequests:  getEnvIntWithDefault("HTTP_RATE_LIMIT_REQUESTS", 300),
-			rateLimitWindow:    getEnvDurationWithDefault("HTTP_RATE_LIMIT_WINDOW", time.Minute),
 		},
 		db: dbConfig{
 			host:             getEnvWithDefault("DB_HOST", "localhost"),
@@ -241,10 +236,8 @@ func loadEnvConfig() envConfig {
 			adminPassword:        getEnvWithDefault("ADMIN_PASSWORD", ""),
 		},
 		auth: authConfig{
-			accessTokenTTL:    getEnvDurationWithDefault("JWT_ACCESS_TTL", 15*time.Minute),
-			refreshTokenTTL:   getEnvDurationWithDefault("JWT_REFRESH_TTL", 30*24*time.Hour),
-			rateLimitRequests: getEnvIntWithDefault("AUTH_RATE_LIMIT_REQUESTS", 10),
-			rateLimitWindow:   getEnvDurationWithDefault("AUTH_RATE_LIMIT_WINDOW", time.Minute),
+			accessTokenTTL:  getEnvDurationWithDefault("JWT_ACCESS_TTL", 15*time.Minute),
+			refreshTokenTTL: getEnvDurationWithDefault("JWT_REFRESH_TTL", 30*24*time.Hour),
 		},
 	}
 }
@@ -355,8 +348,6 @@ func GetWriteTimeout() time.Duration          { return envConfigI.http.writeTime
 func GetIdleTimeout() time.Duration           { return envConfigI.http.idleTimeout }
 func GetServerShutdownTimeout() time.Duration { return envConfigI.http.shutdownTimeout }
 func GetMaxBodyBytes() int64                  { return envConfigI.http.maxBodyBytes }
-func GetHTTPRateLimitRequests() int           { return envConfigI.http.rateLimitRequests }
-func GetHTTPRateLimitWindow() time.Duration   { return envConfigI.http.rateLimitWindow }
 
 func GetCORSAllowedOrigins() []string {
 	return append([]string(nil), envConfigI.http.corsAllowedOrigins...)
@@ -390,10 +381,8 @@ func GetRedisDB() int          { return envConfigI.redis.database }
 func GetInternalSharedSecret() string { return envConfigI.secret.internalSharedSecret }
 func GetJWTSecret() []byte            { return []byte(envConfigI.secret.jwtSecret) }
 
-func GetAccessTokenTTL() time.Duration      { return envConfigI.auth.accessTokenTTL }
-func GetRefreshTokenTTL() time.Duration     { return envConfigI.auth.refreshTokenTTL }
-func GetAuthRateLimitRequests() int         { return envConfigI.auth.rateLimitRequests }
-func GetAuthRateLimitWindow() time.Duration { return envConfigI.auth.rateLimitWindow }
+func GetAccessTokenTTL() time.Duration  { return envConfigI.auth.accessTokenTTL }
+func GetRefreshTokenTTL() time.Duration { return envConfigI.auth.refreshTokenTTL }
 
 func GetWorkerMessageProvider() string        { return envConfigI.worker.provider }
 func GetWorkerConcurrency() int               { return envConfigI.worker.concurrency }

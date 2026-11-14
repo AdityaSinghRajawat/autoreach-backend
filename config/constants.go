@@ -13,17 +13,20 @@ type appConstants struct {
 }
 
 type httpConstants struct {
-	correlationIDHeader  string
-	internalSecretHeader string
-	retryAfterHeader     string
-	originHeader         string
-	apiBasePath          string
-	corsAllowedMethods   string
-	corsAllowedHeaders   string
-	corsMaxAgeSeconds    string
-	defaultPage          int
-	defaultPerPage       int
-	maxPerPage           int
+	correlationIDHeader   string
+	internalSecretHeader  string
+	retryAfterHeader      string
+	rateLimitHeader       string
+	rateLimitPolicyHeader string
+	originHeader          string
+	apiBasePath           string
+	corsAllowedMethods    string
+	corsAllowedHeaders    string
+	corsMaxAgeSeconds     string
+	corsExposedHeaders    string
+	defaultPage           int
+	defaultPerPage        int
+	maxPerPage            int
 }
 
 type dbConstants struct {
@@ -60,8 +63,6 @@ type authConstants struct {
 	argonSaltLength     uint32
 	argonKeyLength      uint32
 	minPasswordLength   int
-	rateLimitScopeAPI   string
-	rateLimitScopeAuth  string
 }
 
 type jobConstants struct {
@@ -113,8 +114,6 @@ var constI = constants{
 		argonSaltLength:     16,
 		argonKeyLength:      32,
 		minPasswordLength:   10,
-		rateLimitScopeAPI:   "api",
-		rateLimitScopeAuth:  "auth",
 	},
 	app: appConstants{
 		serviceName:  "autoreach",
@@ -126,17 +125,20 @@ var constI = constants{
 		metricsSpace: "autoreach",
 	},
 	http: httpConstants{
-		correlationIDHeader:  "X-Correlation-ID",
-		internalSecretHeader: "X-Internal-Secret",
-		retryAfterHeader:     "Retry-After",
-		originHeader:         "Origin",
-		apiBasePath:          "/api/v1",
-		corsAllowedMethods:   "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-		corsAllowedHeaders:   "Authorization, Content-Type, X-Correlation-ID, X-API-Key",
-		corsMaxAgeSeconds:    "600",
-		defaultPage:          1,
-		defaultPerPage:       20,
-		maxPerPage:           100,
+		correlationIDHeader:   "X-Correlation-ID",
+		internalSecretHeader:  "X-Internal-Secret",
+		retryAfterHeader:      "Retry-After",
+		rateLimitHeader:       "RateLimit",
+		rateLimitPolicyHeader: "RateLimit-Policy",
+		originHeader:          "Origin",
+		apiBasePath:           "/api/v1",
+		corsAllowedMethods:    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+		corsAllowedHeaders:    "Authorization, Content-Type, X-Correlation-ID, X-API-Key",
+		corsMaxAgeSeconds:     "600",
+		corsExposedHeaders:    "RateLimit, RateLimit-Policy, Retry-After, X-Correlation-ID",
+		defaultPage:           1,
+		defaultPerPage:        20,
+		maxPerPage:            100,
 	},
 	db: dbConstants{
 		connectTimeout:           10 * time.Second,
@@ -166,14 +168,19 @@ func GetMetricsNamespace() string { return constI.app.metricsSpace }
 func GetCorrelationIDHeader() string  { return constI.http.correlationIDHeader }
 func GetInternalSecretHeader() string { return constI.http.internalSecretHeader }
 func GetRetryAfterHeader() string     { return constI.http.retryAfterHeader }
-func GetOriginHeader() string         { return constI.http.originHeader }
-func GetAPIBasePath() string          { return constI.http.apiBasePath }
-func GetCORSAllowedMethods() string   { return constI.http.corsAllowedMethods }
-func GetCORSAllowedHeaders() string   { return constI.http.corsAllowedHeaders }
-func GetCORSMaxAgeSeconds() string    { return constI.http.corsMaxAgeSeconds }
-func GetDefaultPage() int             { return constI.http.defaultPage }
-func GetDefaultPerPage() int          { return constI.http.defaultPerPage }
-func GetMaxPerPage() int              { return constI.http.maxPerPage }
+func GetRateLimitHeader() string      { return constI.http.rateLimitHeader }
+func GetRateLimitPolicyHeader() string {
+	return constI.http.rateLimitPolicyHeader
+}
+func GetOriginHeader() string       { return constI.http.originHeader }
+func GetAPIBasePath() string        { return constI.http.apiBasePath }
+func GetCORSAllowedMethods() string { return constI.http.corsAllowedMethods }
+func GetCORSAllowedHeaders() string { return constI.http.corsAllowedHeaders }
+func GetCORSMaxAgeSeconds() string  { return constI.http.corsMaxAgeSeconds }
+func GetCORSExposedHeaders() string { return constI.http.corsExposedHeaders }
+func GetDefaultPage() int           { return constI.http.defaultPage }
+func GetDefaultPerPage() int        { return constI.http.defaultPerPage }
+func GetMaxPerPage() int            { return constI.http.maxPerPage }
 
 func GetDBConnectTimeout() time.Duration           { return constI.db.connectTimeout }
 func GetDBMaxConnLifetime() time.Duration          { return constI.db.maxConnLifetime }
@@ -202,8 +209,6 @@ func GetArgonParallelism() uint8     { return constI.auth.argonParallelism }
 func GetArgonSaltLength() uint32     { return constI.auth.argonSaltLength }
 func GetArgonKeyLength() uint32      { return constI.auth.argonKeyLength }
 func GetMinPasswordLength() int      { return constI.auth.minPasswordLength }
-func GetRateLimitScopeAPI() string   { return constI.auth.rateLimitScopeAPI }
-func GetRateLimitScopeAuth() string  { return constI.auth.rateLimitScopeAuth }
 
 func GetJobIDParam() string      { return constI.job.jobIDParam }
 func GetClientIDParam() string   { return constI.job.clientIDParam }

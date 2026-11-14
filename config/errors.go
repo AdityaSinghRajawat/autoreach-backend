@@ -59,6 +59,7 @@ var (
 	ErrRouteNotFound            = errors.New("route not found")
 	ErrMethodNotAllowed         = errors.New("method not allowed")
 	ErrRateLimitExceeded        = errors.New("rate limit exceeded")
+	ErrRateLimiterUnavailable   = errors.New("rate limiter is unavailable")
 	ErrTrailingRequestData      = errors.New("unexpected trailing data")
 	ErrUnexpectedRedisReply     = errors.New("unexpected redis reply")
 	ErrEmbeddingCountMismatch   = errors.New("embedder returned a different number of vectors")
