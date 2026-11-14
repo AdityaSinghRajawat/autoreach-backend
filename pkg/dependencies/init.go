@@ -18,7 +18,7 @@ type Dependencies struct {
 	Postgres            *db.PostgresConn
 	Redis               *db.RedisConn
 	TransactionManager  db.TransactionManager
-	RateLimiter         utils.Limiter
+	RateLimiter         sharedTypes.Limiter
 	RedisUtil           *utils.RedisUtil
 	WorkerStrategy      workerConfigs.IWorkerStrategy
 	WorkerClient        workerConfigs.IWorkerClient

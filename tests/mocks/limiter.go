@@ -3,34 +3,40 @@ package mocks
 import (
 	"context"
 	"sync"
-	"time"
 
-	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 )
 
 type Limiter struct {
 	mutex    sync.Mutex
-	Decision utils.RateLimitDecision
+	Decision sharedTypes.RateLimitDecision
 	Err      error
-	Keys     []string
+	Calls    []LimiterCall
 }
 
-var _ utils.Limiter = (*Limiter)(nil)
+type LimiterCall struct {
+	Policy  config.RateLimitPolicyName
+	Subject string
+	Cost    int
+}
+
+var _ sharedTypes.Limiter = (*Limiter)(nil)
 
 func NewAllowingLimiter() *Limiter {
-	return &Limiter{Decision: utils.RateLimitDecision{Allowed: true}}
+	return &Limiter{Decision: sharedTypes.RateLimitDecision{Allowed: true}}
 }
 
 func (l *Limiter) Allow(
 	_ context.Context,
-	key string,
-	_ int,
-	_ time.Duration,
-) (utils.RateLimitDecision, error) {
+	policy config.RateLimitPolicy,
+	subject string,
+	cost int,
+) (sharedTypes.RateLimitDecision, error) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
-	l.Keys = append(l.Keys, key)
+	l.Calls = append(l.Calls, LimiterCall{Policy: policy.Name, Subject: subject, Cost: cost})
 
 	return l.Decision, l.Err
 }

@@ -25,12 +25,7 @@ func (s *EnrichmentService) callProvider(
 		return fmt.Errorf("%s: %w", code, config.ErrProviderUnavailable)
 	}
 
-	decision, err := s.rateLimiter.Allow(
-		ctx,
-		utils.BuildKey(config.GetEnrichmentRateNamespace(), code),
-		policy.RateLimit,
-		policy.RateWindow,
-	)
+	decision, err := s.rateLimiter.Allow(ctx, policy.RateLimitPolicy(), code, 1)
 	if err == nil && !decision.Allowed {
 		return fmt.Errorf("%s: %w", code, config.ErrProviderRateLimited)
 	}

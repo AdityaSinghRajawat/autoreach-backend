@@ -2,6 +2,7 @@ package shared
 
 import (
 	"context"
+	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
@@ -19,4 +20,20 @@ type FileStore interface {
 
 type APIKeyVerifier interface {
 	VerifyAPIKey(ctx context.Context, apiKey string) (*Principal, *config.CustomError)
+}
+
+type RateLimitDecision struct {
+	Allowed    bool
+	Remaining  int
+	NextUnitIn time.Duration
+}
+
+// A cost of 0 checks the allowance without spending it.
+type Limiter interface {
+	Allow(
+		ctx context.Context,
+		policy config.RateLimitPolicy,
+		subject string,
+		cost int,
+	) (RateLimitDecision, error)
 }

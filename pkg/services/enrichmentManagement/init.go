@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	enrichmentRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/enrichmentManagement"
 	jobRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/jobManagement"
@@ -25,7 +26,7 @@ type EnrichmentServiceDependencies struct {
 	EnrichmentRequestRepo *enrichmentRepo.EnrichmentRequestRepo
 	TransactionManager    db.TransactionManager
 	WorkerClient          workerConfigs.IWorkerClient
-	RateLimiter           utils.Limiter
+	RateLimiter           sharedTypes.Limiter
 	CreditCounter         CreditCounter
 	EmailVerifier         *utils.EmailVerifier
 	Providers             []providers.Provider
@@ -38,7 +39,7 @@ type EnrichmentService struct {
 	enrichmentRequestRepo *enrichmentRepo.EnrichmentRequestRepo
 	transactionManager    db.TransactionManager
 	workerClient          workerConfigs.IWorkerClient
-	rateLimiter           utils.Limiter
+	rateLimiter           sharedTypes.Limiter
 	creditCounter         CreditCounter
 	emailVerifier         *utils.EmailVerifier
 	providers             []providers.Provider
