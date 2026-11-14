@@ -17,8 +17,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-const apiKeySeparator = "_"
-
 func (s *AuthService) CreateAPIClient(
 	ctx context.Context,
 	client *authModel.APIClient,
@@ -97,7 +95,7 @@ func (s *AuthService) VerifyAPIKey(
 	ctx context.Context,
 	apiKey, requiredScope string,
 ) *config.CustomError {
-	parts := strings.SplitN(apiKey, apiKeySeparator, 3)
+	parts := strings.SplitN(apiKey, config.GetAPIKeySeparator(), 3)
 	if len(parts) != 3 || parts[0] != config.GetAPIKeyPrefix() {
 		return config.NewCustomError(
 			fmt.Errorf("verify api key: %w", config.ErrAPIKeyInvalid),
@@ -105,7 +103,10 @@ func (s *AuthService) VerifyAPIKey(
 		)
 	}
 
-	client, err := s.apiClientRepo.FindActiveByPrefix(ctx, parts[0]+apiKeySeparator+parts[1])
+	client, err := s.apiClientRepo.FindActiveByPrefix(
+		ctx,
+		parts[0]+config.GetAPIKeySeparator()+parts[1],
+	)
 	if err != nil {
 		return config.NewCustomError(
 			fmt.Errorf("verify api key: %w", err),
@@ -157,8 +158,12 @@ func generateAPIKey() (string, string, error) {
 		return "", "", fmt.Errorf("generate api key: %w", err)
 	}
 
-	keyPrefix := config.GetAPIKeyPrefix() + apiKeySeparator + hex.EncodeToString(prefixBytes)
-	apiKey := keyPrefix + apiKeySeparator + base64.RawURLEncoding.EncodeToString(secretBytes)
+	keyPrefix := config.GetAPIKeyPrefix() + config.GetAPIKeySeparator() + hex.EncodeToString(
+		prefixBytes,
+	)
+	apiKey := keyPrefix + config.GetAPIKeySeparator() + base64.RawURLEncoding.EncodeToString(
+		secretBytes,
+	)
 
 	return keyPrefix, apiKey, nil
 }

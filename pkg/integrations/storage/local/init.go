@@ -8,11 +8,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-const (
-	directoryMode = 0o750
-	fileMode      = 0o600
-)
-
 type LocalStorageIntegration struct {
 	rootDirectory string
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
@@ -35,7 +36,7 @@ func NewResume() *Resume {
 
 	return &Resume{
 		ID:             uuid.NewString(),
-		ParsedMetadata: json.RawMessage(emptySettings),
+		ParsedMetadata: json.RawMessage(config.GetEmptyJSONObject()),
 		Status:         modelHelpers.ResumeStatusUploaded,
 		CreatedAt:      now,
 		UpdatedAt:      now,

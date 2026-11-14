@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	candidateRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/candidateManagement"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
@@ -16,18 +17,13 @@ type FileStore interface {
 	Delete(ctx context.Context, key string) error
 }
 
-type Embedder interface {
-	CreateEmbeddings(ctx context.Context, inputs []string) ([][]float32, error)
-	Model() string
-}
-
 type CandidateServiceDependencies struct {
 	CandidateRepo      *candidateRepo.CandidateRepo
 	ResumeRepo         *candidateRepo.ResumeRepo
 	TransactionManager db.TransactionManager
 	WorkerClient       workerConfigs.IWorkerClient
 	FileStore          FileStore
-	Embedder           Embedder
+	Embedder           sharedTypes.Embedder
 }
 
 type CandidateService struct {
@@ -36,7 +32,7 @@ type CandidateService struct {
 	transactionManager db.TransactionManager
 	workerClient       workerConfigs.IWorkerClient
 	fileStore          FileStore
-	embedder           Embedder
+	embedder           sharedTypes.Embedder
 }
 
 func NewCandidateService(dependencies CandidateServiceDependencies) (*CandidateService, error) {

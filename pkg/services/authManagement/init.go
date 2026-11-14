@@ -10,8 +10,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-const tokenTypeBearer = "Bearer"
-
 type AuthServiceDependencies struct {
 	UserRepo           *authRepo.UserRepo
 	RefreshTokenRepo   *authRepo.RefreshTokenRepo

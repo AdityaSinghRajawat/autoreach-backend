@@ -7,23 +7,23 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
 //go:embed openapi.json
 var openAPISpec []byte
-
-const specPath = "/openapi.json"
 
 func GetOpenAPISpec() []byte {
 	return append([]byte(nil), openAPISpec...)
 }
 
 func LoadSwaggerRoutes(group *gin.RouterGroup) {
-	group.GET(specPath, func(c *gin.Context) {
-		c.Data(http.StatusOK, "application/json; charset=utf-8", openAPISpec)
+	group.GET(config.GetOpenAPISpecPath(), func(c *gin.Context) {
+		c.Data(http.StatusOK, config.GetJSONContentTypeUTF8(), openAPISpec)
 	})
 	group.GET(
-		"/swagger/*any",
-		ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL(specPath)),
+		config.GetSwaggerUIPath(),
+		ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL(config.GetOpenAPISpecPath())),
 	)
 }

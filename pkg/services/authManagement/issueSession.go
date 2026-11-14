@@ -48,7 +48,7 @@ func (s *AuthService) issueSession(
 		User:         authTypes.NewUserResponse(user, candidateID),
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		TokenType:    tokenTypeBearer,
+		TokenType:    config.GetTokenTypeBearer(),
 		ExpiresIn:    int(expiresAt.Sub(now).Seconds()),
 	}, nil
 }

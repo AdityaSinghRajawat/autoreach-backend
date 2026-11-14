@@ -45,7 +45,7 @@ func NewJobPosting() *JobPosting {
 
 	return &JobPosting{
 		ID:         uuid.NewString(),
-		RawPayload: json.RawMessage(`{}`),
+		RawPayload: json.RawMessage(config.GetEmptyJSONObject()),
 		Status:     modelHelpers.JobStatusActive,
 		LastSeenAt: now,
 		CreatedAt:  now,

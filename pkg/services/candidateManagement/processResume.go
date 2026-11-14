@@ -16,8 +16,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-var wordPattern = regexp.MustCompile(`\S+`)
-
 func (s *CandidateService) ProcessResume(
 	ctx context.Context,
 	resumeID string,
@@ -275,6 +273,6 @@ func parseResumeMetadata(text string) candidateTypes.ResumeMetadata {
 
 	return candidateTypes.ResumeMetadata{
 		Skills:    skills,
-		WordCount: len(wordPattern.FindAllString(text, -1)),
+		WordCount: len(strings.Fields(text)),
 	}
 }

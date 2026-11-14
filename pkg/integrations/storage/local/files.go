@@ -17,11 +17,11 @@ func (i *LocalStorageIntegration) Save(_ context.Context, key string, content []
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), directoryMode); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), config.GetStorageDirectoryMode()); err != nil {
 		return fmt.Errorf("save file: %w", err)
 	}
 
-	if err := os.WriteFile(path, content, fileMode); err != nil {
+	if err := os.WriteFile(path, content, config.GetStorageFileMode()); err != nil {
 		return fmt.Errorf("save file: %w", err)
 	}
 

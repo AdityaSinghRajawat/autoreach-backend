@@ -18,9 +18,9 @@ func CORS(allowedOrigins []string) gin.HandlerFunc {
 			return
 		}
 
-		c.Header("Access-Control-Allow-Origin", origin)
-		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Vary", config.GetOriginHeader())
+		c.Header(config.GetCORSAllowOriginHeader(), origin)
+		c.Header(config.GetCORSAllowCredentialsHeader(), config.GetTrueValue())
+		c.Header(config.GetVaryHeader(), config.GetOriginHeader())
 
 		if c.Request.Method != http.MethodOptions {
 			c.Next()
@@ -28,9 +28,9 @@ func CORS(allowedOrigins []string) gin.HandlerFunc {
 			return
 		}
 
-		c.Header("Access-Control-Allow-Methods", config.GetCORSAllowedMethods())
-		c.Header("Access-Control-Allow-Headers", config.GetCORSAllowedHeaders())
-		c.Header("Access-Control-Max-Age", config.GetCORSMaxAgeSeconds())
+		c.Header(config.GetCORSAllowMethodsHeader(), config.GetCORSAllowedMethods())
+		c.Header(config.GetCORSAllowHeadersHeader(), config.GetCORSAllowedHeaders())
+		c.Header(config.GetCORSMaxAgeHeader(), config.GetCORSMaxAgeSeconds())
 		c.AbortWithStatus(http.StatusNoContent)
 	}
 }

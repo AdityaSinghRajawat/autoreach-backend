@@ -12,11 +12,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
 )
 
-const (
-	defaultTimezone = "UTC"
-	emptySettings   = `{}`
-)
-
 type Candidate struct {
 	ID                  string          `db:"id"                    json:"candidateId"         validate:"required,uuid"`
 	UserID              string          `db:"user_id"               json:"userId"              validate:"required,uuid"`
@@ -40,8 +35,8 @@ func NewCandidate() *Candidate {
 		MinMatchScore:       config.GetDefaultMinMatchScore(),
 		AutoApplyEnabled:    true,
 		AutoOutreachEnabled: true,
-		Timezone:            defaultTimezone,
-		Settings:            json.RawMessage(emptySettings),
+		Timezone:            config.GetDefaultTimezone(),
+		Settings:            json.RawMessage(config.GetEmptyJSONObject()),
 		CreatedAt:           now,
 		UpdatedAt:           now,
 	}
