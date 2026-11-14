@@ -11,8 +11,8 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-func (i *LocalStorageIntegration) Save(_ context.Context, key string, content []byte) error {
-	path, err := i.resolve(key)
+func (s *LocalStorage) Save(_ context.Context, key string, content []byte) error {
+	path, err := s.resolve(key)
 	if err != nil {
 		return err
 	}
@@ -28,8 +28,8 @@ func (i *LocalStorageIntegration) Save(_ context.Context, key string, content []
 	return nil
 }
 
-func (i *LocalStorageIntegration) Read(_ context.Context, key string) ([]byte, error) {
-	path, err := i.resolve(key)
+func (s *LocalStorage) Read(_ context.Context, key string) ([]byte, error) {
+	path, err := s.resolve(key)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +46,8 @@ func (i *LocalStorageIntegration) Read(_ context.Context, key string) ([]byte, e
 	return content, nil
 }
 
-func (i *LocalStorageIntegration) Delete(_ context.Context, key string) error {
-	path, err := i.resolve(key)
+func (s *LocalStorage) Delete(_ context.Context, key string) error {
+	path, err := s.resolve(key)
 	if err != nil {
 		return err
 	}

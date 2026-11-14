@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/storage"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	workerProviders "github.com/AdityaSinghRajawat/autoreach-backend/worker/providers"
 )
@@ -48,6 +49,15 @@ func (d *Dependencies) initClients(ctx context.Context, postgresMaxConns int) er
 	)
 	if err != nil {
 		return err
+	}
+
+	if d.FileStore == nil {
+		fileStore, err := storage.NewFileStore(ctx)
+		if err != nil {
+			return err
+		}
+
+		d.FileStore = fileStore
 	}
 
 	return d.initClientHelpers()

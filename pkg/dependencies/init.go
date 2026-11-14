@@ -8,7 +8,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
-	candidateService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/candidateManagement"
 	enrichmentProviders "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
@@ -24,7 +23,7 @@ type Dependencies struct {
 	WorkerStrategy      workerConfigs.IWorkerStrategy
 	WorkerClient        workerConfigs.IWorkerClient
 	Embedder            sharedTypes.Embedder
-	FileStore           candidateService.FileStore
+	FileStore           sharedTypes.FileStore
 	EnrichmentProviders []enrichmentProviders.Provider
 	EmailVerifier       *utils.EmailVerifier
 	Repositories        Repositories

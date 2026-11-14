@@ -12,8 +12,8 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	candidateTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/candidateManagement"
 	matchingTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/matchingManagement"
-	localStorage "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/storage/local"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/storage/local"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
@@ -116,7 +116,7 @@ func TestUploadResumeRequestConvertsToAResumeEntity(t *testing.T) {
 }
 
 func TestLocalStorageRoundTripsAndRefusesKeysOutsideItsRoot(t *testing.T) {
-	store, err := localStorage.NewLocalStorageIntegration(t.TempDir())
+	store, err := local.NewLocalStorage(t.TempDir())
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -198,4 +198,37 @@ func TestPercentileCosineAndCalibrationSuggestion(t *testing.T) {
 	low, high = utils.SuggestCalibration(bad, good)
 	assert.InDelta(t, 0, low, 0.0001, "labels that do not separate leave the score unchanged")
 	assert.InDelta(t, 1, high, 0.0001)
+}
+
+func TestStorageKeysMustBeRelativePathsWithoutTraversal(t *testing.T) {
+	setup.Config(t)
+
+	for _, valid := range []string{"resumes/c1/r1.pdf", "a", "a/b/c.docx", "resumes/c-1/r_1.pdf"} {
+		assert.NoError(t, utils.ValidateStorageKey(valid), "key %q", valid)
+	}
+
+	for _, invalid := range []string{
+		"", "/etc/passwd", "../outside.pdf", "resumes/../../outside.pdf", "resumes/./r1.pdf",
+		"resumes//r1.pdf", "resumes/r1.pdf/", `resumes\r1.pdf`, "C:/resumes/r1.pdf", "..",
+	} {
+		assert.ErrorIs(
+			t,
+			utils.ValidateStorageKey(invalid),
+			config.ErrInvalidStorageKey,
+			"key %q",
+			invalid,
+		)
+	}
+}
+
+func TestLocalStorageIsTheDefaultDriver(t *testing.T) {
+	setup.Config(t)
+
+	assert.Equal(t, config.StorageDriverLocal, config.GetStorageDriver())
+	assert.Equal(
+		t,
+		"us-east-1",
+		config.GetS3Settings().Region,
+		"the SDK needs a region even for S3-compatible services",
+	)
 }

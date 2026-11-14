@@ -93,7 +93,6 @@ type openAIConfig struct {
 }
 
 type matchConfig struct {
-	storageLocalDir    string
 	resumeMaxBytes     int64
 	resumeMaxTextChars int
 	topK               int
@@ -133,6 +132,7 @@ func Init() {
 
 		loadTableNames()
 		loadEnrichmentConfig()
+		loadStorageConfig()
 		enforceProductionRequirements()
 	})
 }
@@ -142,7 +142,6 @@ func loadEnvConfig() envConfig {
 
 	return envConfig{
 		match: matchConfig{
-			storageLocalDir:    getEnvWithDefault("STORAGE_LOCAL_DIR", "./data/uploads"),
 			resumeMaxBytes:     getEnvInt64WithDefault("RESUME_MAX_BYTES", 4<<20),
 			resumeMaxTextChars: getEnvIntWithDefault("RESUME_MAX_TEXT_CHARS", 200000),
 			topK:               max(getEnvIntWithDefault("MATCH_TOP_K", 50), 1),
@@ -306,6 +305,15 @@ func getEnvFloatWithDefault(key string, fallback float64) float64 {
 	return value
 }
 
+func getEnvBoolWithDefault(key string, fallback bool) bool {
+	value, err := strconv.ParseBool(getEnvWithDefault(key, ""))
+	if err != nil {
+		return fallback
+	}
+
+	return value
+}
+
 func getEnvDurationWithDefault(key string, fallback time.Duration) time.Duration {
 	value, err := time.ParseDuration(getEnvWithDefault(key, ""))
 	if err != nil {
@@ -411,7 +419,6 @@ func GetBackgroundDrainTimeout() time.Duration { return envConfigI.concurrency.b
 
 func GetConcurrentTaskLimit() int { return envConfigI.concurrency.concurrentTaskLimit }
 
-func GetStorageLocalDir() string { return envConfigI.match.storageLocalDir }
 func GetResumeMaxBytes() int64   { return envConfigI.match.resumeMaxBytes }
 func GetResumeMaxTextChars() int { return envConfigI.match.resumeMaxTextChars }
 func GetMatchTopK() int          { return envConfigI.match.topK }

@@ -1,7 +1,6 @@
 package candidateManagement
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
@@ -11,18 +10,12 @@ import (
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
-type FileStore interface {
-	Save(ctx context.Context, key string, content []byte) error
-	Read(ctx context.Context, key string) ([]byte, error)
-	Delete(ctx context.Context, key string) error
-}
-
 type CandidateServiceDependencies struct {
 	CandidateRepo      *candidateRepo.CandidateRepo
 	ResumeRepo         *candidateRepo.ResumeRepo
 	TransactionManager db.TransactionManager
 	WorkerClient       workerConfigs.IWorkerClient
-	FileStore          FileStore
+	FileStore          sharedTypes.FileStore
 	Embedder           sharedTypes.Embedder
 }
 
@@ -31,7 +24,7 @@ type CandidateService struct {
 	resumeRepo         *candidateRepo.ResumeRepo
 	transactionManager db.TransactionManager
 	workerClient       workerConfigs.IWorkerClient
-	fileStore          FileStore
+	fileStore          sharedTypes.FileStore
 	embedder           sharedTypes.Embedder
 }
 

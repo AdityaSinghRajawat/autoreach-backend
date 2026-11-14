@@ -38,6 +38,9 @@ var (
 	ErrEmptyDocument           = errors.New("document has no extractable text")
 	ErrDocumentTooLarge        = errors.New("document expands beyond the allowed size")
 	ErrInvalidStorageKey       = errors.New("invalid storage key")
+	ErrStoredFileTooLarge      = errors.New("stored file exceeds the size limit")
+	ErrUnknownStorageDriver    = errors.New("unknown storage driver")
+	ErrStorageUnavailable      = errors.New("file storage is unavailable")
 	ErrStoredFileNotFound      = errors.New("stored file not found")
 	ErrInvalidCalibrationPair  = errors.New(
 		"calibration pair needs resume, job and a good or bad label",
