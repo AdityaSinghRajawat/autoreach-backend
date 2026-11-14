@@ -11,14 +11,17 @@ import (
 const (
 	ProviderAsynq ProviderName = "asynq"
 
-	TaskEmbedJob      WorkerTaskID = "task:embed_job"
-	TaskEmbedJobBatch WorkerTaskID = "task:embed_job_batch"
-	TaskProcessResume WorkerTaskID = "task:process_resume"
-	TaskMatchResume   WorkerTaskID = "task:match_resume"
-	TaskMatchJob      WorkerTaskID = "task:match_job"
+	TaskEmbedJob       WorkerTaskID = "task:embed_job"
+	TaskEmbedJobBatch  WorkerTaskID = "task:embed_job_batch"
+	TaskProcessResume  WorkerTaskID = "task:process_resume"
+	TaskMatchResume    WorkerTaskID = "task:match_resume"
+	TaskMatchJob       WorkerTaskID = "task:match_job"
+	TaskEnrichContacts WorkerTaskID = "task:enrich_contacts"
+	TaskUnroutable     WorkerTaskID = "task:unroutable"
 
-	QueueEmbedding = "embedding_queue"
-	QueueMatching  = "matching_queue"
+	QueueEmbedding  = "embedding_queue"
+	QueueMatching   = "matching_queue"
+	QueueEnrichment = "enrichment_queue"
 
 	GroupEmbedJob = "embed_job"
 
@@ -51,7 +54,8 @@ var (
 		2 * time.Minute,
 		5 * time.Minute,
 	}
-	matchingBackoffI = []time.Duration{5 * time.Second, 20 * time.Second, time.Minute}
+	matchingBackoffI   = []time.Duration{5 * time.Second, 20 * time.Second, time.Minute}
+	enrichmentBackoffI = []time.Duration{10 * time.Second, 30 * time.Second, 90 * time.Second}
 )
 
 var taskConfigsI = map[WorkerTaskID]TaskConfig{
@@ -86,11 +90,18 @@ var taskConfigsI = map[WorkerTaskID]TaskConfig{
 		RetryBackoff: matchingBackoffI,
 		Timeout:      30 * time.Second,
 	},
+	TaskEnrichContacts: {
+		QueueName:    QueueEnrichment,
+		MaxRetry:     3,
+		RetryBackoff: enrichmentBackoffI,
+		Timeout:      30 * time.Second,
+	},
 }
 
 var queueDefinitionsI = []QueueDefinition{
 	{Name: QueueEmbedding, Priority: 3},
 	{Name: QueueMatching, Priority: 2},
+	{Name: QueueEnrichment, Priority: 1},
 }
 
 func GetTaskConfig(taskID WorkerTaskID) (TaskConfig, bool) {

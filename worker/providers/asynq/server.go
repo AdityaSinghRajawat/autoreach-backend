@@ -116,7 +116,7 @@ func (s *Server) aggregate(groupKey string, tasks []*asynq.Task) *asynq.Task {
 			fmt.Errorf("aggregate group %s: no aggregator registered", groupKey),
 		)
 
-		return asynq.NewTask(unroutableTaskType, nil)
+		return asynq.NewTask(string(workerConfigs.TaskUnroutable), nil)
 	}
 
 	messages := make([]workerConfigs.Message, 0, len(tasks))
@@ -138,14 +138,14 @@ func (s *Server) aggregate(groupKey string, tasks []*asynq.Task) *asynq.Task {
 	if err != nil {
 		utils.LogErrorWithoutCtx(fmt.Errorf("aggregate group %s: %w", groupKey, err))
 
-		return asynq.NewTask(unroutableTaskType, nil)
+		return asynq.NewTask(string(workerConfigs.TaskUnroutable), nil)
 	}
 
 	encoded, err := encodeEnvelope(aggregated.Payload, aggregated.Metadata)
 	if err != nil {
 		utils.LogErrorWithoutCtx(err)
 
-		return asynq.NewTask(unroutableTaskType, nil)
+		return asynq.NewTask(string(workerConfigs.TaskUnroutable), nil)
 	}
 
 	options := []asynq.Option{}
@@ -158,8 +158,6 @@ func (s *Server) aggregate(groupKey string, tasks []*asynq.Task) *asynq.Task {
 
 	return asynq.NewTask(string(aggregated.TaskID), encoded, options...)
 }
-
-const unroutableTaskType = "task:unroutable"
 
 func retryDelay(retryCount int, _ error, task *asynq.Task) time.Duration {
 	return workerConfigs.RetryDelay(workerConfigs.WorkerTaskID(task.Type()), retryCount)

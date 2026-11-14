@@ -9,13 +9,11 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-const stuckWorkReconcilerLock = "cron:stuck_work_reconciler"
-
 func (cm *CronManager) stuckWorkReconcilerJob(ctx context.Context) {
 	interval := config.GetReconcilerInterval()
 
 	cm.cronInstance.Schedule(cron.Every(interval), cron.FuncJob(func() {
-		cm.runLocked(ctx, stuckWorkReconcilerLock, interval, cm.RunStuckWorkReconciler)
+		cm.runLocked(ctx, config.GetStuckWorkReconcilerLock(), interval, cm.RunStuckWorkReconciler)
 	}))
 }
 
@@ -52,7 +50,7 @@ func (cm *CronManager) RunStuckWorkReconciler(ctx context.Context) {
 		},
 	)
 	if err != nil {
-		utils.LogError(ctx, err, "cron_job", stuckWorkReconcilerLock)
+		utils.LogError(ctx, err, "cron_job", config.GetStuckWorkReconcilerLock())
 	}
 
 	if requeuedEmbeddings+requeuedResumes > 0 {

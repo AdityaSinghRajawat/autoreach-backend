@@ -98,11 +98,17 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 		return err
 	}
 
+	enrichContacts, err := workerTasks.NewEnrichContactsTaskHandler(services.Enrichment)
+	if err != nil {
+		return err
+	}
+
 	ws.register(workerConfigs.TaskEmbedJob, embedJob)
 	ws.register(workerConfigs.TaskEmbedJobBatch, embedJobBatch)
 	ws.register(workerConfigs.TaskProcessResume, processResume)
 	ws.register(workerConfigs.TaskMatchResume, matchResume)
 	ws.register(workerConfigs.TaskMatchJob, matchJob)
+	ws.register(workerConfigs.TaskEnrichContacts, enrichContacts)
 
 	return nil
 }
