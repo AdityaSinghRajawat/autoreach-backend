@@ -21,6 +21,7 @@ func CORS(allowedOrigins []string) gin.HandlerFunc {
 		c.Header(config.GetCORSAllowOriginHeader(), origin)
 		c.Header(config.GetCORSAllowCredentialsHeader(), config.GetTrueValue())
 		c.Header(config.GetVaryHeader(), config.GetOriginHeader())
+		c.Header(config.GetCORSExposeHeadersHeader(), config.GetCORSExposedHeaders())
 
 		if c.Request.Method != http.MethodOptions {
 			c.Next()

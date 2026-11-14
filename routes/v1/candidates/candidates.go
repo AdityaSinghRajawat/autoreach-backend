@@ -18,6 +18,7 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 	candidateGroup := group.Group(
 		"/candidates/:"+config.GetCandidateIDParam(),
 		middlewares.AuthenticateUser(),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyUser),
 	)
 	candidateGroup.GET(
 		"",
@@ -33,6 +34,7 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 	candidateGroup.POST(
 		"/resumes",
 		middlewares.Authorize(config.PermissionResumeCreate),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyResumeUpload),
 		candidateHandler.UploadResume,
 	)
 	candidateGroup.GET(
@@ -75,6 +77,7 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 	candidateGroup.POST(
 		jobContactsPath+"/enrich",
 		middlewares.Authorize(config.PermissionContactEnrich),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyContactEnrich),
 		enrichmentHandler.RequestJobEnrichment,
 	)
 }

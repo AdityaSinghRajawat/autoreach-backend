@@ -15,12 +15,14 @@ func LoadJobRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 	jobGroup.POST(
 		"/ingest",
 		middlewares.AuthenticateAPIClient(deps.Services.Auth),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyAPIClient),
 		middlewares.Authorize(config.PermissionJobIngest),
 		handler.IngestJobs,
 	)
 	jobGroup.GET(
 		"/:"+config.GetJobIDParam(),
 		middlewares.AuthenticateUser(),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyUser),
 		middlewares.Authorize(config.PermissionJobRead),
 		handler.GetJob,
 	)

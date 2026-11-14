@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,6 +26,11 @@ func NewRoutes(deps *dependencies.Dependencies) http.Handler {
 
 	router := gin.New()
 	router.HandleMethodNotAllowed = true
+	router.TrustedPlatform = config.GetTrustedPlatform()
+
+	if err := router.SetTrustedProxies(config.GetTrustedProxies()); err != nil {
+		log.Fatalf("set trusted proxies: %v", err)
+	}
 
 	router.Use(middlewares.Recovery())
 	router.Use(middlewares.RequestLogger(deps.Logger))
@@ -55,9 +61,7 @@ func loadOperatorRoutes(router *gin.Engine) {
 func loadAPIRoutes(router *gin.Engine, deps *dependencies.Dependencies) {
 	api := router.Group(config.GetAPIBasePath(), middlewares.RateLimit(
 		deps.RateLimiter,
-		config.GetRateLimitScopeAPI(),
-		config.GetHTTPRateLimitRequests(),
-		config.GetHTTPRateLimitWindow(),
+		config.RateLimitPolicyIP,
 	))
 	authRoutes.LoadAuthRoutes(api, deps)
 	candidateRoutes.LoadCandidateRoutes(api, deps)

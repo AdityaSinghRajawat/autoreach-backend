@@ -11,7 +11,11 @@ import (
 func LoadAdminRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 	authHandler := deps.Handlers.Auth
 
-	adminGroup := group.Group("/admin", middlewares.AuthenticateUser())
+	adminGroup := group.Group(
+		"/admin",
+		middlewares.AuthenticateUser(),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyUser),
+	)
 	adminGroup.POST(
 		"/api-clients",
 		middlewares.Authorize(config.PermissionAPIClientCreate),
