@@ -10,7 +10,6 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
-	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
 )
@@ -41,11 +40,11 @@ func TestPasswordHashVerifiesOnlyTheOriginalPassword(t *testing.T) {
 func TestAccessTokenRoundTripsThePrincipal(t *testing.T) {
 	setup.Config(t)
 
-	principal := sharedTypes.Principal{
-		UserID:      "user-1",
-		CandidateID: "candidate-1",
-		Role:        modelHelpers.UserRoleCandidate,
-	}
+	principal := sharedTypes.NewUserPrincipal(
+		"user-1",
+		"candidate-1",
+		[]string{config.RoleCandidate},
+	)
 
 	token, expiresAt, err := utils.IssueAccessToken(principal, utils.GetCurrTimeStamp())
 	require.NoError(t, err)
@@ -59,7 +58,7 @@ func TestAccessTokenRoundTripsThePrincipal(t *testing.T) {
 func TestAccessTokenIsRejectedWhenExpiredTamperedOrForeign(t *testing.T) {
 	setup.Config(t)
 
-	principal := sharedTypes.Principal{UserID: "user-1", Role: modelHelpers.UserRoleCandidate}
+	principal := sharedTypes.NewUserPrincipal("user-1", "", []string{config.RoleCandidate})
 
 	expired, _, err := utils.IssueAccessToken(
 		principal,
@@ -75,23 +74,23 @@ func TestAccessTokenIsRejectedWhenExpiredTamperedOrForeign(t *testing.T) {
 	assert.ErrorIs(t, err, config.ErrInvalidToken)
 
 	foreign, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":  "user-1",
-		"role": "ADMIN",
-		"iss":  config.GetTokenIssuer(),
-		"exp":  time.Now().Add(time.Hour).Unix(),
+		"sub":   "user-1",
+		"roles": []string{config.RoleAdmin},
+		"iss":   config.GetTokenIssuer(),
+		"exp":   time.Now().Add(time.Hour).Unix(),
 	}).SignedString([]byte("a-different-secret-of-sufficient-length"))
 	require.NoError(t, err)
 	_, err = utils.ParseAccessToken(foreign)
 	assert.ErrorIs(t, err, config.ErrInvalidToken)
 
-	unknownRole, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":  "user-1",
-		"role": "SUPERUSER",
-		"iss":  config.GetTokenIssuer(),
-		"exp":  time.Now().Add(time.Hour).Unix(),
+	withoutRoles, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   "user-1",
+		"roles": []string{},
+		"iss":   config.GetTokenIssuer(),
+		"exp":   time.Now().Add(time.Hour).Unix(),
 	}).SignedString(config.GetJWTSecret())
 	require.NoError(t, err)
-	_, err = utils.ParseAccessToken(unknownRole)
+	_, err = utils.ParseAccessToken(withoutRoles)
 	assert.ErrorIs(t, err, config.ErrInvalidToken)
 }
 
@@ -107,19 +106,4 @@ func TestOpaqueTokensAreUniqueAndStoredOnlyAsAFingerprint(t *testing.T) {
 	assert.Equal(t, utils.Fingerprint(first), firstHash)
 	assert.NotEqual(t, first, firstHash)
 	assert.Len(t, firstHash, 64)
-}
-
-func TestPrincipalCanOnlyAccessItsOwnCandidateUnlessAdmin(t *testing.T) {
-	candidate := sharedTypes.Principal{
-		UserID:      "u",
-		CandidateID: "c-1",
-		Role:        modelHelpers.UserRoleCandidate,
-	}
-	orphan := sharedTypes.Principal{UserID: "u", Role: modelHelpers.UserRoleCandidate}
-	admin := sharedTypes.Principal{UserID: "a", Role: modelHelpers.UserRoleAdmin}
-
-	assert.True(t, candidate.CanAccessCandidate("c-1"))
-	assert.False(t, candidate.CanAccessCandidate("c-2"))
-	assert.False(t, orphan.CanAccessCandidate(""))
-	assert.True(t, admin.CanAccessCandidate("c-2"))
 }

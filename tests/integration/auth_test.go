@@ -56,7 +56,7 @@ func TestRegisterCreatesAUserACandidateAndASession(t *testing.T) {
 	session := register(t, router, "Alex@Example.com")
 
 	assert.Equal(t, "alex@example.com", session.User.Email)
-	assert.Equal(t, "CANDIDATE", session.User.Role)
+	assert.Equal(t, []string{config.RoleCandidate}, session.User.Roles)
 	require.NotNil(t, session.User.CandidateID)
 	assert.Equal(t, "Bearer", session.TokenType)
 	assert.Equal(t, int(config.GetAccessTokenTTL().Seconds()), session.ExpiresIn)

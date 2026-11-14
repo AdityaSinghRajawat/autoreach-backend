@@ -47,7 +47,7 @@ func newJobFixture(t *testing.T) jobFixture {
 	t.Helper()
 	deps := setup.Dependencies(t)
 	router := routes.NewRoutes(deps)
-	created := createAPIClient(t, deps, router, []string{config.GetScopeJobsIngest()})
+	created := createAPIClient(t, deps, router, []string{"job:ingest:any"})
 	user := register(t, router, "alex@example.com")
 
 	return jobFixture{
@@ -328,7 +328,7 @@ func TestIngestRejectsAnEmptyOrOversizedBatch(t *testing.T) {
 func TestIngestRequiresAValidUnrevokedAPIKeyWithTheIngestScope(t *testing.T) {
 	deps := setup.Dependencies(t)
 	router := routes.NewRoutes(deps)
-	created := createAPIClient(t, deps, router, []string{config.GetScopeJobsIngest()})
+	created := createAPIClient(t, deps, router, []string{"job:ingest:any"})
 	user := register(t, router, "alex@example.com")
 	payload := map[string]any{"jobs": []any{validJob()}}
 	admin := helpers.Do(
@@ -414,7 +414,7 @@ func TestAdminRoutesRejectNonAdmins(t *testing.T) {
 	user := register(t, router, "alex@example.com")
 	request := authTypes.CreateAPIClientRequest{
 		Name:   "x",
-		Scopes: []string{config.GetScopeJobsIngest()},
+		Scopes: []string{"job:ingest:any"},
 	}
 
 	forbidden := helpers.Do(

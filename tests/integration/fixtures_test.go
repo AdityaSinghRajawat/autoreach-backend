@@ -3,13 +3,14 @@
 package integration
 
 import (
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
-	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 )
 
 func adminPrincipal() sharedTypes.Principal {
-	return sharedTypes.Principal{
-		UserID: "11111111-1111-4111-8111-111111111111",
-		Role:   modelHelpers.UserRoleAdmin,
-	}
+	return sharedTypes.NewUserPrincipal(
+		"11111111-1111-4111-8111-111111111111",
+		"",
+		[]string{config.RoleAdmin},
+	)
 }

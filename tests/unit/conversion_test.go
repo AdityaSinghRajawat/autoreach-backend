@@ -65,7 +65,7 @@ func TestConstructorsStampIdentityTimestampsAndDefaults(t *testing.T) {
 
 	assert.NotEqual(t, authModel.NewUser().ID, user.ID)
 	assert.True(t, user.IsActive)
-	assert.Equal(t, modelHelpers.UserRoleCandidate, user.Role)
+	assert.Equal(t, []string{config.RoleCandidate}, user.Roles)
 	assert.Equal(t, user.CreatedAt, user.UpdatedAt)
 	assert.Equal(t, user.CreatedAt, user.CreatedAt.Truncate(time.Microsecond),
 		"timestamps must fit the database's microsecond precision so a stored row equals the model")
@@ -169,7 +169,7 @@ func TestTheModelRejectsWhatConversionDoesNotCheck(t *testing.T) {
 	unknownRole := authModel.NewUser()
 	unknownRole.Email = "alex@example.com"
 	unknownRole.PasswordHash = "hash"
-	unknownRole.Role = modelHelpers.UserRole("SUPERUSER")
+	unknownRole.Roles = []string{"SUPERUSER"}
 	require.Error(t, unknownRole.Validate())
 
 	token := authModel.NewRefreshToken(-time.Minute)
@@ -228,13 +228,13 @@ func TestCreateAPIClientRequestConvertsToAnAPIClientAwaitingItsKey(t *testing.T)
 
 	request := authTypes.CreateAPIClientRequest{
 		Name:   "  linkedin-scraper ",
-		Scopes: []string{config.GetScopeJobsIngest()},
+		Scopes: []string{"job:ingest:any"},
 	}
 
 	client := request.ToAPIClientModel()
 
 	assert.Equal(t, "linkedin-scraper", client.Name)
-	assert.True(t, client.HasScope(config.GetScopeJobsIngest()))
+	assert.Equal(t, []string{"job:ingest:any"}, client.Scopes)
 	require.Error(t, client.Validate(), "a client without a key is not yet valid")
 
 	client.KeyPrefix = "ark_abc123"
