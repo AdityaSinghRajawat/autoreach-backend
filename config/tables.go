@@ -9,13 +9,16 @@ import (
 type Table string
 
 const (
-	TableUsers            Table = "users"
-	TableRefreshTokens    Table = "refresh_tokens"
-	TableCandidates       Table = "candidates"
-	TableAPIClients       Table = "api_clients"
-	TableJobPostings      Table = "job_postings"
-	TableCandidateResumes Table = "candidate_resumes"
-	TableJobMatches       Table = "job_matches"
+	TableUsers              Table = "users"
+	TableRefreshTokens      Table = "refresh_tokens"
+	TableCandidates         Table = "candidates"
+	TableAPIClients         Table = "api_clients"
+	TableJobPostings        Table = "job_postings"
+	TableCandidateResumes   Table = "candidate_resumes"
+	TableJobMatches         Table = "job_matches"
+	TableCompanyContacts    Table = "company_contacts"
+	TableJobContacts        Table = "job_contacts"
+	TableEnrichmentRequests Table = "enrichment_requests"
 )
 
 var declaredTables = []Table{
@@ -26,6 +29,9 @@ var declaredTables = []Table{
 	TableJobPostings,
 	TableCandidateResumes,
 	TableJobMatches,
+	TableCompanyContacts,
+	TableJobContacts,
+	TableEnrichmentRequests,
 }
 
 var (

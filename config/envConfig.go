@@ -53,6 +53,7 @@ type redisConfig struct {
 type secretConfig struct {
 	internalSharedSecret string
 	jwtSecret            string
+	adminPassword        string
 }
 
 type authConfig struct {
@@ -131,6 +132,7 @@ func Init() {
 		envConfigI = loadEnvConfig()
 
 		loadTableNames()
+		loadEnrichmentConfig()
 		enforceProductionRequirements()
 	})
 }
@@ -236,6 +238,7 @@ func loadEnvConfig() envConfig {
 		secret: secretConfig{
 			internalSharedSecret: getEnvWithDefault("INTERNAL_SHARED_SECRET", ""),
 			jwtSecret:            getEnvWithDefault("JWT_SECRET", ""),
+			adminPassword:        getEnvWithDefault("ADMIN_PASSWORD", ""),
 		},
 		auth: authConfig{
 			accessTokenTTL:    getEnvDurationWithDefault("JWT_ACCESS_TTL", 15*time.Minute),
@@ -418,3 +421,5 @@ func GetMatchEFSearch() int {
 }
 
 func GetMatchMinStoredScore() float64 { return envConfigI.match.minStoredScore }
+
+func GetAdminPassword() string { return envConfigI.secret.adminPassword }
