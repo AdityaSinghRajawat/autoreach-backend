@@ -1,0 +1,65 @@
+package routes
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	swaggerDocs "github.com/AdityaSinghRajawat/autoreach-backend/docs/swagger"
+	"github.com/AdityaSinghRajawat/autoreach-backend/middlewares"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/dependencies"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers"
+	adminRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/admin"
+	authRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/auth"
+	candidateRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/candidates"
+	jobRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/jobs"
+)
+
+func NewRoutes(deps *dependencies.Dependencies) http.Handler {
+	if !config.IsLocal() {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	router := gin.New()
+	router.HandleMethodNotAllowed = true
+
+	router.Use(middlewares.Recovery())
+	router.Use(middlewares.RequestLogger(deps.Logger))
+	router.Use(middlewares.ErrorHandler())
+	router.Use(middlewares.CORS(config.GetCORSAllowedOrigins()))
+	router.Use(middlewares.BodyLimit(config.GetMaxBodyBytes()))
+
+	router.NoRoute(middlewares.NotFound())
+	router.NoMethod(middlewares.MethodNotAllowed())
+
+	router.GET("/health", handlers.Health)
+	loadOperatorRoutes(router)
+	loadAPIRoutes(router, deps)
+
+	return router
+}
+
+func loadOperatorRoutes(router *gin.Engine) {
+	operator := router.Group("")
+	if config.IsProduction() {
+		operator.Use(middlewares.InternalSharedSecret(config.GetInternalSharedSecret()))
+	}
+
+	operator.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	swaggerDocs.LoadSwaggerRoutes(operator)
+}
+
+func loadAPIRoutes(router *gin.Engine, deps *dependencies.Dependencies) {
+	api := router.Group(config.GetAPIBasePath(), middlewares.RateLimit(
+		deps.RateLimiter,
+		config.GetRateLimitScopeAPI(),
+		config.GetHTTPRateLimitRequests(),
+		config.GetHTTPRateLimitWindow(),
+	))
+	authRoutes.LoadAuthRoutes(api, deps)
+	candidateRoutes.LoadCandidateRoutes(api, deps)
+	jobRoutes.LoadJobRoutes(api, deps)
+	adminRoutes.LoadAdminRoutes(api, deps)
+}
