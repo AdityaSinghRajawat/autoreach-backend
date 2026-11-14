@@ -8,12 +8,7 @@ Go service for AutoReach. One binary, two process modes:
 | `autoreach worker` | Queue consumers and cron jobs, plus `/health` and `/metrics` |
 | `autoreach create-admin <email>` | One-off: creates an administrator. Password is read from `ADMIN_PASSWORD` |
 
-Design documents live in `docs/`:
-
-- `product_requirements_document.md` — what the product does
-- `technical_specifications_document.md` — API contract, schema, stack
-- `ARCHITECTURE_SPEC.md` — layering, naming and conventions this code follows
-- `IMPLEMENTATION_PLAN.md` — milestones, decisions and open questions
+The product requirements, technical specification, architecture spec and implementation plan are working documents kept outside the repository.
 
 ## Requirements
 
@@ -92,16 +87,17 @@ tests              unit, integration, setup, helpers, mocks
 - Every route under `/api/v1` must be in `docs/swagger/openapi.json`; a unit test fails otherwise, and router tests validate real responses against the spec.
 - Every worker task needs a `TaskConfig` and a registered handler; the worker refuses to start if they drift.
 - The database is the source of truth for pipeline state. Queue tasks are idempotent, and a reconciler cron re-enqueues rows whose task was lost.
-- Go source carries no comments. Reasoning belongs in `docs/`.
+- Go source carries no comments. Naming and small functions carry the meaning.
 - Models in `pkg/models` are database entities only. Each has `New<Model>()` (generates the ID, stamps timestamps and defaults), `UpdateTimestamp()` and `Validate()`. Projections, requests and responses live in `pkg/customtypes`.
 - One validation per stage: `utils.BindAndValidate` validates the request from its tags; the request's `To<Model>Model()` receiver only maps fields and never validates; the service calls `UpdateTimestamp()` then the model's `Validate()` before saving.
 - A handler only reads the request, calls one service method and writes the response or error. Create endpoints convert the request to a model and pass the model; update endpoints pass the request, and the service loads the existing entity and converts it there.
 - Saves are `Upsert(ctx, model)` and return the model they were given. IDs and defaults are set in the constructor, so nothing is read back from the database after a write.
 - Repositories hold no duplicated query or scan code: one private finder per table, and `db.FindOne` / `pgx.CollectRows` for row mapping.
+- Services, handlers, repositories, utilities and integrations declare no constants and no stray types. Constants live in `config` behind getters (headers, vendor wire values, lock names, validation messages); non-entity structs live in `pkg/customtypes/<domain>`. Enum types stay in `pkg/models/helpers`, task and queue names in `worker/configs`, and SQL column lists beside the queries that use them.
 - Error messages live in `config/errors.go` as `config.ErrXxx`; no other package calls `errors.New`.
 - Independent operations run through `utils.RunConcurrently`; fire-and-forget work through `utils.RunInBackground`. No bare `go` outside `pkg/utils` and bootstrap.
 - Formatting is mechanical: run `make fmt` before committing. CI runs `make lint`. Format-on-save is a personal editor choice and is not part of the repository.
 
 ## Status
 
-Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, and candidate-to-job matching in both directions (new resume against jobs, new job against resumes). See `docs/IMPLEMENTATION_PLAN.md` for what follows.
+Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), and decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers. The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
