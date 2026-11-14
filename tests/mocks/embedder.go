@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	jobService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement"
+	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 )
 
 const EmbedderModel = "fake-embedding-model"
@@ -19,7 +19,7 @@ type Embedder struct {
 	Pinned     map[string][]float32
 }
 
-var _ jobService.Embedder = (*Embedder)(nil)
+var _ sharedTypes.Embedder = (*Embedder)(nil)
 
 func NewEmbedder(dimensions int) *Embedder {
 	return &Embedder{Dimensions: dimensions}
