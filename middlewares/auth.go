@@ -64,3 +64,19 @@ func AuthenticateUser() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func WebhookToken(secret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		provided := c.Query(config.GetWebhookTokenParam())
+		if secret == "" || subtle.ConstantTimeCompare([]byte(provided), []byte(secret)) != 1 {
+			utils.HandleCustomError(c, config.NewCustomError(
+				config.ErrWebhookTokenMismatch,
+				config.GetErrCodeUnauthorized(),
+			))
+
+			return
+		}
+
+		c.Next()
+	}
+}

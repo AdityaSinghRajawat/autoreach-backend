@@ -3,15 +3,17 @@ package dependencies
 import (
 	authHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/authManagement"
 	candidateHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/candidateManagement"
+	enrichmentHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/enrichmentManagement"
 	jobHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/jobManagement"
 	matchingHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/matchingManagement"
 )
 
 type Handlers struct {
-	Auth      *authHandler.AuthHandler
-	Candidate *candidateHandler.CandidateHandler
-	Job       *jobHandler.JobHandler
-	Matching  *matchingHandler.MatchingHandler
+	Auth       *authHandler.AuthHandler
+	Candidate  *candidateHandler.CandidateHandler
+	Job        *jobHandler.JobHandler
+	Matching   *matchingHandler.MatchingHandler
+	Enrichment *enrichmentHandler.EnrichmentHandler
 }
 
 func (d *Dependencies) initHandlers() error {
@@ -35,11 +37,17 @@ func (d *Dependencies) initHandlers() error {
 		return err
 	}
 
+	enrichment, err := enrichmentHandler.NewEnrichmentHandler(d.Services.Enrichment)
+	if err != nil {
+		return err
+	}
+
 	d.Handlers = Handlers{
-		Auth:      auth,
-		Candidate: candidate,
-		Job:       job,
-		Matching:  matching,
+		Enrichment: enrichment,
+		Auth:       auth,
+		Candidate:  candidate,
+		Job:        job,
+		Matching:   matching,
 	}
 
 	return nil

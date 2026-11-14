@@ -13,8 +13,6 @@ import (
 	workerServer "github.com/AdityaSinghRajawat/autoreach-backend/worker/server"
 )
 
-const adminPasswordEnv = "ADMIN_PASSWORD"
-
 func main() {
 	config.Init()
 
@@ -97,7 +95,7 @@ func createAdmin(ctx context.Context, arguments []string) error {
 	user, customErr := deps.Services.Auth.CreateAdmin(
 		ctx,
 		arguments[0],
-		os.Getenv(adminPasswordEnv),
+		config.GetAdminPassword(),
 	)
 	if customErr != nil {
 		return customErr

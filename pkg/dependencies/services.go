@@ -3,15 +3,17 @@ package dependencies
 import (
 	authService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/authManagement"
 	candidateService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/candidateManagement"
+	enrichmentService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement"
 	jobService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement"
 	matchingService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/matchingManagement"
 )
 
 type Services struct {
-	Auth      *authService.AuthService
-	Candidate *candidateService.CandidateService
-	Job       *jobService.JobService
-	Matching  *matchingService.MatchingService
+	Auth       *authService.AuthService
+	Candidate  *candidateService.CandidateService
+	Job        *jobService.JobService
+	Matching   *matchingService.MatchingService
+	Enrichment *enrichmentService.EnrichmentService
 }
 
 func (d *Dependencies) initServices() error {
@@ -57,6 +59,25 @@ func (d *Dependencies) initServices() error {
 			JobPostingRepo:     d.Repositories.JobPosting,
 			JobMatchRepo:       d.Repositories.JobMatch,
 			TransactionManager: d.TransactionManager,
+			WorkerClient:       d.WorkerClient,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	enrichment, err := enrichmentService.NewEnrichmentService(
+		enrichmentService.EnrichmentServiceDependencies{
+			JobPostingRepo:        d.Repositories.JobPosting,
+			JobMatchRepo:          d.Repositories.JobMatch,
+			CompanyContactRepo:    d.Repositories.CompanyContact,
+			EnrichmentRequestRepo: d.Repositories.EnrichmentRequest,
+			TransactionManager:    d.TransactionManager,
+			WorkerClient:          d.WorkerClient,
+			RateLimiter:           d.RateLimiter,
+			CreditCounter:         d.RedisUtil,
+			EmailVerifier:         d.EmailVerifier,
+			Providers:             d.EnrichmentProviders,
 		},
 	)
 	if err != nil {
@@ -64,10 +85,11 @@ func (d *Dependencies) initServices() error {
 	}
 
 	d.Services = Services{
-		Auth:      auth,
-		Candidate: candidate,
-		Job:       job,
-		Matching:  matching,
+		Enrichment: enrichment,
+		Auth:       auth,
+		Candidate:  candidate,
+		Job:        job,
+		Matching:   matching,
 	}
 
 	return nil

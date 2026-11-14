@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "AutoReach API",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "REST API for the AutoReach career automation and outreach platform. All JSON keys are camelCase and every response uses the standard envelope."
   },
   "servers": [
@@ -39,6 +39,14 @@
     {
       "name": "Matching",
       "description": "Jobs matched to a candidate"
+    },
+    {
+      "name": "Contacts",
+      "description": "Decision-maker contacts discovered for matched jobs"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Callbacks from third-party providers"
     }
   ],
   "paths": {
@@ -1112,6 +1120,308 @@
           }
         }
       }
+    },
+    "/api/v1/candidates/{candidateId}/contacts": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "operationId": "listCandidateContacts",
+        "summary": "List contacts discovered for any job matched to the candidate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data",
+                        "meta"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CompanyContact"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/jobs/{jobId}/contacts": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "jobId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "operationId": "listJobContacts",
+        "summary": "List contacts discovered for a job matched to the candidate",
+        "description": "Returns 404 when the job is not matched to this candidate.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CompanyContact"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/jobs/{jobId}/contacts/enrich": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "jobId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Contacts"
+        ],
+        "operationId": "requestJobEnrichment",
+        "summary": "Queue contact discovery for a matched job",
+        "description": "Contacts already known for the company within the freshness window are reused without calling any provider.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RequestEnrichmentResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/signalhire": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "operationId": "signalHireWebhook",
+        "summary": "SignalHire callback with the contact details of a requested person",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WebhookAck"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1998,6 +2308,126 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "CompanyContact": {
+        "type": "object",
+        "required": [
+          "contactId",
+          "companyDomain",
+          "companyName",
+          "fullName",
+          "roleType",
+          "title",
+          "workEmail",
+          "phoneNumber",
+          "linkedinUrl",
+          "enrichmentProvider",
+          "isEmailVerified",
+          "emailVerificationStatus",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "companyDomain": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "roleType": {
+            "type": "string",
+            "enum": [
+              "ENGINEERING_MANAGER",
+              "HIRING_MANAGER",
+              "RECRUITER"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "workEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "linkedinUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "enrichmentProvider": {
+            "type": "string",
+            "enum": [
+              "APOLLO",
+              "SIGNALHIRE",
+              "CONTACTOUT"
+            ]
+          },
+          "isEmailVerified": {
+            "type": "boolean"
+          },
+          "emailVerificationStatus": {
+            "type": "string",
+            "enum": [
+              "UNVERIFIED",
+              "VERIFIED",
+              "RISKY",
+              "INVALID"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RequestEnrichmentResult": {
+        "type": "object",
+        "required": [
+          "jobId",
+          "taskName",
+          "status"
+        ],
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskName": {
+            "type": "string",
+            "example": "task:enrich_contacts"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ENQUEUED"
+            ]
+          }
+        }
+      },
+      "WebhookAck": {
+        "type": "object",
+        "required": [
+          "received"
+        ],
+        "properties": {
+          "received": {
+            "type": "boolean"
           }
         }
       }

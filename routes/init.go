@@ -15,6 +15,7 @@ import (
 	authRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/auth"
 	candidateRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/candidates"
 	jobRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/jobs"
+	webhookRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/webhooks"
 )
 
 func NewRoutes(deps *dependencies.Dependencies) http.Handler {
@@ -62,4 +63,5 @@ func loadAPIRoutes(router *gin.Engine, deps *dependencies.Dependencies) {
 	candidateRoutes.LoadCandidateRoutes(api, deps)
 	jobRoutes.LoadJobRoutes(api, deps)
 	adminRoutes.LoadAdminRoutes(api, deps)
+	webhookRoutes.LoadWebhookRoutes(api, deps)
 }

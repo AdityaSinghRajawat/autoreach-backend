@@ -6,27 +6,30 @@ import (
 	"log/slog"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	candidateService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/candidateManagement"
-	jobService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement"
+	enrichmentProviders "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
 type Dependencies struct {
-	Logger             *slog.Logger
-	Postgres           *db.PostgresConn
-	Redis              *db.RedisConn
-	TransactionManager db.TransactionManager
-	RateLimiter        utils.Limiter
-	RedisUtil          *utils.RedisUtil
-	WorkerStrategy     workerConfigs.IWorkerStrategy
-	WorkerClient       workerConfigs.IWorkerClient
-	Embedder           jobService.Embedder
-	FileStore          candidateService.FileStore
-	Repositories       Repositories
-	Services           Services
-	Handlers           Handlers
+	Logger              *slog.Logger
+	Postgres            *db.PostgresConn
+	Redis               *db.RedisConn
+	TransactionManager  db.TransactionManager
+	RateLimiter         utils.Limiter
+	RedisUtil           *utils.RedisUtil
+	WorkerStrategy      workerConfigs.IWorkerStrategy
+	WorkerClient        workerConfigs.IWorkerClient
+	Embedder            sharedTypes.Embedder
+	FileStore           candidateService.FileStore
+	EnrichmentProviders []enrichmentProviders.Provider
+	EmailVerifier       *utils.EmailVerifier
+	Repositories        Repositories
+	Services            Services
+	Handlers            Handlers
 }
 
 func NewDependencies(

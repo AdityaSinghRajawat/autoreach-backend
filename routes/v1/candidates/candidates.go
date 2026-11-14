@@ -11,6 +11,8 @@ import (
 func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 	candidateHandler := deps.Handlers.Candidate
 	matchingHandler := deps.Handlers.Matching
+	enrichmentHandler := deps.Handlers.Enrichment
+	jobContactsPath := "/jobs/:" + config.GetJobIDParam() + "/contacts"
 	resumePath := "/resumes/:" + config.GetResumeIDParam()
 
 	candidateGroup := group.Group(
@@ -28,4 +30,8 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 	candidateGroup.DELETE(resumePath, candidateHandler.DeleteResume)
 
 	candidateGroup.GET("/jobs", matchingHandler.ListMatchedJobs)
+
+	candidateGroup.GET("/contacts", enrichmentHandler.ListCandidateContacts)
+	candidateGroup.GET(jobContactsPath, enrichmentHandler.ListJobContacts)
+	candidateGroup.POST(jobContactsPath+"/enrich", enrichmentHandler.RequestJobEnrichment)
 }
