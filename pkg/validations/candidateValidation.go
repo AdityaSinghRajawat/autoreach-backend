@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-)
 
-const linkedinHost = "linkedin.com"
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+)
 
 func ValidateTimezone(fieldLevel validator.FieldLevel) bool {
 	name := fieldLevel.Field().String()
@@ -34,5 +34,5 @@ func ValidateLinkedinURL(fieldLevel validator.FieldLevel) bool {
 
 	host := strings.ToLower(parsed.Hostname())
 
-	return host == linkedinHost || strings.HasSuffix(host, "."+linkedinHost)
+	return host == config.GetLinkedinHost() || strings.HasSuffix(host, "."+config.GetLinkedinHost())
 }

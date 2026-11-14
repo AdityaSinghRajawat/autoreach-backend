@@ -15,8 +15,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-const uniqueViolationCode = "23505"
-
 type PostgresConn struct {
 	pool *pgxpool.Pool
 }
@@ -96,7 +94,7 @@ func IsNoRows(err error) bool {
 func IsUniqueViolation(err error) bool {
 	var postgresErr *pgconn.PgError
 
-	return errors.As(err, &postgresErr) && postgresErr.Code == uniqueViolationCode
+	return errors.As(err, &postgresErr) && postgresErr.Code == config.GetUniqueViolationCode()
 }
 
 func decodeTimestampsAsUTC(_ context.Context, conn *pgx.Conn) error {

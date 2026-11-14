@@ -14,8 +14,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-const maxErrorBodyBytes = 2048
-
 type APIError struct {
 	StatusCode int
 	Body       string
@@ -83,10 +81,10 @@ func (c *HttpClient) do(
 	}
 
 	if payload != nil {
-		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set(config.GetContentTypeHeader(), config.GetJSONContentType())
 	}
 
-	request.Header.Set("Accept", "application/json")
+	request.Header.Set(config.GetAcceptHeader(), config.GetJSONContentType())
 
 	for name, value := range headers {
 		request.Header.Set(name, value)
@@ -99,7 +97,7 @@ func (c *HttpClient) do(
 	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		excerpt, _ := io.ReadAll(io.LimitReader(response.Body, maxErrorBodyBytes))
+		excerpt, _ := io.ReadAll(io.LimitReader(response.Body, config.GetMaxErrorBodyBytes()))
 
 		return &APIError{StatusCode: response.StatusCode, Body: string(excerpt)}
 	}

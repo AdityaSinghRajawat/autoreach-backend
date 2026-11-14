@@ -24,16 +24,6 @@ var customValidationsI = map[string]validator.Func{
 	"validate_resume_file":  ValidateResumeFile,
 }
 
-var customIssuesI = map[string]string{
-	"validate_timezone":     "must be a valid IANA time zone",
-	"validate_linkedin_url": "must be an https linkedin.com URL",
-	"validate_external_url": "must be a public https URL on a host that matches atsType",
-	"validate_salary_range": "must be greater than or equal to salaryMin",
-	"validate_job_title":    "must contain letters or digits",
-	"validate_json_object":  "must be a JSON object",
-	"validate_resume_file":  "must be a PDF or DOCX document",
-}
-
 func GetValidator() *validator.Validate {
 	validateOnce.Do(func() {
 		validateI = validator.New(validator.WithRequiredStructEnabled())

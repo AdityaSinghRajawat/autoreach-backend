@@ -12,13 +12,8 @@ import (
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 )
 
-const (
-	atsTypeFieldName   = "ATSType"
-	salaryMinFieldName = "SalaryMin"
-)
-
 func ValidateExternalURL(fieldLevel validator.FieldLevel) bool {
-	atsType := parentField(fieldLevel, atsTypeFieldName)
+	atsType := parentField(fieldLevel, config.GetATSTypeFieldName())
 	if !atsType.IsValid() || atsType.Kind() != reflect.String {
 		return false
 	}
@@ -31,7 +26,7 @@ func ValidateJobTitle(fieldLevel validator.FieldLevel) bool {
 }
 
 func ValidateSalaryRange(fieldLevel validator.FieldLevel) bool {
-	salaryMin := parentField(fieldLevel, salaryMinFieldName)
+	salaryMin := parentField(fieldLevel, config.GetSalaryMinFieldName())
 	if !salaryMin.IsValid() || salaryMin.Kind() != reflect.Float64 {
 		return true
 	}

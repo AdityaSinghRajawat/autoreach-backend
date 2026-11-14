@@ -14,16 +14,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-const (
-	docxBodyPath       = "word/document.xml"
-	docxTextElement    = "t"
-	docxParagraph      = "p"
-	docxTab            = "tab"
-	docxLineBreak      = "br"
-	documentReadFactor = 4
-	docxMaxBodyBytes   = 64 << 20
-)
-
 func ExtractPDFText(content []byte, maxChars int) (text string, err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -51,7 +41,7 @@ func ExtractDocxText(content []byte, maxChars int) (string, error) {
 	}
 
 	for _, file := range archive.File {
-		if file.Name != docxBodyPath {
+		if file.Name != config.GetDocxBodyPath() {
 			continue
 		}
 
@@ -69,7 +59,7 @@ func ExtractDocxText(content []byte, maxChars int) (string, error) {
 }
 
 func decodeDocxBody(body io.Reader, maxChars int) (string, error) {
-	decoder := xml.NewDecoder(&boundedReader{reader: body, remaining: docxMaxBodyBytes})
+	decoder := xml.NewDecoder(&boundedReader{reader: body, remaining: config.GetDocxMaxBodyBytes()})
 	builder := strings.Builder{}
 	insideText := false
 
@@ -89,12 +79,12 @@ func decodeDocxBody(body io.Reader, maxChars int) (string, error) {
 
 		switch element := token.(type) {
 		case xml.StartElement:
-			insideText = element.Name.Local == docxTextElement
+			insideText = element.Name.Local == config.GetDocxTextElement()
 			writeDocxSeparator(&builder, element.Name.Local)
 		case xml.EndElement:
 			insideText = false
 
-			if element.Name.Local == docxParagraph {
+			if element.Name.Local == config.GetDocxParagraph() {
 				builder.WriteByte('\n')
 			}
 		case xml.CharData:
@@ -103,7 +93,7 @@ func decodeDocxBody(body io.Reader, maxChars int) (string, error) {
 			}
 		}
 
-		if builder.Len() > maxChars*documentReadFactor {
+		if builder.Len() > maxChars*config.GetDocumentReadFactor() {
 			return "", fmt.Errorf("extract docx text: %w", config.ErrDocumentTooLarge)
 		}
 	}
@@ -113,15 +103,15 @@ func decodeDocxBody(body io.Reader, maxChars int) (string, error) {
 
 func writeDocxSeparator(builder *strings.Builder, element string) {
 	switch element {
-	case docxTab:
+	case config.GetDocxTab():
 		builder.WriteByte('\t')
-	case docxLineBreak:
+	case config.GetDocxLineBreak():
 		builder.WriteByte('\n')
 	}
 }
 
 func readBoundedText(reader io.Reader, maxChars int) (string, error) {
-	raw, err := io.ReadAll(io.LimitReader(reader, int64(maxChars)*documentReadFactor))
+	raw, err := io.ReadAll(io.LimitReader(reader, int64(maxChars*config.GetDocumentReadFactor())))
 	if err != nil {
 		return "", fmt.Errorf("read document text: %w: %w", config.ErrUnreadableDocument, err)
 	}

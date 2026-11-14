@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"path"
 	"strings"
+
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
 type ResumeStatus string
@@ -16,23 +18,13 @@ const (
 
 	ContentTypePDF  = "application/pdf"
 	ContentTypeDOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-
-	extensionPDF  = ".pdf"
-	extensionDOCX = ".docx"
-)
-
-var (
-	pdfMagic        = []byte("%PDF-")
-	zipMagic        = []byte("PK\x03\x04")
-	docxBodyMarker  = []byte("word/document.xml")
-	maxResumeNameLn = 255
 )
 
 func DetectResumeContentType(content []byte) string {
 	switch {
-	case bytes.HasPrefix(content, pdfMagic):
+	case bytes.HasPrefix(content, config.GetPDFMagic()):
 		return ContentTypePDF
-	case bytes.HasPrefix(content, zipMagic) && bytes.Contains(content, docxBodyMarker):
+	case bytes.HasPrefix(content, config.GetZipMagic()) && bytes.Contains(content, []byte(config.GetDocxBodyPath())):
 		return ContentTypeDOCX
 	default:
 		return ""
@@ -42,9 +34,9 @@ func DetectResumeContentType(content []byte) string {
 func ResumeExtension(contentType string) string {
 	switch contentType {
 	case ContentTypePDF:
-		return extensionPDF
+		return config.GetPDFExtension()
 	case ContentTypeDOCX:
-		return extensionDOCX
+		return config.GetDOCXExtension()
 	default:
 		return ""
 	}
@@ -61,12 +53,12 @@ func SanitizeFileName(name string) string {
 	}, base)
 	base = strings.TrimSpace(base)
 
-	if len(base) > maxResumeNameLn {
-		base = base[len(base)-maxResumeNameLn:]
+	if len(base) > config.GetMaxFileNameLength() {
+		base = base[len(base)-config.GetMaxFileNameLength():]
 	}
 
 	if base == "" || base == "." || base == "/" {
-		return "resume"
+		return config.GetFallbackFileName()
 	}
 
 	return base

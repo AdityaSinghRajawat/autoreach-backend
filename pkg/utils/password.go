@@ -12,8 +12,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-const argonEncodingFormat = "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s"
-
 func HashPassword(password string) (string, error) {
 	salt := make([]byte, config.GetArgonSaltLength())
 	if _, err := rand.Read(salt); err != nil {
@@ -31,7 +29,7 @@ func HashPassword(password string) (string, error) {
 	)
 
 	return fmt.Sprintf(
-		argonEncodingFormat,
+		config.GetArgonEncodingFormat(),
 		argon2.Version, memory, iterations, parallelism,
 		base64.RawStdEncoding.EncodeToString(salt),
 		base64.RawStdEncoding.EncodeToString(key),

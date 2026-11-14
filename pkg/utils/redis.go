@@ -69,3 +69,21 @@ func (r *RedisUtil) ReleaseLock(ctx context.Context, lock *RedisLock) error {
 
 	return nil
 }
+
+func (r *RedisUtil) IncrementDaily(
+	ctx context.Context,
+	namespace, name string,
+	amount int64,
+) (int64, error) {
+	key := BuildKey(namespace, name, GetCurrTimeStamp().Format(time.DateOnly))
+
+	pipeline := r.client.TxPipeline()
+	counter := pipeline.IncrBy(ctx, key, amount)
+	pipeline.Expire(ctx, key, config.GetDailyCounterTTL())
+
+	if _, err := pipeline.Exec(ctx); err != nil {
+		return 0, fmt.Errorf("increment daily counter %s: %w", name, err)
+	}
+
+	return counter.Val(), nil
+}
