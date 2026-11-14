@@ -33,6 +33,19 @@ ADMIN_PASSWORD='choose-a-long-password' go run ./cmd/autoreach create-admin admi
 
 API reference: `http://localhost:8080/swagger/index.html` (source: `docs/swagger/openapi.json`).
 
+## Authorisation
+
+Roles are defined in code, in `config/authorizationPolicy.go`; there is no role enum in the database.
+
+- **Permissions** are `resource:action` strings in one catalogue, for example `resume:update`.
+- **Grants** give a permission at a scope, for example `resume:update:own`. `own` means the resource belongs to the caller's candidate; `any` means every resource. The scope is where attributes of the resource decide access (ABAC).
+- **Roles** are named lists of grants. A user can hold several roles, stored in the `users.roles` array, and gets the union of their grants. Access tokens carry role names only.
+- **API clients** hold grants from a separate allow-list (`job:ingest:any` today), checked by the same middleware.
+
+Routes declare what they need with `middlewares.Authorize(config.PermissionXxx)`. A missing permission is `403`; another candidate's data is `404`. Using an `any` grant on a candidate's data is logged.
+
+To add a role, add an entry to `rolePoliciesI`. To add a permission, add it to the catalogue and grant it to roles. A typo in either stops the server at startup. A new kind of access (for example "candidates assigned to me") is a new scope plus one case in `scopeAllows` in `middlewares/authorize.go`.
+
 ## File storage
 
 `STORAGE_DRIVER` chooses where uploaded files go: `local` (the default, under `STORAGE_LOCAL_DIR`) or `s3` (configured by the `S3_*` settings). `S3_ENDPOINT` and `S3_USE_PATH_STYLE` cover S3-compatible services such as Cloudflare R2 or MinIO. Startup fails if `s3` is chosen and the bucket is missing or unreachable, or if the driver name is unknown. Files already on local disk are not copied across automatically.
