@@ -205,7 +205,8 @@ func (r *ResumeRepo) ListActiveSimilaritiesToJob(
 ) ([]matchingTypes.ResumeSimilarity, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		SELECT resume.id, resume.candidate_id, candidate.min_match_score::float8,
-			(1 - (resume.embedding <=> job.embedding))::float8
+			(1 - (resume.embedding <=> job.embedding))::float8,
+			candidate.auto_outreach_enabled
 		FROM `+r.resumesTable+` AS resume
 		JOIN `+r.candidatesTable+` AS candidate ON candidate.id = resume.candidate_id
 		JOIN `+r.jobPostingsTable+` AS job ON job.id = $1

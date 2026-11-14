@@ -39,10 +39,11 @@ type JobSimilarity struct {
 }
 
 type ResumeSimilarity struct {
-	ResumeID      string
-	CandidateID   string
-	MinMatchScore float64
-	Similarity    float64
+	ResumeID            string
+	CandidateID         string
+	MinMatchScore       float64
+	Similarity          float64
+	AutoOutreachEnabled bool
 }
 
 type MatchResult struct {

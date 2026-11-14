@@ -8,6 +8,7 @@ import (
 	candidateRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/candidateManagement"
 	jobRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/jobManagement"
 	matchingRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/matchingManagement"
+	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
 type MatchingServiceDependencies struct {
@@ -16,6 +17,7 @@ type MatchingServiceDependencies struct {
 	JobPostingRepo     *jobRepo.JobPostingRepo
 	JobMatchRepo       *matchingRepo.JobMatchRepo
 	TransactionManager db.TransactionManager
+	WorkerClient       workerConfigs.IWorkerClient
 }
 
 type MatchingService struct {
@@ -24,6 +26,7 @@ type MatchingService struct {
 	jobPostingRepo     *jobRepo.JobPostingRepo
 	jobMatchRepo       *matchingRepo.JobMatchRepo
 	transactionManager db.TransactionManager
+	workerClient       workerConfigs.IWorkerClient
 }
 
 func NewMatchingService(dependencies MatchingServiceDependencies) (*MatchingService, error) {
@@ -31,7 +34,8 @@ func NewMatchingService(dependencies MatchingServiceDependencies) (*MatchingServ
 		dependencies.ResumeRepo == nil ||
 		dependencies.JobPostingRepo == nil ||
 		dependencies.JobMatchRepo == nil ||
-		dependencies.TransactionManager == nil {
+		dependencies.TransactionManager == nil ||
+		dependencies.WorkerClient == nil {
 		return nil, fmt.Errorf("new matching service: %w", config.ErrMissingDependency)
 	}
 
@@ -41,5 +45,6 @@ func NewMatchingService(dependencies MatchingServiceDependencies) (*MatchingServ
 		jobPostingRepo:     dependencies.JobPostingRepo,
 		jobMatchRepo:       dependencies.JobMatchRepo,
 		transactionManager: dependencies.TransactionManager,
+		workerClient:       dependencies.WorkerClient,
 	}, nil
 }

@@ -3,6 +3,7 @@ package matchingManagement
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -17,6 +18,7 @@ type JobMatchRepo struct {
 	postgres         *db.PostgresConn
 	jobMatchesTable  string
 	jobPostingsTable string
+	jobContactsTable string
 }
 
 func NewJobMatchRepo(postgres *db.PostgresConn) (*JobMatchRepo, error) {
@@ -28,6 +30,7 @@ func NewJobMatchRepo(postgres *db.PostgresConn) (*JobMatchRepo, error) {
 		postgres:         postgres,
 		jobMatchesTable:  config.GetTableName(config.TableJobMatches),
 		jobPostingsTable: config.GetTableName(config.TableJobPostings),
+		jobContactsTable: config.GetTableName(config.TableJobContacts),
 	}, nil
 }
 
@@ -77,6 +80,58 @@ func (r *JobMatchRepo) DeleteStaleForCandidate(
 	return nil
 }
 
+func (r *JobMatchRepo) Exists(ctx context.Context, candidateID, jobID string) (bool, error) {
+	var exists bool
+
+	err := r.postgres.Executor(ctx).QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM `+r.jobMatchesTable+` WHERE candidate_id = $1 AND job_id = $2
+		)
+	`, candidateID, jobID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check job match: %w", err)
+	}
+
+	return exists, nil
+}
+
+func (r *JobMatchRepo) ClaimFanOut(
+	ctx context.Context,
+	candidateID string,
+	minScore float64,
+	claimedAt time.Time,
+) ([]string, error) {
+	rows, err := r.postgres.Executor(ctx).Query(ctx, `
+		UPDATE `+r.jobMatchesTable+`
+		SET fanned_out_at = $3, updated_at = $3
+		WHERE candidate_id = $1 AND match_score >= $2 AND fanned_out_at IS NULL
+		RETURNING job_id::text
+	`, candidateID, minScore, claimedAt)
+	if err != nil {
+		return nil, fmt.Errorf("claim job match fan-out: %w", err)
+	}
+
+	jobIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("claim job match fan-out: %w", err)
+	}
+
+	return jobIDs, nil
+}
+
+func (r *JobMatchRepo) ReleaseFanOut(ctx context.Context, candidateID, jobID string) error {
+	_, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.jobMatchesTable+`
+		SET fanned_out_at = NULL
+		WHERE candidate_id = $1 AND job_id = $2
+	`, candidateID, jobID)
+	if err != nil {
+		return fmt.Errorf("release job match fan-out: %w", err)
+	}
+
+	return nil
+}
+
 func (r *JobMatchRepo) ListForCandidate(
 	ctx context.Context,
 	candidateID string,
@@ -85,7 +140,9 @@ func (r *JobMatchRepo) ListForCandidate(
 ) ([]matchingTypes.MatchedJob, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		SELECT job.id, job.company_name, job.job_title, job.location,
-			match.match_score::float8, job.ats_type, 0, NULL::text, job.created_at
+			match.match_score::float8, job.ats_type,
+			(SELECT COUNT(*) FROM `+r.jobContactsTable+` AS link WHERE link.job_id = job.id)::int,
+			NULL::text, job.created_at
 		FROM `+r.jobMatchesTable+` AS match
 		JOIN `+r.jobPostingsTable+` AS job ON job.id = match.job_id
 		WHERE match.candidate_id = $1 AND match.match_score >= $2

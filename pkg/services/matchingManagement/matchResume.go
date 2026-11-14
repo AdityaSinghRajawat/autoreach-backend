@@ -88,6 +88,8 @@ func (s *MatchingService) MatchResume(
 		return nil, customErr
 	}
 
+	s.fanOutMatches(ctx, candidate.ID, candidate.MinMatchScore, candidate.AutoOutreachEnabled)
+
 	return &matchingTypes.MatchResult{Considered: len(similarities), Stored: len(matches)}, nil
 }
 
