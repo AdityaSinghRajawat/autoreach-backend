@@ -16,7 +16,7 @@ func (s *AuthService) issueSession(
 	candidateID, familyID string,
 ) (*authTypes.SessionResponse, error) {
 	now := utils.GetCurrTimeStamp()
-	principal := sharedTypes.Principal{UserID: user.ID, CandidateID: candidateID, Role: user.Role}
+	principal := sharedTypes.NewUserPrincipal(user.ID, candidateID, user.Roles)
 
 	accessToken, expiresAt, err := utils.IssueAccessToken(principal, now)
 	if err != nil {

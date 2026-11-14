@@ -2,7 +2,6 @@ package authManagement
 
 import (
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,7 +15,7 @@ type APIClient struct {
 	Name       string     `db:"name"         json:"name"       validate:"required,max=100"`
 	KeyPrefix  string     `db:"key_prefix"   json:"keyPrefix"  validate:"required,max=32"`
 	KeyHash    string     `db:"key_hash"     json:"-"          validate:"required,len=64,hexadecimal"`
-	Scopes     []string   `db:"scopes"       json:"scopes"     validate:"required,min=1,dive,oneof=jobs:ingest"`
+	Scopes     []string   `db:"scopes"       json:"scopes"     validate:"required,min=1,unique,dive,validate_api_client_grant"`
 	LastUsedAt *time.Time `db:"last_used_at" json:"lastUsedAt"`
 	RevokedAt  *time.Time `db:"revoked_at"   json:"revokedAt"`
 	CreatedAt  time.Time  `db:"created_at"   json:"createdAt"  validate:"required"`
@@ -44,8 +43,4 @@ func (c *APIClient) Validate() error {
 	}
 
 	return nil
-}
-
-func (c *APIClient) HasScope(scope string) bool {
-	return slices.Contains(c.Scopes, scope)
 }

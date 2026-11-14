@@ -5,7 +5,6 @@ import (
 
 	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
-	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 )
 
 type RegisterRequest struct {
@@ -28,10 +27,10 @@ type LogoutRequest struct {
 }
 
 type UserResponse struct {
-	UserID      string  `json:"userId"`
-	Email       string  `json:"email"`
-	Role        string  `json:"role"`
-	CandidateID *string `json:"candidateId"`
+	UserID      string   `json:"userId"`
+	Email       string   `json:"email"`
+	Roles       []string `json:"roles"`
+	CandidateID *string  `json:"candidateId"`
 }
 
 type SessionResponse struct {
@@ -45,7 +44,6 @@ type SessionResponse struct {
 func (r *RegisterRequest) ToUserModel() *authModel.User {
 	user := authModel.NewUser()
 	user.Email = authModel.NormalizeEmail(r.Email)
-	user.Role = modelHelpers.UserRoleCandidate
 
 	return user
 }
@@ -67,7 +65,7 @@ func NewUserResponse(user *authModel.User, candidateID string) UserResponse {
 	response := UserResponse{
 		UserID: user.ID,
 		Email:  user.Email,
-		Role:   string(user.Role),
+		Roles:  user.Roles,
 	}
 	if candidateID != "" {
 		response.CandidateID = &candidateID

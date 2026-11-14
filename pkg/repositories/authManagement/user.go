@@ -9,7 +9,7 @@ import (
 	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
 )
 
-const userColumns = `id, email, password_hash, role::text, is_active, created_at, updated_at`
+const userColumns = `id, email, password_hash, roles, is_active, created_at, updated_at`
 
 type UserRepo struct {
 	postgres   *db.PostgresConn
@@ -29,17 +29,15 @@ func NewUserRepo(postgres *db.PostgresConn) (*UserRepo, error) {
 
 func (r *UserRepo) Upsert(ctx context.Context, user *authModel.User) (*authModel.User, error) {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
-		INSERT INTO `+r.usersTable+` (
-			id, email, password_hash, role, is_active, created_at, updated_at
-		)
-		VALUES ($1, $2, $3, $4::user_role, $5, $6, $7)
+		INSERT INTO `+r.usersTable+` (`+userColumns+`)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (id) DO UPDATE SET
 			email = EXCLUDED.email,
 			password_hash = EXCLUDED.password_hash,
-			role = EXCLUDED.role,
+			roles = EXCLUDED.roles,
 			is_active = EXCLUDED.is_active,
 			updated_at = EXCLUDED.updated_at
-	`, user.ID, user.Email, user.PasswordHash, string(user.Role), user.IsActive,
+	`, user.ID, user.Email, user.PasswordHash, user.Roles, user.IsActive,
 		user.CreatedAt, user.UpdatedAt,
 	)
 	if err != nil {
@@ -78,7 +76,7 @@ func scanUser(row db.RowScanner) (*authModel.User, error) {
 	user := authModel.User{}
 
 	err := row.Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.Role,
+		&user.ID, &user.Email, &user.PasswordHash, &user.Roles,
 		&user.IsActive, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {

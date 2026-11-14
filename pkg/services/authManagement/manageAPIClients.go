@@ -13,6 +13,7 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	authTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/authManagement"
+	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
@@ -93,11 +94,11 @@ func (s *AuthService) RevokeAPIClient(ctx context.Context, clientID string) *con
 
 func (s *AuthService) VerifyAPIKey(
 	ctx context.Context,
-	apiKey, requiredScope string,
-) *config.CustomError {
+	apiKey string,
+) (*sharedTypes.Principal, *config.CustomError) {
 	parts := strings.SplitN(apiKey, config.GetAPIKeySeparator(), 3)
 	if len(parts) != 3 || parts[0] != config.GetAPIKeyPrefix() {
-		return config.NewCustomError(
+		return nil, config.NewCustomError(
 			fmt.Errorf("verify api key: %w", config.ErrAPIKeyInvalid),
 			config.GetErrCodeUnauthorized(),
 		)
@@ -108,23 +109,16 @@ func (s *AuthService) VerifyAPIKey(
 		parts[0]+config.GetAPIKeySeparator()+parts[1],
 	)
 	if err != nil {
-		return config.NewCustomError(
+		return nil, config.NewCustomError(
 			fmt.Errorf("verify api key: %w", err),
 			config.GetErrCodeInternalServerError(),
 		)
 	}
 
 	if client == nil || !matchesKeyHash(client, apiKey) {
-		return config.NewCustomError(
+		return nil, config.NewCustomError(
 			fmt.Errorf("verify api key: %w", config.ErrAPIKeyInvalid),
 			config.GetErrCodeUnauthorized(),
-		)
-	}
-
-	if !client.HasScope(requiredScope) {
-		return config.NewCustomError(
-			fmt.Errorf("verify api key: %w", config.ErrAPIKeyScopeMissing),
-			config.GetErrCodeForbidden(),
 		)
 	}
 
@@ -136,7 +130,9 @@ func (s *AuthService) VerifyAPIKey(
 		}
 	})
 
-	return nil
+	principal := sharedTypes.NewAPIClientPrincipal(client.ID, client.Scopes)
+
+	return &principal, nil
 }
 
 func matchesKeyHash(client *authModel.APIClient, apiKey string) bool {

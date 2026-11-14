@@ -7,19 +7,19 @@ import (
 
 	"github.com/google/uuid"
 
-	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
 )
 
 type User struct {
-	ID           string                `db:"id"            json:"userId"    validate:"required,uuid"`
-	Email        string                `db:"email"         json:"email"     validate:"required,email,max=255"`
-	PasswordHash string                `db:"password_hash" json:"-"         validate:"required"`
-	Role         modelHelpers.UserRole `db:"role"          json:"role"      validate:"required,oneof=CANDIDATE ADMIN"`
-	IsActive     bool                  `db:"is_active"     json:"isActive"`
-	CreatedAt    time.Time             `db:"created_at"    json:"createdAt" validate:"required"`
-	UpdatedAt    time.Time             `db:"updated_at"    json:"updatedAt" validate:"required"`
+	ID           string    `db:"id"            json:"userId"    validate:"required,uuid"`
+	Email        string    `db:"email"         json:"email"     validate:"required,email,max=255"`
+	PasswordHash string    `db:"password_hash" json:"-"         validate:"required"`
+	Roles        []string  `db:"roles"         json:"roles"     validate:"required,min=1,unique,dive,validate_role"`
+	IsActive     bool      `db:"is_active"     json:"isActive"`
+	CreatedAt    time.Time `db:"created_at"    json:"createdAt" validate:"required"`
+	UpdatedAt    time.Time `db:"updated_at"    json:"updatedAt" validate:"required"`
 }
 
 func NewUser() *User {
@@ -27,7 +27,7 @@ func NewUser() *User {
 
 	return &User{
 		ID:        uuid.NewString(),
-		Role:      modelHelpers.UserRoleCandidate,
+		Roles:     config.GetDefaultSignupRoles(),
 		IsActive:  true,
 		CreatedAt: now,
 		UpdatedAt: now,

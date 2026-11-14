@@ -1,17 +1,33 @@
 package shared
 
-import modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+import (
+	"slices"
+
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+)
 
 type Principal struct {
-	UserID      string
+	Kind        config.PrincipalKind
+	Subject     string
 	CandidateID string
-	Role        modelHelpers.UserRole
+	Roles       []string
+	Grants      config.ScopesByGrant
 }
 
-func (p Principal) CanAccessCandidate(candidateID string) bool {
-	if p.Role.IsAdmin() {
-		return true
+func NewUserPrincipal(userID, candidateID string, roles []string) Principal {
+	return Principal{
+		Kind:        config.PrincipalKindUser,
+		Subject:     userID,
+		CandidateID: candidateID,
+		Roles:       slices.Clone(roles),
+		Grants:      config.ResolveRoleGrants(roles),
 	}
+}
 
-	return p.CandidateID != "" && p.CandidateID == candidateID
+func NewAPIClientPrincipal(clientID string, grants []string) Principal {
+	return Principal{
+		Kind:    config.PrincipalKindAPIClient,
+		Subject: clientID,
+		Grants:  config.ResolveAPIClientGrants(grants),
+	}
 }

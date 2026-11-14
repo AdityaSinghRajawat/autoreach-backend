@@ -7,7 +7,6 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
-	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
@@ -37,7 +36,7 @@ func (s *AuthService) CreateAdmin(
 	user := authModel.NewUser()
 	user.Email = authModel.NormalizeEmail(email)
 	user.PasswordHash = passwordHash
-	user.Role = modelHelpers.UserRoleAdmin
+	user.Roles = []string{config.RoleAdmin}
 
 	if err := user.Validate(); err != nil {
 		return nil, config.NewCustomError(

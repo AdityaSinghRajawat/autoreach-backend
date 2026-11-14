@@ -11,12 +11,11 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
-	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 )
 
 type accessTokenClaims struct {
-	Role        string `json:"role"`
-	CandidateID string `json:"cid,omitempty"`
+	Roles       []string `json:"roles"`
+	CandidateID string   `json:"cid,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -26,11 +25,11 @@ func IssueAccessToken(
 ) (string, time.Time, error) {
 	expiresAt := issuedAt.Add(config.GetAccessTokenTTL())
 	claims := accessTokenClaims{
-		Role:        string(principal.Role),
+		Roles:       principal.Roles,
 		CandidateID: principal.CandidateID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    config.GetTokenIssuer(),
-			Subject:   principal.UserID,
+			Subject:   principal.Subject,
 			ID:        uuid.NewString(),
 			IssuedAt:  jwt.NewNumericDate(issuedAt),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
@@ -61,16 +60,11 @@ func ParseAccessToken(raw string) (sharedTypes.Principal, error) {
 		return sharedTypes.Principal{}, fmt.Errorf("%w: %w", config.ErrInvalidToken, err)
 	}
 
-	role := modelHelpers.UserRole(claims.Role)
-	if claims.Subject == "" || !role.IsValid() {
+	if claims.Subject == "" || len(claims.Roles) == 0 {
 		return sharedTypes.Principal{}, fmt.Errorf("%w: incomplete claims", config.ErrInvalidToken)
 	}
 
-	return sharedTypes.Principal{
-		UserID:      claims.Subject,
-		CandidateID: claims.CandidateID,
-		Role:        role,
-	}, nil
+	return sharedTypes.NewUserPrincipal(claims.Subject, claims.CandidateID, claims.Roles), nil
 }
 
 func NewOpaqueToken() (string, string, error) {

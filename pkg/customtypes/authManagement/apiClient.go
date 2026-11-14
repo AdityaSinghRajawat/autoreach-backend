@@ -8,7 +8,7 @@ import (
 
 type CreateAPIClientRequest struct {
 	Name   string   `json:"name"   validate:"required,max=100"`
-	Scopes []string `json:"scopes" validate:"required,min=1,dive,oneof=jobs:ingest"`
+	Scopes []string `json:"scopes" validate:"required,min=1,unique,dive,validate_api_client_grant"`
 }
 
 type CreateAPIClientResponse struct {

@@ -14,7 +14,7 @@ func (s *AuthService) GetCurrentUser(
 	ctx context.Context,
 	principal sharedTypes.Principal,
 ) (*authTypes.UserResponse, *config.CustomError) {
-	user, candidateID, err := s.findActiveUserWithCandidate(ctx, principal.UserID)
+	user, candidateID, err := s.findActiveUserWithCandidate(ctx, principal.Subject)
 	if errors.Is(err, config.ErrUserInactive) {
 		return nil, config.NewCustomError(
 			fmt.Errorf("get current user: %w", err),
