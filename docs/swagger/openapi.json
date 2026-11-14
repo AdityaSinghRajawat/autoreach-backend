@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "AutoReach API",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "description": "REST API for the AutoReach career automation and outreach platform. All JSON keys are camelCase and every response uses the standard envelope."
   },
   "servers": [
@@ -140,6 +140,9 @@
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -198,6 +201,9 @@
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -257,6 +263,9 @@
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -287,6 +296,9 @@
           },
           "422": {
             "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -331,6 +343,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -387,11 +402,14 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       },
@@ -448,14 +466,17 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
           "422": {
             "$ref": "#/components/responses/ValidationError"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -579,11 +600,14 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -648,6 +672,9 @@
           },
           "422": {
             "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       },
@@ -696,6 +723,9 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -735,6 +765,9 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -814,6 +847,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
@@ -823,8 +859,11 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       },
@@ -871,11 +910,14 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -941,11 +983,14 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       },
@@ -1002,6 +1047,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
@@ -1011,8 +1059,8 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       },
@@ -1034,11 +1082,14 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -1136,14 +1187,17 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
           "422": {
             "$ref": "#/components/responses/ValidationError"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -1231,11 +1285,14 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -1305,11 +1362,14 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -1376,11 +1436,17 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -1455,6 +1521,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -2531,12 +2600,23 @@
         }
       },
       "RateLimited": {
-        "description": "Too many requests",
+        "description": "Too many requests. Retry-After gives the seconds to wait.",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ErrorEnvelope"
             }
+          }
+        },
+        "headers": {
+          "Retry-After": {
+            "$ref": "#/components/headers/RetryAfter"
+          },
+          "RateLimit": {
+            "$ref": "#/components/headers/RateLimit"
+          },
+          "RateLimit-Policy": {
+            "$ref": "#/components/headers/RateLimitPolicy"
           }
         }
       },
@@ -2558,6 +2638,37 @@
               "$ref": "#/components/schemas/ErrorEnvelope"
             }
           }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "A dependency the request needs is temporarily unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      }
+    },
+    "headers": {
+      "RetryAfter": {
+        "description": "Seconds until the request may be retried.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "RateLimit": {
+        "description": "Remaining allowance per policy (draft-ietf-httpapi-ratelimit-headers): r is the requests left and t the seconds until one more is available, for example \"user\";r=42;t=1.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "RateLimitPolicy": {
+        "description": "Policies applied to the request, for example \"user\";q=600;w=60.",
+        "schema": {
+          "type": "string"
         }
       }
     }

@@ -46,6 +46,26 @@ Routes declare what they need with `middlewares.Authorize(config.PermissionXxx)`
 
 To add a role, add an entry to `rolePoliciesI`. To add a permission, add it to the catalogue and grant it to roles. A typo in either stops the server at startup. A new kind of access (for example "candidates assigned to me") is a new scope plus one case in `scopeAllows` in `middlewares/authorize.go`.
 
+## Rate limiting
+
+Limits use GCRA (the generic cell rate algorithm) in Redis: one key per subject and one atomic script per check, so every API and worker replica shares the same limits. Each policy allows a burst, then spaces requests evenly over its period, so there is no extra burst at window edges.
+
+Policies are named in `config/rateLimitPolicy.go` and tuned with `RATE_LIMIT_<NAME>`, `_PERIOD` and `_BURST`:
+
+| Policy | Applies to | Keyed by | If Redis is down |
+|---|---|---|---|
+| `ip` | every `/api/v1` request | client IP | allow |
+| `auth` | register, login, refresh | client IP | refuse (503) |
+| `login_account` | failed logins | account (email digest) | refuse (503) |
+| `user` | authenticated requests | user | allow |
+| `api_client` | API-key requests | API client | allow |
+| `resume_upload` | resume uploads | user | refuse (503) |
+| `contact_enrich` | enrichment requests | user | refuse (503) |
+
+Routes add a policy with `middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyXxx)`. Responses follow draft-ietf-httpapi-ratelimit-headers: `RateLimit-Policy: "user";q=600;w=60` describes each policy and `RateLimit: "user";r=42;t=1` gives the remaining allowance and the seconds until one more request is available (omitted when the allowance is full). A `429` also carries `Retry-After`. `login_account` counts only failed logins and publishes no `RateLimit` fields, so they cannot reveal another account's failures. CORS exposes these headers to browsers. Enrichment providers use the same limiter with their own `<PROVIDER>_RATE_LIMIT`, `_RATE_WINDOW` and `_RATE_BURST`.
+
+The client IP is the TCP peer unless `TRUSTED_PROXIES` lists the proxy in front of the API, or `TRUSTED_PLATFORM` names the edge header (such as `CF-Connecting-IP`). Without this, `X-Forwarded-For` would let any caller choose its own IP and get past the limits.
+
 ## File storage
 
 `STORAGE_DRIVER` chooses where uploaded files go: `local` (the default, under `STORAGE_LOCAL_DIR`) or `s3` (configured by the `S3_*` settings). `S3_ENDPOINT` and `S3_USE_PATH_STYLE` cover S3-compatible services such as Cloudflare R2 or MinIO. Startup fails if `s3` is chosen and the bucket is missing or unreachable, or if the driver name is unknown. Files already on local disk are not copied across automatically.
