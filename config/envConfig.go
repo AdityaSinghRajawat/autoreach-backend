@@ -133,6 +133,7 @@ func Init() {
 		loadTableNames()
 		loadEnrichmentConfig()
 		loadStorageConfig()
+		loadAuthorizationPolicy()
 		enforceProductionRequirements()
 	})
 }

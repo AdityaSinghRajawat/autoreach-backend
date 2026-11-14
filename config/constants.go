@@ -71,7 +71,6 @@ type jobConstants struct {
 	apiKeyPrefix       string
 	apiKeyPrefixBytes  int
 	apiKeySecretBytes  int
-	scopeJobsIngest    string
 	maxIngestBatchSize int
 	hashVersion        string
 	lockNamespace      string
@@ -96,7 +95,6 @@ var constI = constants{
 		apiKeyPrefix:       "ark",
 		apiKeyPrefixBytes:  6,
 		apiKeySecretBytes:  32,
-		scopeJobsIngest:    "jobs:ingest",
 		maxIngestBatchSize: 500,
 		hashVersion:        "v1",
 		lockNamespace:      "lock",
@@ -213,7 +211,6 @@ func GetAPIKeyHeader() string    { return constI.job.apiKeyHeader }
 func GetAPIKeyPrefix() string    { return constI.job.apiKeyPrefix }
 func GetAPIKeyPrefixBytes() int  { return constI.job.apiKeyPrefixBytes }
 func GetAPIKeySecretBytes() int  { return constI.job.apiKeySecretBytes }
-func GetScopeJobsIngest() string { return constI.job.scopeJobsIngest }
 func GetMaxIngestBatchSize() int { return constI.job.maxIngestBatchSize }
 func GetJobHashVersion() string  { return constI.job.hashVersion }
 func GetLockNamespace() string   { return constI.job.lockNamespace }
