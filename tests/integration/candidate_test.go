@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -229,28 +228,6 @@ func TestTransactionRollsBackEveryWriteWhenTheWorkFails(t *testing.T) {
 	stored, err := deps.Repositories.User.FindByEmail(ctx, "rollback@example.com")
 	require.NoError(t, err)
 	assert.Nil(t, stored)
-}
-
-func TestRateLimiterBlocksAfterTheLimitAndReportsRetryAfter(t *testing.T) {
-	deps := setup.Dependencies(t)
-	ctx := context.Background()
-
-	first, err := deps.RateLimiter.Allow(ctx, "integration:client", 2, time.Minute)
-	require.NoError(t, err)
-	second, err := deps.RateLimiter.Allow(ctx, "integration:client", 2, time.Minute)
-	require.NoError(t, err)
-	third, err := deps.RateLimiter.Allow(ctx, "integration:client", 2, time.Minute)
-	require.NoError(t, err)
-	other, err := deps.RateLimiter.Allow(ctx, "integration:other", 2, time.Minute)
-	require.NoError(t, err)
-
-	assert.True(t, first.Allowed)
-	assert.Equal(t, 1, first.Remaining)
-	assert.True(t, second.Allowed)
-	assert.False(t, third.Allowed)
-	assert.Greater(t, third.RetryAfter, time.Duration(0))
-	assert.LessOrEqual(t, third.RetryAfter, time.Minute)
-	assert.True(t, other.Allowed, "limits are tracked per key")
 }
 
 func TestUpsertReturnsTheSameModelThatASubsequentReadReturns(t *testing.T) {

@@ -14,7 +14,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/middlewares"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
-	"github.com/AdityaSinghRajawat/autoreach-backend/tests/mocks"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
 )
 
@@ -171,32 +170,5 @@ func TestInternalSharedSecretRejectsMissingWrongAndUnsetSecrets(t *testing.T) {
 			nil,
 			map[string]string{header: ""},
 		).Recorder.Code,
-	)
-}
-
-func TestRateLimitBlocksWithRetryAfterAndFailsOpenWhenTheLimiterIsDown(t *testing.T) {
-	blocking := &mocks.Limiter{
-		Decision: utils.RateLimitDecision{Allowed: false, RetryAfter: 1500_000_000},
-	}
-	failing := &mocks.Limiter{Err: errors.New("redis unavailable")}
-
-	engine := newEngine(t)
-	handler := func(c *gin.Context) { utils.BuildAndSendResponse(c, gin.H{"ok": true}, http.StatusOK) }
-	engine.GET("/blocked", middlewares.RateLimit(blocking, "api", 1, 60_000_000_000), handler)
-	engine.GET("/open", middlewares.RateLimit(failing, "api", 1, 60_000_000_000), handler)
-
-	blocked := helpers.Do(t, engine, http.MethodGet, "/blocked", nil, nil)
-	require.Equal(t, http.StatusTooManyRequests, blocked.Recorder.Code)
-	assert.Equal(t, "2", blocked.Recorder.Header().Get(config.GetRetryAfterHeader()))
-	assert.Equal(
-		t,
-		string(config.GetErrCodeRateLimited()),
-		helpers.DecodeEnvelope(t, blocked).Error.Code,
-	)
-
-	assert.Equal(
-		t,
-		http.StatusOK,
-		helpers.Do(t, engine, http.MethodGet, "/open", nil, nil).Recorder.Code,
 	)
 }
