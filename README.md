@@ -33,11 +33,15 @@ ADMIN_PASSWORD='choose-a-long-password' go run ./cmd/autoreach create-admin admi
 
 API reference: `http://localhost:8080/swagger/index.html` (source: `docs/swagger/openapi.json`).
 
+## File storage
+
+`STORAGE_DRIVER` chooses where uploaded files go: `local` (the default, under `STORAGE_LOCAL_DIR`) or `s3` (configured by the `S3_*` settings). `S3_ENDPOINT` and `S3_USE_PATH_STYLE` cover S3-compatible services such as Cloudflare R2 or MinIO. Startup fails if `s3` is chosen and the bucket is missing or unreachable, or if the driver name is unknown. Files already on local disk are not copied across automatically.
+
 ## Tests
 
 ```bash
 make test-unit                  # no infrastructure
-make test-up                    # throwaway postgres :55432 and redis :56379
+make test-up                    # throwaway postgres :55432, redis :56379, S3 mock :59090
 make test-integration           # real database, real queue; -p 1
 make test-down
 make tools                      # install the pinned golangci-lint
@@ -69,7 +73,8 @@ pkg/services       use cases; one per file
 pkg/repositories   SQL, one file per table
 pkg/models         persisted shapes and enums
 pkg/customtypes    request, response and result shapes
-pkg/integrations   third-party API clients
+pkg/integrations   clients for third-party HTTP APIs (OpenAI, enrichment providers)
+pkg/storage        file storage: local disk (default) or S3, chosen by STORAGE_DRIVER
 pkg/db             pools, transactions
 pkg/utils          logging, HTTP helpers, hashing, tokens, rate limiter, locks
 worker             queue contracts, publisher, asynq adapter, task handlers
