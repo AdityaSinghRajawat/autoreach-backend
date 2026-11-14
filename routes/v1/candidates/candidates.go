@@ -18,20 +18,63 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 	candidateGroup := group.Group(
 		"/candidates/:"+config.GetCandidateIDParam(),
 		middlewares.AuthenticateUser(),
-		middlewares.TenantScope(),
 	)
-	candidateGroup.GET("", candidateHandler.GetCandidate)
-	candidateGroup.PATCH("", candidateHandler.UpdateCandidate)
+	candidateGroup.GET(
+		"",
+		middlewares.Authorize(config.PermissionCandidateRead),
+		candidateHandler.GetCandidate,
+	)
+	candidateGroup.PATCH(
+		"",
+		middlewares.Authorize(config.PermissionCandidateUpdate),
+		candidateHandler.UpdateCandidate,
+	)
 
-	candidateGroup.POST("/resumes", candidateHandler.UploadResume)
-	candidateGroup.GET("/resumes", candidateHandler.ListResumes)
-	candidateGroup.GET(resumePath, candidateHandler.GetResume)
-	candidateGroup.PATCH(resumePath, candidateHandler.UpdateResume)
-	candidateGroup.DELETE(resumePath, candidateHandler.DeleteResume)
+	candidateGroup.POST(
+		"/resumes",
+		middlewares.Authorize(config.PermissionResumeCreate),
+		candidateHandler.UploadResume,
+	)
+	candidateGroup.GET(
+		"/resumes",
+		middlewares.Authorize(config.PermissionResumeRead),
+		candidateHandler.ListResumes,
+	)
+	candidateGroup.GET(
+		resumePath,
+		middlewares.Authorize(config.PermissionResumeRead),
+		candidateHandler.GetResume,
+	)
+	candidateGroup.PATCH(
+		resumePath,
+		middlewares.Authorize(config.PermissionResumeUpdate),
+		candidateHandler.UpdateResume,
+	)
+	candidateGroup.DELETE(
+		resumePath,
+		middlewares.Authorize(config.PermissionResumeDelete),
+		candidateHandler.DeleteResume,
+	)
 
-	candidateGroup.GET("/jobs", matchingHandler.ListMatchedJobs)
+	candidateGroup.GET(
+		"/jobs",
+		middlewares.Authorize(config.PermissionMatchRead),
+		matchingHandler.ListMatchedJobs,
+	)
 
-	candidateGroup.GET("/contacts", enrichmentHandler.ListCandidateContacts)
-	candidateGroup.GET(jobContactsPath, enrichmentHandler.ListJobContacts)
-	candidateGroup.POST(jobContactsPath+"/enrich", enrichmentHandler.RequestJobEnrichment)
+	candidateGroup.GET(
+		"/contacts",
+		middlewares.Authorize(config.PermissionContactRead),
+		enrichmentHandler.ListCandidateContacts,
+	)
+	candidateGroup.GET(
+		jobContactsPath,
+		middlewares.Authorize(config.PermissionContactRead),
+		enrichmentHandler.ListJobContacts,
+	)
+	candidateGroup.POST(
+		jobContactsPath+"/enrich",
+		middlewares.Authorize(config.PermissionContactEnrich),
+		enrichmentHandler.RequestJobEnrichment,
+	)
 }

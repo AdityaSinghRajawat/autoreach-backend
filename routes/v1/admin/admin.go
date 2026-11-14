@@ -6,18 +6,25 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/middlewares"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/dependencies"
-	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 )
 
 func LoadAdminRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 	authHandler := deps.Handlers.Auth
 
-	adminGroup := group.Group(
-		"/admin",
-		middlewares.AuthenticateUser(),
-		middlewares.RequireRole(modelHelpers.UserRoleAdmin),
+	adminGroup := group.Group("/admin", middlewares.AuthenticateUser())
+	adminGroup.POST(
+		"/api-clients",
+		middlewares.Authorize(config.PermissionAPIClientCreate),
+		authHandler.CreateAPIClient,
 	)
-	adminGroup.POST("/api-clients", authHandler.CreateAPIClient)
-	adminGroup.GET("/api-clients", authHandler.ListAPIClients)
-	adminGroup.DELETE("/api-clients/:"+config.GetClientIDParam(), authHandler.RevokeAPIClient)
+	adminGroup.GET(
+		"/api-clients",
+		middlewares.Authorize(config.PermissionAPIClientRead),
+		authHandler.ListAPIClients,
+	)
+	adminGroup.DELETE(
+		"/api-clients/:"+config.GetClientIDParam(),
+		middlewares.Authorize(config.PermissionAPIClientRevoke),
+		authHandler.RevokeAPIClient,
+	)
 }
