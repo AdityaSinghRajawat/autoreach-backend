@@ -1,0 +1,65 @@
+version: "2"
+
+run:
+  build-tags:
+    - integration
+  timeout: 5m
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+    - gci
+    - golines
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/AdityaSinghRajawat/autoreach-backend
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/AdityaSinghRajawat/autoreach-backend)
+      custom-order: true
+    golines:
+      max-len: 100
+      tab-len: 4
+      shorten-comments: false
+      reformat-tags: false
+      chain-split-dots: true
+
+linters:
+  default: standard
+  enable:
+    - wsl_v5
+    - nlreturn
+    - whitespace
+    - errorlint
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck
+    - noctx
+    - unconvert
+    - misspell
+    - nolintlint
+  settings:
+    nlreturn:
+      block-size: 1
+    whitespace:
+      multi-if: false
+      multi-func: false
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+  exclusions:
+    generated: strict
+    rules:
+      - path: tests/
+        linters:
+          - noctx
+          - bodyclose
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

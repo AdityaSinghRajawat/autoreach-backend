@@ -1,0 +1,109 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-local}
+  PORT: 8080
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_USER: ${DB_USER:-autoreach}
+  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+  DB_NAME: ${DB_NAME:-autoreach}
+  DB_SCHEMA: ${DB_SCHEMA:-autoreach}
+  DB_SSLMODE: disable
+  REDIS_ADDR: redis:6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+  INTERNAL_SHARED_SECRET: ${INTERNAL_SHARED_SECRET:-}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-10}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    shm_size: "1gb"
+    environment:
+      POSTGRES_USER: ${DB_USER:-autoreach}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:-autoreach}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-autoreach} -d ${DB_NAME:-autoreach}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *default-logging
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    logging: *default-logging
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://${DB_USER:-autoreach}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-autoreach}?sslmode=disable&search_path=${DB_SCHEMA:-autoreach},public"
+      - "up"
+    logging: *default-logging
+
+  server:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    environment: *app-env
+    ports:
+      - "127.0.0.1:8080:8080"
+    stop_grace_period: 45s
+    mem_limit: 512m
+    logging: *default-logging
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    environment: *app-env
+    ports:
+      - "127.0.0.1:8081:8080"
+    stop_grace_period: 45s
+    mem_limit: 512m
+    logging: *default-logging
+
+volumes:
+  postgres-data:
+  redis-data:

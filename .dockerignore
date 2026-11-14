@@ -1,0 +1,15 @@
+.git
+.github
+.local
+.idea
+.vscode
+bin
+tmp
+logs
+tests
+*.exe
+*.out
+.env*
+!.env.example
+docker-compose*.yml
+README.md

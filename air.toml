@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/bin/app.exe ./cmd/autoreach"
+bin = "./tmp/bin/app.exe"
+include_ext = ["go", "sql", "json"]
+exclude_dir = ["tmp", "bin", "logs", "tests", "docs/swagger/node_modules", ".git"]
+delay = 500
+stop_on_error = true
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true

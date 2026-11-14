@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    shm_size: "1gb"
+    environment:
+      POSTGRES_USER: autoreach
+      POSTGRES_PASSWORD: autoreach
+      POSTGRES_DB: autoreach
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+      - ./scripts/initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autoreach -d autoreach"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.2-alpine
+    command: ["redis-server", "--requirepass", "autoreach"]
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://autoreach:autoreach@postgres:5432/autoreach?sslmode=disable&search_path=autoreach,public"
+      - "up"
+
+volumes:
+  postgres-dev-data:

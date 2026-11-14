@@ -1,0 +1,17 @@
+bin/
+tmp/
+logs/
+data/
+*.exe
+*.out
+coverage.html
+
+.env
+.env.*
+!.env.example
+!.env.test
+
+.local/
+.idea/
+.vscode/
+.DS_Store
