@@ -137,6 +137,7 @@ func Init() {
 		loadChannelAccountConfig()
 		loadOutreachConfig()
 		loadLinkedinConfig()
+		loadApplicationConfig()
 		enforceProductionRequirements()
 	})
 }

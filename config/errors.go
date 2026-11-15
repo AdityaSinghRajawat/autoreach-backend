@@ -92,15 +92,21 @@ var (
 	ErrLinkedinNoteTooLong    = errors.New(
 		"a LinkedIn connection note must be at most 300 characters",
 	)
-	ErrContactHasNoLinkedin    = errors.New("contact has no LinkedIn profile")
-	ErrConnectionNotAccepted   = errors.New("the connection request was not accepted in time")
-	ErrConfirmationNotAllowed  = errors.New("this message cannot move to that status")
-	ErrUnknownLinkedinProvider = errors.New("unknown LinkedIn provider")
-	ErrMessageFieldRequired    = errors.New("is required for the selected channel")
-	ErrRateLimiterUnavailable  = errors.New("rate limiter is unavailable")
-	ErrTrailingRequestData     = errors.New("unexpected trailing data")
-	ErrUnexpectedRedisReply    = errors.New("unexpected redis reply")
-	ErrEmbeddingCountMismatch  = errors.New(
+	ErrContactHasNoLinkedin       = errors.New("contact has no LinkedIn profile")
+	ErrConnectionNotAccepted      = errors.New("the connection request was not accepted in time")
+	ErrConfirmationNotAllowed     = errors.New("this message cannot move to that status")
+	ErrUnknownLinkedinProvider    = errors.New("unknown LinkedIn provider")
+	ErrMessageFieldRequired       = errors.New("is required for the selected channel")
+	ErrApplicationNotFound        = errors.New("application not found")
+	ErrApplicationTransition      = errors.New("the application cannot move to that status")
+	ErrNoActiveResume             = errors.New("the candidate has no active resume")
+	ErrUnsupportedApplicationForm = errors.New("unsupported application form")
+	ErrATSRateLimited             = errors.New("application site rate limit reached")
+	ErrATSRejected                = errors.New("the application site rejected the submission")
+	ErrRateLimiterUnavailable     = errors.New("rate limiter is unavailable")
+	ErrTrailingRequestData        = errors.New("unexpected trailing data")
+	ErrUnexpectedRedisReply       = errors.New("unexpected redis reply")
+	ErrEmbeddingCountMismatch     = errors.New(
 		"embedder returned a different number of vectors",
 	)
 	ErrMalformedEmbedding = errors.New("malformed embedding")

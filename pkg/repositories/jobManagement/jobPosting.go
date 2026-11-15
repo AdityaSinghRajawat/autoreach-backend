@@ -117,6 +117,27 @@ func (r *JobPostingRepo) FindByID(ctx context.Context, jobID string) (*jobModel.
 	return db.FindOne(row, scanJobPosting, "find job posting")
 }
 
+func (r *JobPostingRepo) ListByIDs(
+	ctx context.Context,
+	jobIDs []string,
+) ([]*jobModel.JobPosting, error) {
+	rows, err := r.postgres.Executor(ctx).Query(ctx, `
+		SELECT `+jobPostingColumns+` FROM `+r.jobPostingsTable+` WHERE id = ANY($1)
+	`, jobIDs)
+	if err != nil {
+		return nil, fmt.Errorf("list jobs by id: %w", err)
+	}
+
+	jobs, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (*jobModel.JobPosting, error) {
+		return scanJobPosting(row)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list jobs by id: %w", err)
+	}
+
+	return jobs, nil
+}
+
 func (r *JobPostingRepo) ListEmbeddingSources(
 	ctx context.Context,
 	jobIDs []string,

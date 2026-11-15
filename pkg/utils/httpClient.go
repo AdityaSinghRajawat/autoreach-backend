@@ -7,11 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"strings"
 	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 )
 
 type APIError struct {
@@ -58,30 +61,98 @@ func (c *HttpClient) Post(
 	return c.do(ctx, http.MethodPost, endpoint, headers, payload, result)
 }
 
+func (c *HttpClient) PostMultipart(
+	ctx context.Context,
+	endpoint string,
+	headers map[string]string,
+	fields map[string][]string,
+	files []sharedTypes.MultipartFile,
+	result any,
+) error {
+	var body bytes.Buffer
+
+	writer := multipart.NewWriter(&body)
+
+	for name, values := range fields {
+		for _, value := range values {
+			if err := writer.WriteField(name, value); err != nil {
+				return fmt.Errorf("encode multipart field: %w", err)
+			}
+		}
+	}
+
+	for _, file := range files {
+		part, err := writer.CreatePart(textproto.MIMEHeader{
+			"Content-Disposition": {
+				`form-data; name="` + file.FieldName + `"; filename="` + file.FileName + `"`,
+			},
+			"Content-Type": {file.ContentType},
+		})
+		if err != nil {
+			return fmt.Errorf("encode multipart file: %w", err)
+		}
+
+		if _, err := part.Write(file.Content); err != nil {
+			return fmt.Errorf("encode multipart file: %w", err)
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("encode multipart body: %w", err)
+	}
+
+	return c.send(
+		ctx,
+		http.MethodPost,
+		endpoint,
+		headers,
+		&body,
+		writer.FormDataContentType(),
+		result,
+	)
+}
+
 func (c *HttpClient) do(
 	ctx context.Context,
 	method, endpoint string,
 	headers map[string]string,
 	payload, result any,
 ) error {
-	var body io.Reader
-
-	if payload != nil {
-		encoded, err := json.Marshal(payload)
-		if err != nil {
-			return fmt.Errorf("encode request body: %w", err)
-		}
-
-		body = bytes.NewReader(encoded)
+	if payload == nil {
+		return c.send(ctx, method, endpoint, headers, nil, "", result)
 	}
 
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("encode request body: %w", err)
+	}
+
+	return c.send(
+		ctx,
+		method,
+		endpoint,
+		headers,
+		bytes.NewReader(encoded),
+		config.GetJSONContentType(),
+		result,
+	)
+}
+
+func (c *HttpClient) send(
+	ctx context.Context,
+	method, endpoint string,
+	headers map[string]string,
+	body io.Reader,
+	contentType string,
+	result any,
+) error {
 	request, err := http.NewRequestWithContext(ctx, method, c.baseURL+endpoint, body)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
 
-	if payload != nil {
-		request.Header.Set(config.GetContentTypeHeader(), config.GetJSONContentType())
+	if contentType != "" {
+		request.Header.Set(config.GetContentTypeHeader(), contentType)
 	}
 
 	request.Header.Set(config.GetAcceptHeader(), config.GetJSONContentType())

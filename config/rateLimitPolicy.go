@@ -28,15 +28,16 @@ const (
 	RateLimitKeyPrincipal RateLimitKey = "principal"
 	RateLimitKeyAccount   RateLimitKey = "account"
 
-	RateLimitPolicyIP             RateLimitPolicyName = "ip"
-	RateLimitPolicyAuth           RateLimitPolicyName = "auth"
-	RateLimitPolicyLoginAccount   RateLimitPolicyName = "login_account"
-	RateLimitPolicyUser           RateLimitPolicyName = "user"
-	RateLimitPolicyAPIClient      RateLimitPolicyName = "api_client"
-	RateLimitPolicyResumeUpload   RateLimitPolicyName = "resume_upload"
-	RateLimitPolicyContactEnrich  RateLimitPolicyName = "contact_enrich"
-	RateLimitPolicyMailboxVerify  RateLimitPolicyName = "mailbox_verify"
-	RateLimitPolicyOutreachCreate RateLimitPolicyName = "outreach_create"
+	RateLimitPolicyIP                RateLimitPolicyName = "ip"
+	RateLimitPolicyAuth              RateLimitPolicyName = "auth"
+	RateLimitPolicyLoginAccount      RateLimitPolicyName = "login_account"
+	RateLimitPolicyUser              RateLimitPolicyName = "user"
+	RateLimitPolicyAPIClient         RateLimitPolicyName = "api_client"
+	RateLimitPolicyResumeUpload      RateLimitPolicyName = "resume_upload"
+	RateLimitPolicyContactEnrich     RateLimitPolicyName = "contact_enrich"
+	RateLimitPolicyMailboxVerify     RateLimitPolicyName = "mailbox_verify"
+	RateLimitPolicyOutreachCreate    RateLimitPolicyName = "outreach_create"
+	RateLimitPolicyApplicationCreate RateLimitPolicyName = "application_create"
 
 	rateLimitEnvPrefix = "RATE_LIMIT_"
 	day                = 24 * time.Hour
@@ -102,6 +103,14 @@ var rateLimitDefaultsI = []RateLimitPolicy{
 	{
 		Name:       RateLimitPolicyOutreachCreate,
 		Limit:      60,
+		Period:     day,
+		Burst:      20,
+		Key:        RateLimitKeyPrincipal,
+		FailClosed: true,
+	},
+	{
+		Name:       RateLimitPolicyApplicationCreate,
+		Limit:      50,
 		Period:     day,
 		Burst:      20,
 		Key:        RateLimitKeyPrincipal,

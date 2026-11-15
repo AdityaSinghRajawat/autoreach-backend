@@ -61,6 +61,9 @@ const (
 	PermissionOutreachMessageCreate  Permission = "outreach_message:create"
 	PermissionOutreachMessageRead    Permission = "outreach_message:read"
 	PermissionOutreachMessageUpdate  Permission = "outreach_message:update"
+	PermissionApplicationUpdate      Permission = "application:update"
+	PermissionApplicationRead        Permission = "application:read"
+	PermissionApplicationCreate      Permission = "application:create"
 	PermissionOutreachCampaignUpdate Permission = "outreach_campaign:update"
 )
 
@@ -91,6 +94,9 @@ var permissionCatalogueI = []Permission{
 	PermissionOutreachCampaignRead,
 	PermissionOutreachCampaignUpdate,
 	PermissionOutreachMessageUpdate,
+	PermissionApplicationUpdate,
+	PermissionApplicationRead,
+	PermissionApplicationCreate,
 	PermissionOutreachMessageRead,
 	PermissionOutreachMessageCreate,
 }
@@ -121,6 +127,9 @@ var rolePoliciesI = map[string][]string{
 		"outreach_campaign:read:own",
 		"outreach_campaign:update:own",
 		"outreach_message:update:own",
+		"application:update:own",
+		"application:read:own",
+		"application:create:own",
 		"outreach_message:read:own",
 		"outreach_message:create:own",
 	},
