@@ -117,13 +117,13 @@ func (s *OutreachService) checkCampaignReferences(
 		)
 	}
 
-	emailTemplates := map[string]bool{}
+	ownTemplates := map[string]bool{}
 	for _, template := range templates {
-		emailTemplates[template.ID] = template.Channel == modelHelpers.OutreachChannelEmail
+		ownTemplates[template.ID] = true
 	}
 
 	for _, step := range stepRequests {
-		if !emailTemplates[step.TemplateID] {
+		if !ownTemplates[step.TemplateID] {
 			return config.NewValidationError(
 				fmt.Errorf("%s: %w", operation, config.ErrCampaignStepTemplate),
 				[]config.ErrorDetail{

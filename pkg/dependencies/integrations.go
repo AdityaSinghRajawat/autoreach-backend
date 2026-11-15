@@ -4,6 +4,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	openaiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/openai"
 	enrichmentProviders "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement/linkedinProviders"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
@@ -24,6 +25,15 @@ func (d *Dependencies) initIntegrations() error {
 			config.GetEnrichmentProviderPolicies(),
 			config.GetSignalHireCallbackURL(),
 		)
+	}
+
+	if d.LinkedinProvider == nil {
+		provider, err := linkedinProviders.NewProvider(config.GetLinkedinProvider())
+		if err != nil {
+			return err
+		}
+
+		d.LinkedinProvider = provider
 	}
 
 	if d.EmailUtil == nil {

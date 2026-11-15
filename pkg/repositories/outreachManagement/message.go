@@ -206,29 +206,41 @@ func (r *MessageRepo) ListByCandidate(
 	return messages, total, err
 }
 
-func (r *MessageRepo) ClaimDue(ctx context.Context, now time.Time, limit int) ([]string, error) {
+func (r *MessageRepo) ClaimDue(
+	ctx context.Context,
+	now time.Time,
+	limit int,
+) ([]outreachTypes.ClaimedMessage, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		UPDATE `+r.messagesTable+` SET status = 'SENDING', attempt_count = attempt_count + 1,
 			updated_at = $1
 		WHERE id IN (
 			SELECT id FROM `+r.messagesTable+`
-			WHERE status = 'PENDING' AND scheduled_at <= $1 AND channel = 'EMAIL'
+			WHERE status = 'PENDING' AND scheduled_at <= $1
 			ORDER BY scheduled_at
 			LIMIT $2
 			FOR UPDATE SKIP LOCKED
 		)
-		RETURNING id
+		RETURNING id, channel
 	`, now, limit)
 	if err != nil {
 		return nil, fmt.Errorf("claim due messages: %w", err)
 	}
 
-	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	claimed, err := pgx.CollectRows(
+		rows,
+		func(row pgx.CollectableRow) (outreachTypes.ClaimedMessage, error) {
+			message := outreachTypes.ClaimedMessage{}
+			err := row.Scan(&message.ID, &message.Channel)
+
+			return message, err
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("claim due messages: %w", err)
 	}
 
-	return ids, nil
+	return claimed, nil
 }
 
 func (r *MessageRepo) ReleaseClaim(ctx context.Context, messageID string, now time.Time) error {
@@ -280,6 +292,53 @@ func (r *MessageRepo) ReserveSend(
 	}
 
 	return outreachTypes.SendReservation{Reserved: tag.RowsAffected() == 1}, nil
+}
+
+// Invites waiting for the candidate count toward the cap, so the queue never exceeds a day's allowance.
+func (r *MessageRepo) ReserveLinkedinInvite(
+	ctx context.Context,
+	message *outreachModel.Message,
+	dailyLimit int,
+	now time.Time,
+) (outreachTypes.SendReservation, error) {
+	executor := r.postgres.Executor(ctx)
+
+	if _, err := executor.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`,
+		config.GetLinkedinInviteLockPrefix()+message.CandidateID); err != nil {
+		return outreachTypes.SendReservation{}, fmt.Errorf("reserve linkedin invite: %w", err)
+	}
+
+	var used int
+
+	if err := executor.QueryRow(ctx, `
+		SELECT COUNT(*) FROM `+r.messagesTable+`
+		WHERE candidate_id = $1 AND channel = 'LINKEDIN_CONNECT'
+			AND (status = 'ACTION_REQUIRED' OR sent_at > $2)
+	`, message.CandidateID, now.Add(-config.GetSendAttemptWindow())).Scan(&used); err != nil {
+		return outreachTypes.SendReservation{}, fmt.Errorf("reserve linkedin invite: %w", err)
+	}
+
+	if used >= dailyLimit {
+		return outreachTypes.SendReservation{CapReached: true}, nil
+	}
+
+	tag, err := executor.Exec(ctx, `
+		UPDATE `+r.messagesTable+` SET sent_at = $2, updated_at = $2
+		WHERE id = $1 AND status = 'SENDING' AND sent_at IS NULL
+	`, message.ID, now)
+	if err != nil {
+		return outreachTypes.SendReservation{}, fmt.Errorf("reserve linkedin invite: %w", err)
+	}
+
+	return outreachTypes.SendReservation{Reserved: tag.RowsAffected() == 1}, nil
+}
+
+func (r *MessageRepo) FindLinkedinInvite(
+	ctx context.Context,
+	candidateID, contactID string,
+) (*outreachModel.Message, error) {
+	return r.findOne(ctx, `candidate_id = $1 AND contact_id = $2 AND channel = 'LINKEDIN_CONNECT'
+		ORDER BY created_at DESC LIMIT 1`, candidateID, contactID)
 }
 
 func (r *MessageRepo) OldestSendSince(

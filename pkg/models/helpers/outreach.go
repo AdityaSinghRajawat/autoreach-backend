@@ -47,14 +47,16 @@ const (
 type OutreachStatus string
 
 const (
-	OutreachStatusPending   OutreachStatus = "PENDING"
-	OutreachStatusSending   OutreachStatus = "SENDING"
-	OutreachStatusSent      OutreachStatus = "SENT"
-	OutreachStatusReplied   OutreachStatus = "REPLIED"
-	OutreachStatusFailed    OutreachStatus = "FAILED"
-	OutreachStatusBounced   OutreachStatus = "BOUNCED"
-	OutreachStatusPaused    OutreachStatus = "PAUSED"
-	OutreachStatusCancelled OutreachStatus = "CANCELLED"
+	OutreachStatusPending        OutreachStatus = "PENDING"
+	OutreachStatusSending        OutreachStatus = "SENDING"
+	OutreachStatusActionRequired OutreachStatus = "ACTION_REQUIRED"
+	OutreachStatusAccepted       OutreachStatus = "ACCEPTED"
+	OutreachStatusSent           OutreachStatus = "SENT"
+	OutreachStatusReplied        OutreachStatus = "REPLIED"
+	OutreachStatusFailed         OutreachStatus = "FAILED"
+	OutreachStatusBounced        OutreachStatus = "BOUNCED"
+	OutreachStatusPaused         OutreachStatus = "PAUSED"
+	OutreachStatusCancelled      OutreachStatus = "CANCELLED"
 )
 
 type OutreachEventType string
@@ -67,6 +69,7 @@ const (
 	OutreachEventReplied      OutreachEventType = "REPLIED"
 	OutreachEventAutoReplied  OutreachEventType = "AUTO_REPLIED"
 	OutreachEventUnsubscribed OutreachEventType = "UNSUBSCRIBED"
+	OutreachEventAccepted     OutreachEventType = "ACCEPTED"
 )
 
 type SuppressionType string

@@ -18,46 +18,39 @@ func (s *OutreachService) CreateMessages(
 	candidateID string,
 	request outreachTypes.CreateMessagesRequest,
 ) (*outreachTypes.CreateMessagesResponse, *config.CustomError) {
-	if !request.HasOnlyEmail() {
-		return nil, config.NewValidationError(
-			fmt.Errorf("create outreach messages: %w", config.ErrChannelNotSupported),
-			[]config.ErrorDetail{{Field: "channels", Issue: config.ErrChannelNotSupported.Error()}},
-		)
-	}
+	if missing := request.MissingFields(); len(missing) > 0 {
+		details := make([]config.ErrorDetail, 0, len(missing))
+		for _, field := range missing {
+			details = append(
+				details,
+				config.ErrorDetail{Field: field, Issue: config.ErrMessageFieldRequired.Error()},
+			)
+		}
 
-	message := request.ToMessageModel(candidateID)
-
-	if details := templateContentIssues(&outreachModel.Template{
-		Channel: modelHelpers.OutreachChannelEmail,
-		Subject: message.Subject,
-		Body:    message.BodyContent,
-	}); len(details) > 0 {
 		return nil, config.NewValidationError(
-			fmt.Errorf("create outreach messages: %w", config.ErrUnknownPlaceholder),
+			fmt.Errorf("create outreach messages: %w", config.ErrMessageFieldRequired),
 			details,
 		)
 	}
 
-	contact, customErr := s.reachableContact(ctx, candidateID, request.JobID, request.ContactID)
+	messages := request.ToMessageModels(candidateID)
+
+	for _, message := range messages {
+		if details := templateContentIssues(&outreachModel.Template{
+			Channel: message.Channel,
+			Subject: message.Subject,
+			Body:    message.BodyContent,
+		}); len(details) > 0 {
+			return nil, config.NewValidationError(
+				fmt.Errorf("create outreach messages: %w", config.ErrUnknownPlaceholder),
+				details,
+			)
+		}
+	}
+
+	contact, customErr := s.reachableContact(ctx, candidateID, request, messages)
 	if customErr != nil {
 		return nil, customErr
-	}
-
-	account, err := s.senderAccount(ctx, candidateID, request.ChannelAccountID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("create outreach messages: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
-
-	if account == nil {
-		return nil, config.NewValidationError(
-			fmt.Errorf("create outreach messages: %w", config.ErrNoActiveMailbox),
-			[]config.ErrorDetail{
-				{Field: "channelAccountId", Issue: config.ErrNoActiveMailbox.Error()},
-			},
-		)
 	}
 
 	messageContext, customErr := s.messageContext(ctx, candidateID, request.JobID, contact)
@@ -65,25 +58,89 @@ func (s *OutreachService) CreateMessages(
 		return nil, customErr
 	}
 
-	values := messageContext.PlaceholderValues()
-	subject := utils.RenderPlaceholders(*message.Subject, values)
-	message.Subject = &subject
-	message.BodyContent = utils.RenderPlaceholders(message.BodyContent, values)
-	message.ChannelAccountID = &account.ID
-
-	saved, customErr := s.saveMessage(ctx, message, "create outreach messages")
-	if customErr != nil {
+	if customErr := s.prepareManualMessages(
+		ctx,
+		candidateID,
+		request,
+		messages,
+		messageContext,
+	); customErr != nil {
 		return nil, customErr
 	}
 
-	return &outreachTypes.CreateMessagesResponse{Messages: []*outreachModel.Message{saved}}, nil
+	saved := make([]*outreachModel.Message, 0, len(messages))
+
+	for _, message := range messages {
+		created, customErr := s.saveMessage(ctx, message, "create outreach messages")
+		if customErr != nil {
+			return nil, customErr
+		}
+
+		saved = append(saved, created)
+	}
+
+	return &outreachTypes.CreateMessagesResponse{Messages: saved}, nil
+}
+
+func (s *OutreachService) prepareManualMessages(
+	ctx context.Context,
+	candidateID string,
+	request outreachTypes.CreateMessagesRequest,
+	messages []*outreachModel.Message,
+	messageContext outreachTypes.MessageContext,
+) *config.CustomError {
+	values := messageContext.PlaceholderValues()
+
+	for _, message := range messages {
+		message.BodyContent = utils.RenderPlaceholders(message.BodyContent, values)
+
+		switch message.Channel {
+		case modelHelpers.OutreachChannelEmail:
+			account, err := s.senderAccount(ctx, candidateID, request.ChannelAccountID)
+			if err != nil {
+				return config.NewCustomError(
+					fmt.Errorf("create outreach messages: %w", err),
+					config.GetErrCodeInternalServerError(),
+				)
+			}
+
+			if account == nil {
+				return config.NewValidationError(
+					fmt.Errorf("create outreach messages: %w", config.ErrNoActiveMailbox),
+					[]config.ErrorDetail{
+						{Field: "channelAccountId", Issue: config.ErrNoActiveMailbox.Error()},
+					},
+				)
+			}
+
+			subject := utils.RenderPlaceholders(*message.Subject, values)
+			message.Subject = &subject
+			message.ChannelAccountID = &account.ID
+		case modelHelpers.OutreachChannelLinkedinConnect:
+			if len([]rune(message.BodyContent)) > config.GetLinkedinNoteMaxLength() {
+				return config.NewValidationError(
+					fmt.Errorf("create outreach messages: %w", config.ErrLinkedinNoteTooLong),
+					[]config.ErrorDetail{
+						{Field: "linkedinNote", Issue: config.ErrLinkedinNoteTooLong.Error()},
+					},
+				)
+			}
+
+			note := message.BodyContent
+			message.LinkedinNote = &note
+		}
+	}
+
+	return nil
 }
 
 func (s *OutreachService) reachableContact(
 	ctx context.Context,
-	candidateID, jobID, contactID string,
+	candidateID string,
+	request outreachTypes.CreateMessagesRequest,
+	messages []*outreachModel.Message,
 ) (*enrichmentModel.CompanyContact, *config.CustomError) {
-	contacts, err := s.companyContactRepo.ListByJob(ctx, jobID)
+	contacts, err := s.companyContactRepo.ListByJob(ctx, request.JobID)
 	if err != nil {
 		return nil, config.NewCustomError(
 			fmt.Errorf("find outreach contact: %w", err),
@@ -92,18 +149,21 @@ func (s *OutreachService) reachableContact(
 	}
 
 	index := slices.IndexFunc(contacts, func(contact *enrichmentModel.CompanyContact) bool {
-		return contact.ID == contactID
+		return contact.ID == request.ContactID
 	})
-	if index < 0 || !isEmailable(contacts[index]) {
-		return nil, config.NewValidationError(
-			fmt.Errorf("find outreach contact: %w", config.ErrContactNotReachable),
-			[]config.ErrorDetail{
-				{Field: "contactId", Issue: config.ErrContactNotReachable.Error()},
-			},
-		)
+
+	for _, message := range messages {
+		if index < 0 || !outreachTypes.CanReachOn(contacts[index], message.Channel) {
+			return nil, config.NewValidationError(
+				fmt.Errorf("find outreach contact: %w", config.ErrContactNotReachable),
+				[]config.ErrorDetail{
+					{Field: "contactId", Issue: config.ErrContactNotReachable.Error()},
+				},
+			)
+		}
 	}
 
-	suppressed, err := s.suppressionRepo.IsSuppressed(ctx, candidateID, *contacts[index].WorkEmail)
+	suppressed, err := s.isContactSuppressed(ctx, candidateID, contacts[index])
 	if err != nil {
 		return nil, config.NewCustomError(
 			fmt.Errorf("find outreach contact: %w", err),

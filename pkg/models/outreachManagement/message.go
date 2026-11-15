@@ -21,7 +21,7 @@ type Message struct {
 	TemplateID        *string                      `db:"template_id"         json:"templateId"        validate:"omitnil,uuid"`
 	StepNumber        int                          `db:"step_number"         json:"stepNumber"        validate:"gt=0"`
 	Channel           modelHelpers.OutreachChannel `db:"channel"             json:"channel"           validate:"required,oneof=EMAIL LINKEDIN_CONNECT LINKEDIN_DM"`
-	Status            modelHelpers.OutreachStatus  `db:"status"              json:"status"            validate:"required,oneof=PENDING SENDING SENT REPLIED FAILED BOUNCED PAUSED CANCELLED"`
+	Status            modelHelpers.OutreachStatus  `db:"status"              json:"status"            validate:"required,oneof=PENDING SENDING ACTION_REQUIRED SENT ACCEPTED REPLIED FAILED BOUNCED PAUSED CANCELLED"`
 	Subject           *string                      `db:"subject"             json:"subject"           validate:"omitnil,max=500"`
 	BodyContent       string                       `db:"body_content"        json:"bodyContent"       validate:"required"`
 	LinkedinNote      *string                      `db:"linkedin_note"       json:"linkedinNote"      validate:"omitnil,max=300"`
@@ -65,7 +65,8 @@ func (m *Message) Validate() error {
 
 func (m *Message) IsCancellable() bool {
 	return m.Status == modelHelpers.OutreachStatusPending ||
-		m.Status == modelHelpers.OutreachStatusPaused
+		m.Status == modelHelpers.OutreachStatusPaused ||
+		m.Status == modelHelpers.OutreachStatusActionRequired
 }
 
 func (m *Message) Reschedule(at time.Time) {
@@ -82,4 +83,14 @@ func (m *Message) MarkSent() {
 func (m *Message) Close(status modelHelpers.OutreachStatus, reason string) {
 	m.Status = status
 	m.FailureReason = &reason
+}
+
+func (m *Message) IsLinkedin() bool {
+	return m.Channel == modelHelpers.OutreachChannelLinkedinConnect ||
+		m.Channel == modelHelpers.OutreachChannelLinkedinDM
+}
+
+func (m *Message) AwaitCandidate() {
+	m.Status = modelHelpers.OutreachStatusActionRequired
+	m.SentAt = nil
 }

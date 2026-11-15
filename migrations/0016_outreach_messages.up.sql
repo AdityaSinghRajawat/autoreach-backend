@@ -29,6 +29,8 @@ CREATE INDEX idx_outreach_messages_due ON outreach_messages (scheduled_at) WHERE
 CREATE INDEX idx_outreach_messages_sending ON outreach_messages (updated_at) WHERE status = 'SENDING';
 CREATE INDEX idx_outreach_messages_candidate ON outreach_messages (candidate_id, created_at DESC);
 CREATE INDEX idx_outreach_messages_contact ON outreach_messages (candidate_id, contact_id);
+CREATE INDEX idx_outreach_messages_linkedin_invites ON outreach_messages (candidate_id, sent_at)
+    WHERE channel = 'LINKEDIN_CONNECT';
 CREATE INDEX idx_outreach_messages_account_sent ON outreach_messages (channel_account_id, sent_at)
     WHERE sent_at IS NOT NULL;
 CREATE UNIQUE INDEX idx_outreach_messages_provider_id ON outreach_messages (provider_message_id)

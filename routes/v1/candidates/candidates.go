@@ -173,4 +173,9 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 		middlewares.Authorize(config.PermissionOutreachMessageUpdate),
 		outreachHandler.UpdateMessage,
 	)
+	candidateGroup.POST(
+		messagePath+"/confirm",
+		middlewares.Authorize(config.PermissionOutreachMessageUpdate),
+		outreachHandler.ConfirmMessage,
+	)
 }

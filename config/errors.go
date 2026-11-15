@@ -76,12 +76,12 @@ var (
 	ErrSubjectRequired        = errors.New("an email template needs a subject")
 	ErrTemplateInUse          = errors.New("template is used by a campaign")
 	ErrCampaignStepTemplate   = errors.New(
-		"campaign step template is not an email template of this candidate",
+		"campaign step template does not belong to this candidate",
 	)
 	ErrActiveCampaignExists   = errors.New("the candidate already has an active campaign")
 	ErrMessageNotFound        = errors.New("outreach message not found")
 	ErrMessageNotCancellable  = errors.New("only pending or paused messages can be cancelled")
-	ErrContactNotReachable    = errors.New("contact has no usable email address for this job")
+	ErrContactNotReachable    = errors.New("contact cannot be reached on this channel for this job")
 	ErrContactSuppressed      = errors.New("contact is on the suppression list")
 	ErrNoActiveMailbox        = errors.New("no verified mailbox to send from")
 	ErrChannelNotSupported    = errors.New("channel is not supported yet")
@@ -89,10 +89,18 @@ var (
 	ErrConversationEnded      = errors.New("the contact already replied or bounced")
 	ErrInvalidTrackingLink    = errors.New("tracking link is invalid")
 	ErrInvalidUnsubscribeLink = errors.New("unsubscribe link is invalid")
-	ErrRateLimiterUnavailable = errors.New("rate limiter is unavailable")
-	ErrTrailingRequestData    = errors.New("unexpected trailing data")
-	ErrUnexpectedRedisReply   = errors.New("unexpected redis reply")
-	ErrEmbeddingCountMismatch = errors.New(
+	ErrLinkedinNoteTooLong    = errors.New(
+		"a LinkedIn connection note must be at most 300 characters",
+	)
+	ErrContactHasNoLinkedin    = errors.New("contact has no LinkedIn profile")
+	ErrConnectionNotAccepted   = errors.New("the connection request was not accepted in time")
+	ErrConfirmationNotAllowed  = errors.New("this message cannot move to that status")
+	ErrUnknownLinkedinProvider = errors.New("unknown LinkedIn provider")
+	ErrMessageFieldRequired    = errors.New("is required for the selected channel")
+	ErrRateLimiterUnavailable  = errors.New("rate limiter is unavailable")
+	ErrTrailingRequestData     = errors.New("unexpected trailing data")
+	ErrUnexpectedRedisReply    = errors.New("unexpected redis reply")
+	ErrEmbeddingCountMismatch  = errors.New(
 		"embedder returned a different number of vectors",
 	)
 	ErrMalformedEmbedding = errors.New("malformed embedding")

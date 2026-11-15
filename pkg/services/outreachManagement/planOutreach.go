@@ -29,7 +29,7 @@ func (s *OutreachService) PlanOutreach(
 		return &outreachTypes.PlanOutreachResult{SkippedReason: skippedReason}, nil
 	}
 
-	contacts, err := s.outreachTargets(ctx, candidateID, jobID)
+	contacts, err := s.outreachTargets(ctx, candidateID, jobID, plan)
 	if err != nil {
 		return nil, config.NewCustomError(
 			fmt.Errorf("plan outreach: %w", err),
@@ -73,11 +73,6 @@ func (s *OutreachService) loadPlan(
 		return nil, config.GetSkipNoActiveCampaign(), err
 	}
 
-	account, err := s.senderAccount(ctx, candidateID, campaign.ChannelAccountID)
-	if err != nil || account == nil {
-		return nil, config.GetSkipNoActiveMailbox(), err
-	}
-
 	steps, err := s.campaignRepo.ListSteps(ctx, []string{campaign.ID})
 	if err != nil {
 		return nil, "", err
@@ -95,7 +90,6 @@ func (s *OutreachService) loadPlan(
 
 	plan := &outreachTypes.CampaignPlan{
 		Campaign:  campaign,
-		Account:   account,
 		Steps:     steps,
 		Templates: map[string]*outreachModel.Template{},
 	}
@@ -110,6 +104,15 @@ func (s *OutreachService) loadPlan(
 
 	if len(steps) == 0 || len(plan.Templates) != len(templateIDs) {
 		return nil, config.GetSkipTemplateNotApproved(), nil
+	}
+
+	if !plan.HasEmailStep() {
+		return plan, "", nil
+	}
+
+	plan.Account, err = s.senderAccount(ctx, candidateID, campaign.ChannelAccountID)
+	if err != nil || plan.Account == nil {
+		return nil, config.GetSkipNoActiveMailbox(), err
 	}
 
 	return plan, "", nil
@@ -134,6 +137,7 @@ func (s *OutreachService) senderAccount(
 func (s *OutreachService) outreachTargets(
 	ctx context.Context,
 	candidateID, jobID string,
+	plan *outreachTypes.CampaignPlan,
 ) ([]*enrichmentModel.CompanyContact, error) {
 	contacts, err := s.companyContactRepo.ListByJob(ctx, jobID)
 	if err != nil {
@@ -147,11 +151,11 @@ func (s *OutreachService) outreachTargets(
 			break
 		}
 
-		if !isEmailable(contact) {
+		if !plan.CanReach(contact) {
 			continue
 		}
 
-		suppressed, err := s.suppressionRepo.IsSuppressed(ctx, candidateID, *contact.WorkEmail)
+		suppressed, err := s.isContactSuppressed(ctx, candidateID, contact)
 		if err != nil {
 			return nil, err
 		}
@@ -181,20 +185,28 @@ func plannedMessages(
 		template := plan.Templates[step.TemplateID]
 		scheduledAt = scheduledAt.Add(time.Duration(step.DelayDays) * 24 * time.Hour)
 
+		if !outreachTypes.CanReachOn(messageContext.Contact, template.Channel) {
+			continue
+		}
+
 		message := outreachModel.NewMessage()
 		message.CandidateID = messageContext.Candidate.ID
 		message.ContactID = messageContext.Contact.ID
 		message.JobID = messageContext.Job.ID
 		message.CampaignID = &plan.Campaign.ID
-		message.ChannelAccountID = &plan.Account.ID
 		message.TemplateID = &template.ID
+		message.Channel = template.Channel
 		message.StepNumber = step.StepNumber
 		message.ScheduledAt = scheduledAt
 		message.BodyContent = utils.RenderPlaceholders(template.Body, values)
 
-		if template.Subject != nil {
-			subject := utils.RenderPlaceholders(*template.Subject, values)
+		switch template.Channel {
+		case modelHelpers.OutreachChannelEmail:
+			message.ChannelAccountID = &plan.Account.ID
+			subject := utils.RenderPlaceholders(valueOrEmpty(template.Subject), values)
 			message.Subject = &subject
+		case modelHelpers.OutreachChannelLinkedinConnect:
+			attachLinkedinNote(message)
 		}
 
 		messages = append(messages, message)
@@ -203,9 +215,28 @@ func plannedMessages(
 	return messages
 }
 
-func isEmailable(contact *enrichmentModel.CompanyContact) bool {
-	return contact.WorkEmail != nil &&
-		contact.EmailVerificationStatus != modelHelpers.EmailStatusInvalid
+// A rendered note over LinkedIn's limit is stored as FAILED, so the candidate sees why it was skipped.
+func attachLinkedinNote(message *outreachModel.Message) {
+	if len([]rune(message.BodyContent)) > config.GetLinkedinNoteMaxLength() {
+		message.Close(modelHelpers.OutreachStatusFailed, config.ErrLinkedinNoteTooLong.Error())
+
+		return
+	}
+
+	note := message.BodyContent
+	message.LinkedinNote = &note
+}
+
+func (s *OutreachService) isContactSuppressed(
+	ctx context.Context,
+	candidateID string,
+	contact *enrichmentModel.CompanyContact,
+) (bool, error) {
+	if contact.WorkEmail == nil {
+		return false, nil
+	}
+
+	return s.suppressionRepo.IsSuppressed(ctx, candidateID, *contact.WorkEmail)
 }
 
 func errOrNotFound(err, notFound error) error {

@@ -9,6 +9,7 @@ import (
 	enrichmentRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/enrichmentManagement"
 	jobRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/jobManagement"
 	outreachRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement/linkedinProviders"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
@@ -28,6 +29,7 @@ type OutreachServiceDependencies struct {
 	WorkerClient       workerConfigs.IWorkerClient
 	CredentialCipher   *utils.CredentialCipher
 	EmailUtil          *utils.EmailUtil
+	LinkedinProvider   linkedinProviders.Provider
 }
 
 type OutreachService struct {
@@ -45,6 +47,7 @@ type OutreachService struct {
 	workerClient       workerConfigs.IWorkerClient
 	credentialCipher   *utils.CredentialCipher
 	emailUtil          *utils.EmailUtil
+	linkedinProvider   linkedinProviders.Provider
 }
 
 func NewOutreachService(dependencies OutreachServiceDependencies) (*OutreachService, error) {
@@ -60,7 +63,8 @@ func NewOutreachService(dependencies OutreachServiceDependencies) (*OutreachServ
 		dependencies.JobPostingRepo == nil ||
 		dependencies.TransactionManager == nil ||
 		dependencies.WorkerClient == nil ||
-		dependencies.EmailUtil == nil {
+		dependencies.EmailUtil == nil ||
+		dependencies.LinkedinProvider == nil {
 		return nil, fmt.Errorf("new outreach service: %w", config.ErrMissingDependency)
 	}
 
@@ -79,5 +83,6 @@ func NewOutreachService(dependencies OutreachServiceDependencies) (*OutreachServ
 		workerClient:       dependencies.WorkerClient,
 		credentialCipher:   dependencies.CredentialCipher,
 		emailUtil:          dependencies.EmailUtil,
+		linkedinProvider:   dependencies.LinkedinProvider,
 	}, nil
 }

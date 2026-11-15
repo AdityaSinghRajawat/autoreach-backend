@@ -9,6 +9,7 @@ import (
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	enrichmentProviders "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement/linkedinProviders"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
@@ -29,6 +30,7 @@ type Dependencies struct {
 	EmailVerifier       *utils.EmailVerifier
 	CredentialCipher    *utils.CredentialCipher
 	EmailUtil           *utils.EmailUtil
+	LinkedinProvider    linkedinProviders.Provider
 	Repositories        Repositories
 	Services            Services
 	Handlers            Handlers

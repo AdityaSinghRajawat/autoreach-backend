@@ -11,16 +11,18 @@ import (
 const (
 	ProviderAsynq ProviderName = "asynq"
 
-	TaskEmbedJob       WorkerTaskID = "task:embed_job"
-	TaskEmbedJobBatch  WorkerTaskID = "task:embed_job_batch"
-	TaskProcessResume  WorkerTaskID = "task:process_resume"
-	TaskMatchResume    WorkerTaskID = "task:match_resume"
-	TaskMatchJob       WorkerTaskID = "task:match_job"
-	TaskEnrichContacts WorkerTaskID = "task:enrich_contacts"
-	TaskPlanOutreach   WorkerTaskID = "task:plan_outreach"
-	TaskSendColdEmail  WorkerTaskID = "task:send_cold_email"
-	TaskSweepMailbox   WorkerTaskID = "task:sweep_mailbox"
-	TaskUnroutable     WorkerTaskID = "task:unroutable"
+	TaskEmbedJob           WorkerTaskID = "task:embed_job"
+	TaskEmbedJobBatch      WorkerTaskID = "task:embed_job_batch"
+	TaskProcessResume      WorkerTaskID = "task:process_resume"
+	TaskMatchResume        WorkerTaskID = "task:match_resume"
+	TaskMatchJob           WorkerTaskID = "task:match_job"
+	TaskEnrichContacts     WorkerTaskID = "task:enrich_contacts"
+	TaskPlanOutreach       WorkerTaskID = "task:plan_outreach"
+	TaskSendColdEmail      WorkerTaskID = "task:send_cold_email"
+	TaskSweepMailbox       WorkerTaskID = "task:sweep_mailbox"
+	TaskSendLinkedinInvite WorkerTaskID = "task:send_linkedin_invite"
+	TaskSendLinkedinDM     WorkerTaskID = "task:send_linkedin_dm"
+	TaskUnroutable         WorkerTaskID = "task:unroutable"
 
 	QueueEmbedding  = "embedding_queue"
 	QueueMatching   = "matching_queue"
@@ -101,6 +103,14 @@ var taskConfigsI = map[WorkerTaskID]TaskConfig{
 		Timeout:      30 * time.Second,
 	},
 	TaskSendColdEmail: {
+		QueueName: QueueOutreach,
+		Timeout:   45 * time.Second,
+	},
+	TaskSendLinkedinInvite: {
+		QueueName: QueueOutreach,
+		Timeout:   45 * time.Second,
+	},
+	TaskSendLinkedinDM: {
 		QueueName: QueueOutreach,
 		Timeout:   45 * time.Second,
 	},

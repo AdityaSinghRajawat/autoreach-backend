@@ -119,6 +119,16 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 		return err
 	}
 
+	sendLinkedinInvite, err := workerTasks.NewSendLinkedinInviteTaskHandler(services.Outreach)
+	if err != nil {
+		return err
+	}
+
+	sendLinkedinDM, err := workerTasks.NewSendLinkedinDMTaskHandler(services.Outreach)
+	if err != nil {
+		return err
+	}
+
 	ws.register(workerConfigs.TaskEmbedJob, embedJob)
 	ws.register(workerConfigs.TaskEmbedJobBatch, embedJobBatch)
 	ws.register(workerConfigs.TaskProcessResume, processResume)
@@ -128,6 +138,8 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 	ws.register(workerConfigs.TaskPlanOutreach, planOutreach)
 	ws.register(workerConfigs.TaskSendColdEmail, sendColdEmail)
 	ws.register(workerConfigs.TaskSweepMailbox, sweepMailbox)
+	ws.register(workerConfigs.TaskSendLinkedinInvite, sendLinkedinInvite)
+	ws.register(workerConfigs.TaskSendLinkedinDM, sendLinkedinDM)
 
 	return nil
 }

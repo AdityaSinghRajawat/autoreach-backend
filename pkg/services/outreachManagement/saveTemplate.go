@@ -53,6 +53,14 @@ func templateContentIssues(template *outreachModel.Template) []config.ErrorDetai
 		)
 	}
 
+	if template.Channel == modelHelpers.OutreachChannelLinkedinConnect &&
+		len([]rune(template.Body)) > config.GetLinkedinNoteMaxLength() {
+		details = append(
+			details,
+			config.ErrorDetail{Field: "body", Issue: config.ErrLinkedinNoteTooLong.Error()},
+		)
+	}
+
 	known := config.GetTemplatePlaceholders()
 	fields := map[string]string{"body": template.Body}
 

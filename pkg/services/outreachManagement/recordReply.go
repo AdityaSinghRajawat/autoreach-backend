@@ -13,7 +13,8 @@ func (s *OutreachService) recordReply(
 	ctx context.Context,
 	message *outreachModel.Message,
 ) *config.CustomError {
-	if message.Status != modelHelpers.OutreachStatusSent {
+	if message.Status != modelHelpers.OutreachStatusSent &&
+		message.Status != modelHelpers.OutreachStatusAccepted {
 		return nil
 	}
 

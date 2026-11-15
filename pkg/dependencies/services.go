@@ -102,6 +102,7 @@ func (d *Dependencies) initServices() error {
 		WorkerClient:       d.WorkerClient,
 		CredentialCipher:   d.CredentialCipher,
 		EmailUtil:          d.EmailUtil,
+		LinkedinProvider:   d.LinkedinProvider,
 	})
 	if err != nil {
 		return err

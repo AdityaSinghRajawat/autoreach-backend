@@ -136,6 +136,7 @@ func Init() {
 		loadEmailConfig()
 		loadChannelAccountConfig()
 		loadOutreachConfig()
+		loadLinkedinConfig()
 		enforceProductionRequirements()
 	})
 }
