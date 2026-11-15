@@ -18,7 +18,7 @@ func (cm *CronManager) stuckWorkReconcilerJob(ctx context.Context) {
 }
 
 func (cm *CronManager) RunStuckWorkReconciler(ctx context.Context) {
-	var requeuedEmbeddings, requeuedResumes int
+	var requeuedEmbeddings, requeuedResumes, requeuedApplications int
 
 	err := utils.RunConcurrently(
 		ctx,
@@ -27,6 +27,19 @@ func (cm *CronManager) RunStuckWorkReconciler(ctx context.Context) {
 			Run: func(ctx context.Context) error {
 				requeued, customErr := cm.jobService.RequeuePendingEmbeddings(ctx)
 				requeuedEmbeddings = requeued
+
+				if customErr != nil {
+					return customErr
+				}
+
+				return nil
+			},
+		},
+		utils.ConcurrentTask{
+			Name: "requeue pending applications",
+			Run: func(ctx context.Context) error {
+				requeued, customErr := cm.applicationService.RequeueStaleApplications(ctx)
+				requeuedApplications = requeued
 
 				if customErr != nil {
 					return customErr
@@ -53,12 +66,13 @@ func (cm *CronManager) RunStuckWorkReconciler(ctx context.Context) {
 		utils.LogError(ctx, err, "cron_job", config.GetStuckWorkReconcilerLock())
 	}
 
-	if requeuedEmbeddings+requeuedResumes > 0 {
+	if requeuedEmbeddings+requeuedResumes+requeuedApplications > 0 {
 		utils.LogInfo(
 			ctx,
 			"stuck work reconciled",
 			"requeued_embeddings", requeuedEmbeddings,
 			"requeued_resumes", requeuedResumes,
+			"requeued_applications", requeuedApplications,
 		)
 	}
 }

@@ -22,12 +22,15 @@ const (
 	TaskSweepMailbox       WorkerTaskID = "task:sweep_mailbox"
 	TaskSendLinkedinInvite WorkerTaskID = "task:send_linkedin_invite"
 	TaskSendLinkedinDM     WorkerTaskID = "task:send_linkedin_dm"
+	TaskQueueApplications  WorkerTaskID = "task:queue_applications"
+	TaskPrepareApplication WorkerTaskID = "task:prepare_application"
 	TaskUnroutable         WorkerTaskID = "task:unroutable"
 
-	QueueEmbedding  = "embedding_queue"
-	QueueMatching   = "matching_queue"
-	QueueEnrichment = "enrichment_queue"
-	QueueOutreach   = "outreach_queue"
+	QueueEmbedding   = "embedding_queue"
+	QueueMatching    = "matching_queue"
+	QueueEnrichment  = "enrichment_queue"
+	QueueOutreach    = "outreach_queue"
+	QueueApplication = "application_queue"
 
 	GroupEmbedJob = "embed_job"
 
@@ -114,6 +117,18 @@ var taskConfigsI = map[WorkerTaskID]TaskConfig{
 		QueueName: QueueOutreach,
 		Timeout:   45 * time.Second,
 	},
+	TaskQueueApplications: {
+		QueueName:    QueueApplication,
+		MaxRetry:     3,
+		RetryBackoff: matchingBackoffI,
+		Timeout:      30 * time.Second,
+	},
+	TaskPrepareApplication: {
+		QueueName:    QueueApplication,
+		MaxRetry:     3,
+		RetryBackoff: enrichmentBackoffI,
+		Timeout:      time.Minute,
+	},
 	TaskSweepMailbox: {
 		QueueName: QueueOutreach,
 		Timeout:   2 * time.Minute,
@@ -131,6 +146,7 @@ var queueDefinitionsI = []QueueDefinition{
 	{Name: QueueMatching, Priority: 2},
 	{Name: QueueEnrichment, Priority: 1},
 	{Name: QueueOutreach, Priority: 2},
+	{Name: QueueApplication, Priority: 1},
 }
 
 func GetTaskConfig(taskID WorkerTaskID) (TaskConfig, bool) {

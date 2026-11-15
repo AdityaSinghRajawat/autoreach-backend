@@ -1,6 +1,7 @@
 package dependencies
 
 import (
+	applicationRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/applicationManagement"
 	authRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/authManagement"
 	candidateRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/candidateManagement"
 	enrichmentRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/enrichmentManagement"
@@ -10,6 +11,7 @@ import (
 )
 
 type Repositories struct {
+	Application       *applicationRepo.ApplicationRepo
 	User              *authRepo.UserRepo
 	RefreshToken      *authRepo.RefreshTokenRepo
 	APIClient         *authRepo.APIClientRepo
@@ -103,7 +105,13 @@ func (d *Dependencies) initRepositories() error {
 		return err
 	}
 
+	applicationRepository, err := applicationRepo.NewApplicationRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
 	d.Repositories = Repositories{
+		Application:       applicationRepository,
 		ChannelAccount:    channelAccountRepo,
 		Template:          templateRepo,
 		Campaign:          campaignRepo,

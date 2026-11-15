@@ -13,12 +13,14 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 	matchingHandler := deps.Handlers.Matching
 	enrichmentHandler := deps.Handlers.Enrichment
 	outreachHandler := deps.Handlers.Outreach
+	applicationHandler := deps.Handlers.Application
 	jobContactsPath := "/jobs/:" + config.GetJobIDParam() + "/contacts"
 	resumePath := "/resumes/:" + config.GetResumeIDParam()
 	channelAccountPath := "/channel-accounts/:" + config.GetAccountIDParam()
 	templatePath := "/outreach-templates/:" + config.GetTemplateIDParam()
 	campaignPath := "/outreach-campaigns/:" + config.GetCampaignIDParam()
 	messagePath := "/outreach-messages/:" + config.GetMessageIDParam()
+	applicationPath := "/applications/:" + config.GetApplicationIDParam()
 
 	candidateGroup := group.Group(
 		"/candidates/:"+config.GetCandidateIDParam(),
@@ -177,5 +179,36 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 		messagePath+"/confirm",
 		middlewares.Authorize(config.PermissionOutreachMessageUpdate),
 		outreachHandler.ConfirmMessage,
+	)
+	candidateGroup.GET(
+		"/application-profile",
+		middlewares.Authorize(config.PermissionCandidateRead),
+		applicationHandler.GetApplicationProfile,
+	)
+	candidateGroup.PUT(
+		"/application-profile",
+		middlewares.Authorize(config.PermissionCandidateUpdate),
+		applicationHandler.UpdateApplicationProfile,
+	)
+	candidateGroup.GET(
+		"/applications",
+		middlewares.Authorize(config.PermissionApplicationRead),
+		applicationHandler.ListApplications,
+	)
+	candidateGroup.POST(
+		"/applications",
+		middlewares.Authorize(config.PermissionApplicationCreate),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyApplicationCreate),
+		applicationHandler.CreateApplication,
+	)
+	candidateGroup.GET(
+		applicationPath,
+		middlewares.Authorize(config.PermissionApplicationRead),
+		applicationHandler.GetApplication,
+	)
+	candidateGroup.PATCH(
+		applicationPath,
+		middlewares.Authorize(config.PermissionApplicationUpdate),
+		applicationHandler.UpdateApplication,
 	)
 }

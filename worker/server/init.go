@@ -57,10 +57,11 @@ func NewWorkerServer(_ context.Context, deps *dependencies.Dependencies) (*Worke
 
 func (ws *WorkerServer) loadCrons() error {
 	cronManager, err := cronJobs.NewCronManager(cronJobs.CronManagerDependencies{
-		OutreachService:  ws.dependencies.Services.Outreach,
-		RedisUtil:        ws.dependencies.RedisUtil,
-		JobService:       ws.dependencies.Services.Job,
-		CandidateService: ws.dependencies.Services.Candidate,
+		OutreachService:    ws.dependencies.Services.Outreach,
+		ApplicationService: ws.dependencies.Services.Application,
+		RedisUtil:          ws.dependencies.RedisUtil,
+		JobService:         ws.dependencies.Services.Job,
+		CandidateService:   ws.dependencies.Services.Candidate,
 	})
 	if err != nil {
 		return err
@@ -129,6 +130,16 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 		return err
 	}
 
+	queueApplications, err := workerTasks.NewQueueApplicationsTaskHandler(services.Application)
+	if err != nil {
+		return err
+	}
+
+	prepareApplication, err := workerTasks.NewPrepareApplicationTaskHandler(services.Application)
+	if err != nil {
+		return err
+	}
+
 	ws.register(workerConfigs.TaskEmbedJob, embedJob)
 	ws.register(workerConfigs.TaskEmbedJobBatch, embedJobBatch)
 	ws.register(workerConfigs.TaskProcessResume, processResume)
@@ -140,6 +151,8 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 	ws.register(workerConfigs.TaskSweepMailbox, sweepMailbox)
 	ws.register(workerConfigs.TaskSendLinkedinInvite, sendLinkedinInvite)
 	ws.register(workerConfigs.TaskSendLinkedinDM, sendLinkedinDM)
+	ws.register(workerConfigs.TaskQueueApplications, queueApplications)
+	ws.register(workerConfigs.TaskPrepareApplication, prepareApplication)
 
 	return nil
 }

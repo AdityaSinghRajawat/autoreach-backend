@@ -3,6 +3,7 @@ package dependencies
 import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	openaiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/openai"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/applicationManagement/appliers"
 	enrichmentProviders "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement/linkedinProviders"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -25,6 +26,16 @@ func (d *Dependencies) initIntegrations() error {
 			config.GetEnrichmentProviderPolicies(),
 			config.GetSignalHireCallbackURL(),
 		)
+	}
+
+	if d.Appliers == nil {
+		d.Appliers = appliers.NewApplierRegistry(appliers.RegistryOptions{
+			GreenhouseAPIURL: config.GetGreenhouseBoardsAPIURL(),
+			LeverAPIURL:      config.GetLeverPostingsAPIURL(),
+			LeverEUAPIURL:    config.GetLeverEUPostingsAPIURL(),
+			GreenhouseKeys:   config.GetGreenhouseBoardKeys(),
+			LeverKeys:        config.GetLeverSiteKeys(),
+		})
 	}
 
 	if d.LinkedinProvider == nil {

@@ -90,6 +90,10 @@ func (s *MatchingService) MatchResume(
 
 	s.fanOutMatches(ctx, candidate.ID, candidate.MinMatchScore, candidate.AutoOutreachEnabled)
 
+	if candidate.AutoApplyEnabled {
+		s.publishApplicationQueue(ctx, candidate.ID)
+	}
+
 	return &matchingTypes.MatchResult{Considered: len(similarities), Stored: len(matches)}, nil
 }
 

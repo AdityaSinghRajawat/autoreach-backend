@@ -1,6 +1,7 @@
 package dependencies
 
 import (
+	applicationService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/applicationManagement"
 	authService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/authManagement"
 	candidateService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/candidateManagement"
 	enrichmentService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement"
@@ -10,12 +11,13 @@ import (
 )
 
 type Services struct {
-	Auth       *authService.AuthService
-	Candidate  *candidateService.CandidateService
-	Job        *jobService.JobService
-	Matching   *matchingService.MatchingService
-	Enrichment *enrichmentService.EnrichmentService
-	Outreach   *outreachService.OutreachService
+	Application *applicationService.ApplicationService
+	Auth        *authService.AuthService
+	Candidate   *candidateService.CandidateService
+	Job         *jobService.JobService
+	Matching    *matchingService.MatchingService
+	Enrichment  *enrichmentService.EnrichmentService
+	Outreach    *outreachService.OutreachService
 }
 
 func (d *Dependencies) initServices() error {
@@ -108,13 +110,31 @@ func (d *Dependencies) initServices() error {
 		return err
 	}
 
+	application, err := applicationService.NewApplicationService(
+		applicationService.ApplicationServiceDependencies{
+			ApplicationRepo:    d.Repositories.Application,
+			CandidateRepo:      d.Repositories.Candidate,
+			ResumeRepo:         d.Repositories.Resume,
+			JobPostingRepo:     d.Repositories.JobPosting,
+			TransactionManager: d.TransactionManager,
+			WorkerClient:       d.WorkerClient,
+			FileStore:          d.FileStore,
+			RateLimiter:        d.RateLimiter,
+			Appliers:           d.Appliers,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	d.Services = Services{
-		Outreach:   outreach,
-		Enrichment: enrichment,
-		Auth:       auth,
-		Candidate:  candidate,
-		Job:        job,
-		Matching:   matching,
+		Application: application,
+		Outreach:    outreach,
+		Enrichment:  enrichment,
+		Auth:        auth,
+		Candidate:   candidate,
+		Job:         job,
+		Matching:    matching,
 	}
 
 	return nil

@@ -48,6 +48,7 @@ func (s *MatchingService) MatchJob(
 					similarity.MinMatchScore,
 					similarity.AutoOutreachEnabled,
 				)
+				s.publishApplicationQueue(ctx, similarity.CandidateID)
 
 				return nil
 			},
