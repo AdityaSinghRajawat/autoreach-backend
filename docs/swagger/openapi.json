@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "AutoReach API",
-    "version": "0.8.0",
+    "version": "0.9.0",
     "description": "REST API for the AutoReach career automation and outreach platform. All JSON keys are camelCase and every response uses the standard envelope."
   },
   "servers": [
@@ -2494,7 +2494,9 @@
               "enum": [
                 "PENDING",
                 "SENDING",
+                "ACTION_REQUIRED",
                 "SENT",
+                "ACCEPTED",
                 "REPLIED",
                 "FAILED",
                 "BOUNCED",
@@ -2886,6 +2888,98 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/outreach-messages/{outreachId}/confirm": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "outreachId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "confirmOutreachMessage",
+        "summary": "Confirm what happened to a LinkedIn item in assisted mode",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachMessage"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmOutreachMessageRequest"
+              }
+            }
           }
         }
       }
@@ -4140,7 +4234,8 @@
           },
           "body": {
             "type": "string",
-            "maxLength": 20000
+            "maxLength": 20000,
+            "description": "At most 300 characters for LINKEDIN_CONNECT (a connection note)."
           }
         }
       },
@@ -4260,7 +4355,7 @@
           "name",
           "steps"
         ],
-        "description": "A candidate has at most one ACTIVE campaign; it is used for automatic outreach. Steps must use the candidate's EMAIL templates.",
+        "description": "A candidate has at most one ACTIVE campaign; it is used for automatic outreach. Steps may mix EMAIL, LINKEDIN_CONNECT and LINKEDIN_DM templates; each contact gets only the steps it can be reached on, and a LinkedIn message waits until the connection request is confirmed accepted.",
         "properties": {
           "name": {
             "type": "string",
@@ -4395,11 +4490,9 @@
         "required": [
           "jobId",
           "contactId",
-          "channels",
-          "subject",
-          "emailBody"
+          "channels"
         ],
-        "description": "Queues a message for the dispatcher; it is sent in the candidate's send window, within the mailbox's daily cap. Only EMAIL is accepted until LinkedIn support (M7). Subject and body may use template placeholders.",
+        "description": "Creates one message per channel. EMAIL needs subject and emailBody and a verified mailbox; LINKEDIN_CONNECT needs linkedinNote (at most 300 characters after placeholders); LINKEDIN_DM uses emailBody as the message. LinkedIn channels need a contact with a LinkedIn profile. Text may use template placeholders.",
         "properties": {
           "jobId": {
             "type": "string",
@@ -4529,13 +4622,16 @@
             "enum": [
               "PENDING",
               "SENDING",
+              "ACTION_REQUIRED",
               "SENT",
+              "ACCEPTED",
               "REPLIED",
               "FAILED",
               "BOUNCED",
               "PAUSED",
               "CANCELLED"
-            ]
+            ],
+            "description": "ACTION_REQUIRED: a LinkedIn item the candidate must send in LinkedIn and confirm (assisted mode). ACCEPTED: the candidate confirmed the connection request was accepted."
           },
           "subject": {
             "type": "string",
@@ -4577,6 +4673,23 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ConfirmOutreachMessageRequest": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "SENT",
+              "ACCEPTED",
+              "REPLIED"
+            ],
+            "description": "SENT from ACTION_REQUIRED; ACCEPTED (connection requests) from ACTION_REQUIRED or SENT; REPLIED from any of those, which pauses the remaining steps to the contact."
           }
         }
       }

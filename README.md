@@ -78,7 +78,17 @@ A candidate connects a mailbox (`/candidates/{id}/channel-accounts`): SMTP and I
 - **Unsubscribe:** every email carries `List-Unsubscribe` with a signed one-click link (`List-Unsubscribe-Post`, RFC 8058) when `PUBLIC_BASE_URL` is set, plus a `mailto:` fallback. Opening the link shows a confirmation page and changes nothing; the POST (from the mail client or the page) suppresses the address for that candidate and cancels pending messages. A reply whose subject is "unsubscribe" does the same.
 - **Tracking** of opens and clicks is off unless the candidate sets `settings.emailTracking`, because tracking pixels and rewritten links hurt inbox placement. Click links are signed, so the redirect endpoint cannot be used to send people elsewhere.
 
-Manual messages go through `POST /candidates/{id}/outreach-messages`. Only `EMAIL` is accepted until LinkedIn support (M7).
+Manual messages go through `POST /candidates/{id}/outreach-messages`, one message per requested channel.
+
+## LinkedIn outreach
+
+LinkedIn has no public API for invites or messages, so the default provider is **assisted**: the dispatcher prepares each item and moves it to `ACTION_REQUIRED`; the dashboard shows the note and the contact's profile, the candidate sends it in LinkedIn and confirms it with `POST /candidates/{id}/outreach-messages/{outreachId}/confirm` (`SENT`, `ACCEPTED` for a connection request, or `REPLIED`, which pauses the remaining steps like an email reply).
+
+- Campaigns may mix `EMAIL`, `LINKEDIN_CONNECT` and `LINKEDIN_DM` steps; each contact only gets the steps it can be reached on (an email address, a LinkedIn profile, or both).
+- Connection notes are limited to 300 characters: templates are checked when saved, rendered notes when planned (a longer one is stored as `FAILED` with the reason) and manual notes when submitted.
+- At most 20 connection requests per candidate per rolling day (`LINKEDIN_DAILY_INVITE_LIMIT`), counting invites still waiting for the candidate, enforced across workers with an advisory lock.
+- A LinkedIn message to a contact who was sent an invite waits until the invite is confirmed accepted, and is cancelled after `LINKEDIN_ACCEPTANCE_WAIT`.
+- Automation providers implement `linkedinProviders.Provider` (`SendInvite`, `SendMessage`) and are chosen with `LINKEDIN_PROVIDER`; the caps and note limit apply to every provider.
 
 ## File storage
 
