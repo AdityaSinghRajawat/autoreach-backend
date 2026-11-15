@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "AutoReach API",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "description": "REST API for the AutoReach career automation and outreach platform. All JSON keys are camelCase and every response uses the standard envelope."
   },
   "servers": [
@@ -47,6 +47,14 @@
     {
       "name": "Webhooks",
       "description": "Callbacks from third-party providers"
+    },
+    {
+      "name": "Outreach",
+      "description": "Mailboxes, templates, campaigns and outreach messages"
+    },
+    {
+      "name": "Tracking",
+      "description": "Email open and click tracking (off unless the candidate sets settings.emailTracking)"
     }
   ],
   "paths": {
@@ -1527,6 +1535,1279 @@
           }
         }
       }
+    },
+    "/api/v1/candidates/{candidateId}/channel-accounts": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "listChannelAccounts",
+        "summary": "List the candidate's sending mailboxes",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Channel accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ChannelAccount"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "createChannelAccount",
+        "summary": "Connect a sending mailbox (SMTP and IMAP)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Channel account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ChannelAccount"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChannelAccountRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/channel-accounts/{accountId}": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "accountId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "deleteChannelAccount",
+        "summary": "Disconnect a mailbox; its pending messages are cancelled",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/channel-accounts/{accountId}/verify": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "accountId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "verifyChannelAccount",
+        "summary": "Log in to SMTP and IMAP; the result is the account with status ACTIVE or FAILED",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Channel account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ChannelAccount"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/outreach-templates": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "listOutreachTemplates",
+        "summary": "List templates, newest first",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/OutreachTemplate"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "createOutreachTemplate",
+        "summary": "Create a template in DRAFT",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachTemplate"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTemplateRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/outreach-templates/{templateId}": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "templateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "getOutreachTemplate",
+        "summary": "Get a template",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachTemplate"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "updateOutreachTemplate",
+        "summary": "Edit, approve or archive a template",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachTemplate"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTemplateRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "deleteOutreachTemplate",
+        "summary": "Delete a template no campaign uses",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/outreach-campaigns": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "listOutreachCampaigns",
+        "summary": "List campaigns with their steps",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaigns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/OutreachCampaign"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "createOutreachCampaign",
+        "summary": "Create a campaign",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachCampaign"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCampaignRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/outreach-campaigns/{campaignId}": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "campaignId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "getOutreachCampaign",
+        "summary": "Get a campaign",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachCampaign"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "updateOutreachCampaign",
+        "summary": "Rename, pause, resume, archive or change steps",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachCampaign"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCampaignRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/outreach-messages": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "listOutreachMessages",
+        "summary": "List outreach messages, newest first",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data",
+                        "meta"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/OutreachMessage"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "SENDING",
+                "SENT",
+                "REPLIED",
+                "FAILED",
+                "BOUNCED",
+                "PAUSED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "createOutreachMessages",
+        "summary": "Queue a message to a job contact (TSD dispatch endpoint, scoped to the candidate path)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Queued messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "messages"
+                          ],
+                          "properties": {
+                            "messages": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/OutreachMessage"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOutreachMessagesRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/outreach-messages/{outreachId}": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "outreachId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "getOutreachMessage",
+        "summary": "Get an outreach message",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachMessage"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Outreach"
+        ],
+        "operationId": "updateOutreachMessage",
+        "summary": "Cancel a pending or paused message",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutreachMessage"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOutreachMessageRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/t/o/{token}": {
+      "parameters": [
+        {
+          "name": "token",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Tracking"
+        ],
+        "operationId": "trackOpen",
+        "summary": "Open pixel; records an OPENED event",
+        "responses": {
+          "200": {
+            "description": "1x1 transparent GIF",
+            "content": {
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/t/c/{token}": {
+      "parameters": [
+        {
+          "name": "token",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Tracking"
+        ],
+        "operationId": "trackClick",
+        "summary": "Records a CLICKED event and redirects to the link; only links signed by this service are followed",
+        "parameters": [
+          {
+            "name": "u",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          {
+            "name": "s",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to the original link"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2284,6 +3565,41 @@
               "wordCount": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "jobTitles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "yearsOfExperience": {
+                "type": "number",
+                "nullable": true,
+                "minimum": 0
+              },
+              "education": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "degree": {
+                      "type": "string"
+                    },
+                    "fieldOfStudy": {
+                      "type": "string"
+                    },
+                    "institution": {
+                      "type": "string"
+                    },
+                    "graduationYear": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "parsedBy": {
+                "type": "string",
+                "description": "The parsing model, or \"dictionary\" when the skill list fallback was used."
               }
             }
           },
@@ -2534,6 +3850,652 @@
         "properties": {
           "received": {
             "type": "boolean"
+          }
+        }
+      },
+      "CreateChannelAccountRequest": {
+        "type": "object",
+        "required": [
+          "emailAddress",
+          "username",
+          "password",
+          "smtpHost",
+          "smtpPort",
+          "smtpSecurity",
+          "imapHost",
+          "imapPort",
+          "imapSecurity"
+        ],
+        "properties": {
+          "emailAddress": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 1024,
+            "description": "Stored encrypted with AES-256-GCM; never returned."
+          },
+          "smtpHost": {
+            "type": "string"
+          },
+          "smtpPort": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "smtpSecurity": {
+            "type": "string",
+            "enum": [
+              "TLS",
+              "STARTTLS",
+              "NONE"
+            ],
+            "description": "NONE is accepted only when OUTREACH_ALLOW_INSECURE_MAIL is enabled (never in production)."
+          },
+          "imapHost": {
+            "type": "string"
+          },
+          "imapPort": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "imapSecurity": {
+            "type": "string",
+            "enum": [
+              "TLS",
+              "STARTTLS",
+              "NONE"
+            ],
+            "description": "NONE is accepted only when OUTREACH_ALLOW_INSECURE_MAIL is enabled (never in production)."
+          },
+          "dailyLimit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Capped at OUTREACH_MAX_DAILY_EMAILS (default 30)."
+          }
+        }
+      },
+      "ChannelAccount": {
+        "type": "object",
+        "required": [
+          "accountId",
+          "candidateId",
+          "channelType",
+          "emailAddress",
+          "displayName",
+          "smtpHost",
+          "smtpPort",
+          "smtpSecurity",
+          "imapHost",
+          "imapPort",
+          "imapSecurity",
+          "status",
+          "dailyLimit",
+          "lastVerifiedAt",
+          "lastError",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channelType": {
+            "type": "string",
+            "enum": [
+              "EMAIL"
+            ]
+          },
+          "emailAddress": {
+            "type": "string",
+            "format": "email"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "smtpHost": {
+            "type": "string"
+          },
+          "smtpPort": {
+            "type": "integer"
+          },
+          "smtpSecurity": {
+            "type": "string",
+            "enum": [
+              "TLS",
+              "STARTTLS",
+              "NONE"
+            ]
+          },
+          "imapHost": {
+            "type": "string"
+          },
+          "imapPort": {
+            "type": "integer"
+          },
+          "imapSecurity": {
+            "type": "string",
+            "enum": [
+              "TLS",
+              "STARTTLS",
+              "NONE"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNVERIFIED",
+              "ACTIVE",
+              "FAILED"
+            ]
+          },
+          "dailyLimit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "lastVerifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateTemplateRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "channel",
+          "body"
+        ],
+        "description": "Placeholders: {{candidateName}}, {{candidateFirstName}}, {{candidateLinkedinUrl}}, {{contactName}}, {{contactFirstName}}, {{contactTitle}}, {{companyName}}, {{jobTitle}}, {{matchingSkills}}. Any other placeholder is rejected.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "EMAIL",
+              "LINKEDIN_CONNECT",
+              "LINKEDIN_DM"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true,
+            "description": "Required for EMAIL."
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 20000
+          }
+        }
+      },
+      "UpdateTemplateRequest": {
+        "type": "object",
+        "description": "Changing the subject or body of an APPROVED template returns it to DRAFT.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "APPROVED",
+              "ARCHIVED"
+            ]
+          }
+        }
+      },
+      "OutreachTemplate": {
+        "type": "object",
+        "required": [
+          "templateId",
+          "candidateId",
+          "name",
+          "channel",
+          "subject",
+          "body",
+          "status",
+          "approvedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "EMAIL",
+              "LINKEDIN_CONNECT",
+              "LINKEDIN_DM"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "nullable": true
+          },
+          "body": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "APPROVED",
+              "ARCHIVED"
+            ]
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CampaignStepRequest": {
+        "type": "object",
+        "required": [
+          "templateId",
+          "delayDays"
+        ],
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "delayDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60,
+            "description": "Days after the previous step."
+          }
+        }
+      },
+      "CreateCampaignRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "steps"
+        ],
+        "description": "A candidate has at most one ACTIVE campaign; it is used for automatic outreach. Steps must use the candidate's EMAIL templates.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "channelAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/CampaignStepRequest"
+            }
+          }
+        }
+      },
+      "UpdateCampaignRequest": {
+        "type": "object",
+        "description": "Supplying steps replaces them all.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "channelAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED",
+              "ARCHIVED"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/CampaignStepRequest"
+            }
+          }
+        }
+      },
+      "OutreachCampaign": {
+        "type": "object",
+        "required": [
+          "campaignId",
+          "candidateId",
+          "channelAccountId",
+          "name",
+          "status",
+          "steps",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channelAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED",
+              "ARCHIVED"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "stepNumber",
+                "templateId",
+                "delayDays"
+              ],
+              "properties": {
+                "stepNumber": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "templateId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "delayDays": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateOutreachMessagesRequest": {
+        "type": "object",
+        "required": [
+          "jobId",
+          "contactId",
+          "channels",
+          "subject",
+          "emailBody"
+        ],
+        "description": "Queues a message for the dispatcher; it is sent in the candidate's send window, within the mailbox's daily cap. Only EMAIL is accepted until LinkedIn support (M7). Subject and body may use template placeholders.",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channels": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "EMAIL",
+                "LINKEDIN_CONNECT",
+                "LINKEDIN_DM"
+              ]
+            }
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "emailBody": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "linkedinNote": {
+            "type": "string",
+            "maxLength": 300,
+            "nullable": true
+          },
+          "channelAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateOutreachMessageRequest": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "CANCELLED"
+            ],
+            "description": "Only PENDING or PAUSED messages can be cancelled."
+          }
+        }
+      },
+      "OutreachMessage": {
+        "type": "object",
+        "required": [
+          "outreachId",
+          "candidateId",
+          "contactId",
+          "jobId",
+          "campaignId",
+          "channelAccountId",
+          "templateId",
+          "stepNumber",
+          "channel",
+          "status",
+          "subject",
+          "bodyContent",
+          "linkedinNote",
+          "scheduledAt",
+          "attemptCount",
+          "sentAt",
+          "repliedAt",
+          "failureReason",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "outreachId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "campaignId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "channelAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "templateId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "stepNumber": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "EMAIL",
+              "LINKEDIN_CONNECT",
+              "LINKEDIN_DM"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "SENDING",
+              "SENT",
+              "REPLIED",
+              "FAILED",
+              "BOUNCED",
+              "PAUSED",
+              "CANCELLED"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "nullable": true
+          },
+          "bodyContent": {
+            "type": "string"
+          },
+          "linkedinNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "scheduledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attemptCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "repliedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }
