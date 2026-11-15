@@ -532,3 +532,100 @@ func TestTrackingRecordsOpensAndOnlyFollowsSignedLinks(t *testing.T) {
 	rows.Close()
 	assert.ElementsMatch(t, []string{"SENT", "OPENED", "CLICKED"}, events)
 }
+
+func TestUnsubscribeLinkStopsTheSenderAndOnlyThePostChangesAnything(t *testing.T) {
+	fixture := newOutreachFixture(t)
+	fixture.startCampaign(t)
+
+	ctx := context.Background()
+
+	_, customErr := fixture.deps.Services.Outreach.PlanOutreach(
+		ctx,
+		fixture.candidateID,
+		fixture.jobID,
+	)
+	require.Nil(t, customErr)
+	fixture.dispatchAndSend(t)
+
+	messageID := fixture.messages(t)[0].ID
+	signature := utils.Sign(
+		utils.DeriveKey(config.GetJWTSecret(), config.GetUnsubscribeKeyLabel()),
+		messageID,
+	)
+	path := "/u/" + messageID + "?s=" + signature
+
+	forged := helpers.Do(t, fixture.router, http.MethodGet, "/u/"+messageID+"?s=forged", nil, nil)
+	assert.Equal(t, http.StatusNotFound, forged.Recorder.Code)
+
+	page := helpers.Do(t, fixture.router, http.MethodGet, path, nil, nil)
+	require.Equal(t, http.StatusOK, page.Recorder.Code)
+	assert.Contains(t, string(page.Body), "<form method=\"post\"")
+	assert.Equal(
+		t,
+		modelHelpers.OutreachStatusPending,
+		fixture.messages(t)[1].Status,
+		"opening the link changes nothing",
+	)
+
+	unsubscribed := helpers.Do(t, fixture.router, http.MethodPost, path, nil, nil)
+	require.Equal(t, http.StatusOK, unsubscribed.Recorder.Code)
+	assert.Contains(t, string(unsubscribed.Body), "You have been unsubscribed")
+	assert.Equal(t, modelHelpers.OutreachStatusCancelled, fixture.messages(t)[1].Status)
+
+	var scopedToCandidate bool
+
+	require.NoError(t, fixture.deps.Postgres.GetPool().QueryRow(ctx,
+		"SELECT candidate_id IS NOT NULL FROM suppression_entries WHERE value = $1 AND reason = 'UNSUBSCRIBED'",
+		contactAddress,
+	).
+		Scan(&scopedToCandidate))
+	assert.True(t, scopedToCandidate, "the opt-out applies to this sender only")
+
+	retry := helpers.Do(t, fixture.router, http.MethodPost,
+		candidatePath(fixture.candidateID)+"/outreach-messages", map[string]any{
+			"jobId": fixture.jobID, "contactId": fixture.contactID, "channels": []string{"EMAIL"},
+			"subject": "Hello", "emailBody": "Again",
+		}, bearer(fixture.userToken))
+	assert.Equal(t, http.StatusUnprocessableEntity, retry.Recorder.Code)
+}
+
+func TestReplyingUnsubscribeIsTreatedAsAnOptOut(t *testing.T) {
+	fixture := newOutreachFixture(t)
+	fixture.startCampaign(t)
+
+	ctx := context.Background()
+
+	_, customErr := fixture.deps.Services.Outreach.PlanOutreach(
+		ctx,
+		fixture.candidateID,
+		fixture.jobID,
+	)
+	require.Nil(t, customErr)
+	fixture.dispatchAndSend(t)
+
+	original := findBySubject(t, fetchInbox(t, contactAddress, contactPassword), "")
+
+	require.NoError(
+		t,
+		utils.NewEmailUtil().SendEmail(ctx, mailAccountFor(t, contactAddress, contactPassword),
+			sharedTypes.OutgoingEmail{
+				FromAddress: contactAddress,
+				ToAddress:   senderAddress,
+				Subject:     "Re: unsubscribe",
+				Body:        "Please stop.",
+				MessageID:   utils.NewEmailMessageID(contactAddress),
+				InReplyTo:   original.MessageID,
+				Date:        time.Now(),
+			}),
+	)
+	require.Nil(t, fixture.deps.Services.Outreach.SweepMailbox(ctx, fixture.accountID))
+
+	messages := fixture.messages(t)
+	assert.Equal(
+		t,
+		modelHelpers.OutreachStatusSent,
+		messages[0].Status,
+		"an opt-out is not counted as a reply",
+	)
+	assert.Equal(t, modelHelpers.OutreachStatusCancelled, messages[1].Status)
+}
