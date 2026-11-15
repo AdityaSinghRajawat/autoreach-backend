@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "AutoReach API",
-    "version": "0.9.0",
+    "version": "0.10.0",
     "description": "REST API for the AutoReach career automation and outreach platform. All JSON keys are camelCase and every response uses the standard envelope."
   },
   "servers": [
@@ -59,6 +59,10 @@
     {
       "name": "Unsubscribe",
       "description": "Opt-out links carried in every outreach email (List-Unsubscribe, RFC 8058)"
+    },
+    {
+      "name": "Applications",
+      "description": "Assisted job applications and the application profile"
     }
   ],
   "paths": {
@@ -2983,6 +2987,465 @@
           }
         }
       }
+    },
+    "/api/v1/candidates/{candidateId}/application-profile": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Applications"
+        ],
+        "operationId": "getApplicationProfile",
+        "summary": "Get the answers used to fill application forms",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Application profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ApplicationProfile"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Applications"
+        ],
+        "operationId": "updateApplicationProfile",
+        "summary": "Replace the application profile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Application profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ApplicationProfile"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationProfile"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/applications": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Applications"
+        ],
+        "operationId": "listApplications",
+        "summary": "List applications, newest first",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Applications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data",
+                        "meta"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ApplicationDetail"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "QUEUED",
+                "IN_PROGRESS",
+                "SUBMITTED",
+                "ACTION_REQUIRED",
+                "FAILED",
+                "INTERVIEWING",
+                "REJECTED"
+              ]
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Applications"
+        ],
+        "operationId": "createApplication",
+        "summary": "Queue an application to a job; AutoReach prepares the answers and submits only when the employer's API key is configured",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Application",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Application"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApplicationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidates/{candidateId}/applications/{applicationId}": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "applicationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Applications"
+        ],
+        "operationId": "getApplication",
+        "summary": "Get an application with its prepared answers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Application",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ApplicationDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Applications"
+        ],
+        "operationId": "updateApplication",
+        "summary": "Confirm submission or track the outcome",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Application",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Application"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateApplicationRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4741,6 +5204,305 @@
                 ],
                 "nullable": true,
                 "description": "Who the message is for, including the LinkedIn profile to open for ACTION_REQUIRED items."
+              }
+            }
+          }
+        ]
+      },
+      "ApplicationProfile": {
+        "type": "object",
+        "description": "Answers used to fill application forms. Questions are matched by label keywords; `answers` holds exact answers keyed by question label.",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "linkedinUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500
+          },
+          "githubUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500
+          },
+          "websiteUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500
+          },
+          "currentCompany": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "workAuthorized": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "requiresSponsorship": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "salaryExpectation": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "noticePeriod": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "howDidYouHear": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "coverLetter": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "answers": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 5000
+            }
+          }
+        }
+      },
+      "CreateApplicationRequest": {
+        "type": "object",
+        "required": [
+          "jobId"
+        ],
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UpdateApplicationRequest": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUBMITTED",
+              "INTERVIEWING",
+              "REJECTED"
+            ],
+            "description": "SUBMITTED from ACTION_REQUIRED or FAILED (the candidate submitted it); INTERVIEWING from SUBMITTED; REJECTED from SUBMITTED or INTERVIEWING."
+          }
+        }
+      },
+      "Application": {
+        "type": "object",
+        "required": [
+          "applicationId",
+          "candidateId",
+          "jobId",
+          "resumeId",
+          "matchScore",
+          "status",
+          "atsType",
+          "applyUrl",
+          "preparedAnswers",
+          "missingAnswers",
+          "executionLogs",
+          "externalConfirmation",
+          "attemptCount",
+          "failureReason",
+          "submittedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resumeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "matchScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "QUEUED",
+              "IN_PROGRESS",
+              "SUBMITTED",
+              "ACTION_REQUIRED",
+              "FAILED",
+              "INTERVIEWING",
+              "REJECTED"
+            ],
+            "description": "ACTION_REQUIRED: answers are prepared; the candidate submits with applyUrl and confirms."
+          },
+          "atsType": {
+            "type": "string",
+            "enum": [
+              "GREENHOUSE",
+              "LEVER",
+              "WORKDAY",
+              "OTHER"
+            ]
+          },
+          "applyUrl": {
+            "type": "string"
+          },
+          "preparedAnswers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "label",
+                "fieldName",
+                "value"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "fieldName": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "missingAnswers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "label",
+                "fieldName"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "fieldName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "executionLogs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "at",
+                "step"
+              ],
+              "properties": {
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "step": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "externalConfirmation": {
+            "type": "string",
+            "nullable": true
+          },
+          "attemptCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApplicationDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Application"
+          },
+          {
+            "type": "object",
+            "required": [
+              "job"
+            ],
+            "properties": {
+              "job": {
+                "type": "object",
+                "nullable": true,
+                "required": [
+                  "jobId",
+                  "jobTitle",
+                  "companyName",
+                  "location"
+                ],
+                "properties": {
+                  "jobId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "jobTitle": {
+                    "type": "string"
+                  },
+                  "companyName": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
               }
             }
           }

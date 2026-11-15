@@ -90,6 +90,16 @@ LinkedIn has no public API for invites or messages, so the default provider is *
 - A LinkedIn message to a contact who was sent an invite waits until the invite is confirmed accepted, and is cancelled after `LINKEDIN_ACCEPTANCE_WAIT`.
 - Automation providers implement `linkedinProviders.Provider` (`SendInvite`, `SendMessage`) and are chosen with `LINKEDIN_PROVIDER`; the caps and note limit apply to every provider.
 
+## Job applications
+
+Greenhouse and Lever only accept applications through their APIs with the employer's own key, and their hosted forms are protected by reCAPTCHA, so AutoReach does **assisted apply**:
+
+1. A match at or above the candidate's threshold (with automatic applying on), or `POST /candidates/{id}/applications`, creates a `QUEUED` application. Each job is applied to once.
+2. `task:prepare_application` reads the job's form (Greenhouse questions through the public Job Board API; Lever's standard fields) and fills it from the candidate's details and their application profile (`PUT /candidates/{id}/application-profile`: phone, links, work authorisation, sponsorship, salary, notice period, a cover letter, and exact answers keyed by question label). Questions are matched by label keywords; yes/no selects use the option's value.
+3. With an employer key for that board or site (`GREENHOUSE_BOARD_KEYS`, `LEVER_SITE_KEYS`) and every required answer known, it submits through the official API with the active resume (`SUBMITTED`). Otherwise the application is `ACTION_REQUIRED`: the prepared answers, the questions still unanswered and the apply link are shown to the candidate, who submits in the browser and confirms with `PATCH /candidates/{id}/applications/{applicationId}` (`SUBMITTED`, then `INTERVIEWING` or `REJECTED`).
+
+Requests to each application site are rate limited; transient failures are retried and stalled applications are re-queued by the reconciler. Every step is recorded in `executionLogs`.
+
 ## File storage
 
 `STORAGE_DRIVER` chooses where uploaded files go: `local` (the default, under `STORAGE_LOCAL_DIR`) or `s3` (configured by the `S3_*` settings). `S3_ENDPOINT` and `S3_USE_PATH_STYLE` cover S3-compatible services such as Cloudflare R2 or MinIO. Startup fails if `s3` is chosen and the bucket is missing or unreachable, or if the driver name is unknown. Files already on local disk are not copied across automatically.
@@ -163,4 +173,4 @@ tests              unit, integration, setup, helpers, mocks
 
 ## Status
 
-Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, and email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking). The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
+Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, and assisted job applications for Greenhouse and Lever. The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
