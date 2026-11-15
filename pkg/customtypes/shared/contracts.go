@@ -37,3 +37,8 @@ type Limiter interface {
 		cost int,
 	) (RateLimitDecision, error)
 }
+
+type ChatCompleter interface {
+	CreateChatCompletion(ctx context.Context, request ChatCompletionRequest) (string, error)
+	ChatModel() string
+}

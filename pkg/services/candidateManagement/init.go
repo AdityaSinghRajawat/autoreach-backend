@@ -17,6 +17,7 @@ type CandidateServiceDependencies struct {
 	WorkerClient       workerConfigs.IWorkerClient
 	FileStore          sharedTypes.FileStore
 	Embedder           sharedTypes.Embedder
+	ChatCompleter      sharedTypes.ChatCompleter
 }
 
 type CandidateService struct {
@@ -26,6 +27,7 @@ type CandidateService struct {
 	workerClient       workerConfigs.IWorkerClient
 	fileStore          sharedTypes.FileStore
 	embedder           sharedTypes.Embedder
+	chatCompleter      sharedTypes.ChatCompleter
 }
 
 func NewCandidateService(dependencies CandidateServiceDependencies) (*CandidateService, error) {
@@ -34,7 +36,8 @@ func NewCandidateService(dependencies CandidateServiceDependencies) (*CandidateS
 		dependencies.TransactionManager == nil ||
 		dependencies.WorkerClient == nil ||
 		dependencies.FileStore == nil ||
-		dependencies.Embedder == nil {
+		dependencies.Embedder == nil ||
+		dependencies.ChatCompleter == nil {
 		return nil, fmt.Errorf("new candidate service: %w", config.ErrMissingDependency)
 	}
 
@@ -45,5 +48,6 @@ func NewCandidateService(dependencies CandidateServiceDependencies) (*CandidateS
 		workerClient:       dependencies.WorkerClient,
 		fileStore:          dependencies.FileStore,
 		embedder:           dependencies.Embedder,
+		chatCompleter:      dependencies.ChatCompleter,
 	}, nil
 }

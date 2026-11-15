@@ -23,8 +23,8 @@ func (i *OpenAIIntegration) CreateEmbeddings(
 
 	err := i.httpClient.Post(
 		ctx,
-		"/embeddings",
-		map[string]string{config.GetAuthorizationHeader(): config.GetBearerPrefix() + i.apiKey},
+		config.GetEmbeddingsPath(),
+		i.authorizationHeaders(),
 		embeddingsRequest{Model: i.model, Input: inputs, Dimensions: i.dimensions},
 		&response,
 	)

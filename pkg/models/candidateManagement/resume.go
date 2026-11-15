@@ -59,6 +59,10 @@ func (r *Resume) IsEmbedded() bool {
 	return r.Status == modelHelpers.ResumeStatusEmbedded
 }
 
+func (r *Resume) IsParsed() bool {
+	return r.Status == modelHelpers.ResumeStatusParsed && r.RawText != ""
+}
+
 func (r *Resume) MarkParsed(rawText string, parsedMetadata json.RawMessage) {
 	r.RawText = rawText
 	r.ParsedMetadata = parsedMetadata

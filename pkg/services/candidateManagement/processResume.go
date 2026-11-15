@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
@@ -39,25 +37,27 @@ func (s *CandidateService) ProcessResume(
 		return s.finishProcessedResume(ctx, resume)
 	}
 
-	text, err := s.extractResumeText(ctx, resume)
-	if isTerminalDocumentError(err) {
-		return s.failResume(ctx, resume, err)
-	}
+	if !resume.IsParsed() {
+		text, err := s.extractResumeText(ctx, resume)
+		if isTerminalDocumentError(err) {
+			return s.failResume(ctx, resume, err)
+		}
 
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("process resume: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
+		if err != nil {
+			return nil, config.NewCustomError(
+				fmt.Errorf("process resume: %w", err),
+				config.GetErrCodeInternalServerError(),
+			)
+		}
 
-	if customErr := s.saveParsedResume(ctx, resume, text); customErr != nil {
-		return nil, customErr
+		if customErr := s.saveParsedResume(ctx, resume, text); customErr != nil {
+			return nil, customErr
+		}
 	}
 
 	embeddings, err := s.embedder.CreateEmbeddings(
 		ctx,
-		[]string{truncateForEmbedding(text)},
+		[]string{truncateRunes(resume.RawText, config.GetOpenAIEmbeddingMaxInputChars())},
 	)
 	if err != nil {
 		return s.handleEmbeddingFailure(ctx, resume, err)
@@ -115,7 +115,7 @@ func (s *CandidateService) saveParsedResume(
 	resume *candidateModel.Resume,
 	text string,
 ) *config.CustomError {
-	metadata, err := json.Marshal(parseResumeMetadata(text))
+	metadata, err := json.Marshal(s.parseResumeMetadata(ctx, text))
 	if err != nil {
 		return config.NewCustomError(
 			fmt.Errorf("process resume: encode metadata: %w", err),
@@ -249,30 +249,11 @@ func failureReason(cause error) string {
 	return config.GetPublicMessageForErrCode(config.GetErrCodeUpstreamRejected())
 }
 
-func truncateForEmbedding(text string) string {
+func truncateRunes(text string, limit int) string {
 	characters := []rune(text)
-	if limit := config.GetOpenAIEmbeddingMaxInputChars(); len(characters) > limit {
+	if len(characters) > limit {
 		characters = characters[:limit]
 	}
 
 	return string(characters)
-}
-
-func parseResumeMetadata(text string) candidateTypes.ResumeMetadata {
-	lowered := " " + strings.ToLower(text) + " "
-	skills := make([]string, 0, 16)
-
-	for _, skill := range config.GetSkillDictionary() {
-		pattern := `(^|[^a-z0-9+#.])` + regexp.QuoteMeta(skill) + `($|[^a-z0-9+#])`
-		if matched, err := regexp.MatchString(pattern, lowered); err == nil && matched {
-			skills = append(skills, skill)
-		}
-	}
-
-	slices.Sort(skills)
-
-	return candidateTypes.ResumeMetadata{
-		Skills:    skills,
-		WordCount: len(strings.Fields(text)),
-	}
 }

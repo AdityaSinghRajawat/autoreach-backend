@@ -214,7 +214,13 @@ func TestUploadedDocxResumeIsProcessed(t *testing.T) {
 
 	resume := fixture.getResume(t, uploaded.Resume.ID)
 	assert.True(t, resume.IsActive)
-	assert.JSONEq(t, `{"skills":["django","python"],"wordCount":5}`, string(resume.ParsedMetadata))
+	assert.JSONEq(
+		t,
+		`{"skills":["django","python"],"jobTitles":[],"yearsOfExperience":null,"education":[],`+
+			`"wordCount":5,"parsedBy":"dictionary"}`,
+		string(resume.ParsedMetadata),
+		"the skill dictionary is the fallback when the parsing model fails",
+	)
 }
 
 func TestUploadRejectsMissingUnsupportedAndOversizedFiles(t *testing.T) {
@@ -307,6 +313,8 @@ func TestEmbeddingOutageLeavesTheResumeRetryableAndRejectionFailsIt(t *testing.T
 		uploaded.Resume.ID,
 	)
 	require.Nil(t, customErr, "a retry after the outage completes the resume")
+	assert.Equal(t, 1, setup.ChatCompleter(t).CallCount(),
+		"a retry reuses the parsed text instead of paying for parsing again")
 	assert.True(t, fixture.getResume(t, uploaded.Resume.ID).IsActive)
 
 	rejected := fixture.uploadResume(t, "second.pdf", helpers.BuildPDF(t, "Alex Candidate, Python"))
@@ -583,6 +591,7 @@ func TestReconcilerRequeuesResumesWhoseTaskWasLost(t *testing.T) {
 			WorkerClient:       workerClient,
 			FileStore:          fixture.deps.FileStore,
 			Embedder:           setup.Embedder(t),
+			ChatCompleter:      setup.ChatCompleter(t),
 		},
 	)
 	require.NoError(t, err)
@@ -645,4 +654,41 @@ func TestWorkerProcessesAnUploadedResumeAndMatchesItEndToEnd(t *testing.T) {
 
 		return len(matched) == 1 && matched[0].JobID == ingested.QueuedTasks[0].JobID
 	}, 40*time.Second, 250*time.Millisecond, "the worker did not produce the match")
+}
+
+func TestResumeProfileFromTheParsingModelIsNormalisedAndStored(t *testing.T) {
+	fixture := newJobFixture(t)
+	years := 7.5
+	graduated := 2015
+	setup.ChatCompleter(t).ReplyWith(candidateTypes.ResumeProfile{
+		Skills:            []string{" Go ", "Kubernetes", "go", "", "PostgreSQL"},
+		JobTitles:         []string{"Staff Engineer", "Staff Engineer", "Backend Engineer"},
+		YearsOfExperience: &years,
+		Education: []candidateTypes.ResumeEducation{
+			{Degree: " BSc ", FieldOfStudy: "Computer Science", GraduationYear: &graduated},
+			{},
+		},
+	})
+
+	uploaded := fixture.uploadResume(t, "resume.pdf", helpers.BuildPDF(t, "Alex Candidate, Go"))
+
+	_, customErr := fixture.deps.Services.Candidate.ProcessResume(
+		context.Background(),
+		uploaded.Resume.ID,
+	)
+	require.Nil(t, customErr)
+
+	metadata := candidateTypes.ResumeMetadata{}
+	require.NoError(
+		t,
+		json.Unmarshal(fixture.getResume(t, uploaded.Resume.ID).ParsedMetadata, &metadata),
+	)
+	assert.Equal(t, mocks.ChatModel, metadata.ParsedBy)
+	assert.Equal(t, []string{"go", "kubernetes", "postgresql"}, metadata.Skills)
+	assert.Equal(t, []string{"Staff Engineer", "Backend Engineer"}, metadata.JobTitles)
+	require.NotNil(t, metadata.YearsOfExperience)
+	assert.InDelta(t, 7.5, *metadata.YearsOfExperience, 0.001)
+	assert.Equal(t, []candidateTypes.ResumeEducation{
+		{Degree: "BSc", FieldOfStudy: "Computer Science", GraduationYear: &graduated},
+	}, metadata.Education)
 }

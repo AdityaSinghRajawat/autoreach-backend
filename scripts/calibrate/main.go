@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
-	openaiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/embeddings/openai"
+	openaiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/openai"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
@@ -46,7 +46,7 @@ func run(ctx context.Context, path string) error {
 		return err
 	}
 
-	embedder := openaiIntegration.NewOpenAIIntegration()
+	embedder := openaiIntegration.NewOpenAIIntegration(config.GetOpenAIBaseURL())
 	maxChars := config.GetOpenAIEmbeddingMaxInputChars()
 	similarities := map[string][]float64{}
 

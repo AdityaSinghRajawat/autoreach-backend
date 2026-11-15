@@ -24,9 +24,24 @@ type UploadResumeResponse struct {
 	Status   string                 `json:"status"`
 }
 
+type ResumeProfile struct {
+	Skills            []string          `json:"skills"`
+	JobTitles         []string          `json:"jobTitles"`
+	YearsOfExperience *float64          `json:"yearsOfExperience"`
+	Education         []ResumeEducation `json:"education"`
+}
+
+type ResumeEducation struct {
+	Degree         string `json:"degree,omitempty"`
+	FieldOfStudy   string `json:"fieldOfStudy,omitempty"`
+	Institution    string `json:"institution,omitempty"`
+	GraduationYear *int   `json:"graduationYear,omitempty"`
+}
+
 type ResumeMetadata struct {
-	Skills    []string `json:"skills"`
-	WordCount int      `json:"wordCount"`
+	ResumeProfile
+	WordCount int    `json:"wordCount"`
+	ParsedBy  string `json:"parsedBy"`
 }
 
 type ProcessResumeResult struct {
