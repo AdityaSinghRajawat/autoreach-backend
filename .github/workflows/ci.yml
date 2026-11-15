@@ -69,6 +69,13 @@ jobs:
             curl -sf http://localhost:59090/ >/dev/null && break
             sleep 2
           done
+      - name: Start mail test service
+        run: |
+          docker run -d --name mail-test -p 53025:3025 -p 53143:3143             -e GREENMAIL_OPTS="-Dgreenmail.setup.test.smtp -Dgreenmail.setup.test.imap -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.users.login=email -Dgreenmail.users=alex:alex-password@example.com,sarah:sarah-password@acme.test"             greenmail/standalone:2.1.8
+          for attempt in $(seq 1 30); do
+            (echo > /dev/tcp/127.0.0.1/53143) 2>/dev/null && break
+            sleep 2
+          done
       - name: Integration tests
         env:
           TEST_REQUIRE_SERVICES: "1"

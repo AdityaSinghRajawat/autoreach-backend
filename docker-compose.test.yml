@@ -24,3 +24,14 @@ services:
     image: adobe/s3mock:3.12.0
     ports:
       - "127.0.0.1:59090:9090"
+
+  mail-test:
+    image: greenmail/standalone:2.1.8
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.smtp -Dgreenmail.setup.test.imap -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.users.login=email
+        -Dgreenmail.users=alex:alex-password@example.com,sarah:sarah-password@acme.test
+    ports:
+      - "127.0.0.1:53025:3025"
+      - "127.0.0.1:53143:3143"

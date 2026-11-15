@@ -29,6 +29,7 @@ var (
 	dependenciesI    *dependencies.Dependencies
 	dependenciesErr  error
 	embedderI        *mocks.Embedder
+	chatCompleterI   = &mocks.ChatCompleter{}
 )
 
 func Dependencies(t *testing.T) *dependencies.Dependencies {
@@ -58,6 +59,8 @@ func Dependencies(t *testing.T) *dependencies.Dependencies {
 		embedderI = mocks.NewEmbedder(config.GetOpenAIEmbeddingDimensions())
 
 		dependenciesI.Embedder = embedderI
+
+		dependenciesI.ChatCompleter = chatCompleterI
 		if dependenciesErr = dependenciesI.Wire(); dependenciesErr != nil {
 			return
 		}
@@ -76,6 +79,7 @@ func Dependencies(t *testing.T) *dependencies.Dependencies {
 	Truncate(t, dependenciesI)
 	FlushRedis(t, dependenciesI)
 	embedderI.Reset()
+	chatCompleterI.Reset()
 
 	return dependenciesI
 }
@@ -152,4 +156,10 @@ func FlushRedis(t *testing.T, deps *dependencies.Dependencies) {
 	defer cancel()
 
 	require.NoError(t, deps.Redis.GetClient().FlushDB(ctx).Err())
+}
+
+func ChatCompleter(t *testing.T) *mocks.ChatCompleter {
+	t.Helper()
+
+	return chatCompleterI
 }
