@@ -42,6 +42,14 @@ func NewRoutes(deps *dependencies.Dependencies) http.Handler {
 	router.NoMethod(middlewares.MethodNotAllowed())
 
 	router.GET("/health", handlers.Health)
+	router.GET(
+		config.GetTrackingOpenPath()+":"+config.GetTrackingTokenParam(),
+		deps.Handlers.Outreach.TrackOpen,
+	)
+	router.GET(
+		config.GetTrackingClickPath()+":"+config.GetTrackingTokenParam(),
+		deps.Handlers.Outreach.TrackClick,
+	)
 	loadOperatorRoutes(router)
 	loadAPIRoutes(router, deps)
 

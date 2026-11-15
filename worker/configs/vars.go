@@ -17,11 +17,15 @@ const (
 	TaskMatchResume    WorkerTaskID = "task:match_resume"
 	TaskMatchJob       WorkerTaskID = "task:match_job"
 	TaskEnrichContacts WorkerTaskID = "task:enrich_contacts"
+	TaskPlanOutreach   WorkerTaskID = "task:plan_outreach"
+	TaskSendColdEmail  WorkerTaskID = "task:send_cold_email"
+	TaskSweepMailbox   WorkerTaskID = "task:sweep_mailbox"
 	TaskUnroutable     WorkerTaskID = "task:unroutable"
 
 	QueueEmbedding  = "embedding_queue"
 	QueueMatching   = "matching_queue"
 	QueueEnrichment = "enrichment_queue"
+	QueueOutreach   = "outreach_queue"
 
 	GroupEmbedJob = "embed_job"
 
@@ -90,6 +94,20 @@ var taskConfigsI = map[WorkerTaskID]TaskConfig{
 		RetryBackoff: matchingBackoffI,
 		Timeout:      30 * time.Second,
 	},
+	TaskPlanOutreach: {
+		QueueName:    QueueOutreach,
+		MaxRetry:     3,
+		RetryBackoff: matchingBackoffI,
+		Timeout:      30 * time.Second,
+	},
+	TaskSendColdEmail: {
+		QueueName: QueueOutreach,
+		Timeout:   45 * time.Second,
+	},
+	TaskSweepMailbox: {
+		QueueName: QueueOutreach,
+		Timeout:   2 * time.Minute,
+	},
 	TaskEnrichContacts: {
 		QueueName:    QueueEnrichment,
 		MaxRetry:     3,
@@ -102,6 +120,7 @@ var queueDefinitionsI = []QueueDefinition{
 	{Name: QueueEmbedding, Priority: 3},
 	{Name: QueueMatching, Priority: 2},
 	{Name: QueueEnrichment, Priority: 1},
+	{Name: QueueOutreach, Priority: 2},
 }
 
 func GetTaskConfig(taskID WorkerTaskID) (TaskConfig, bool) {

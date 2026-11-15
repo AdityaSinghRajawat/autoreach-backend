@@ -6,6 +6,7 @@ import (
 	enrichmentRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/enrichmentManagement"
 	jobRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/jobManagement"
 	matchingRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/matchingManagement"
+	outreachRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/outreachManagement"
 )
 
 type Repositories struct {
@@ -18,6 +19,12 @@ type Repositories struct {
 	JobMatch          *matchingRepo.JobMatchRepo
 	CompanyContact    *enrichmentRepo.CompanyContactRepo
 	EnrichmentRequest *enrichmentRepo.EnrichmentRequestRepo
+	ChannelAccount    *outreachRepo.ChannelAccountRepo
+	Template          *outreachRepo.TemplateRepo
+	Campaign          *outreachRepo.CampaignRepo
+	OutreachMessage   *outreachRepo.MessageRepo
+	OutreachEvent     *outreachRepo.EventRepo
+	Suppression       *outreachRepo.SuppressionRepo
 }
 
 func (d *Dependencies) initRepositories() error {
@@ -66,7 +73,43 @@ func (d *Dependencies) initRepositories() error {
 		return err
 	}
 
+	channelAccountRepo, err := outreachRepo.NewChannelAccountRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
+	templateRepo, err := outreachRepo.NewTemplateRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
+	campaignRepo, err := outreachRepo.NewCampaignRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
+	messageRepo, err := outreachRepo.NewMessageRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
+	eventRepo, err := outreachRepo.NewEventRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
+	suppressionRepo, err := outreachRepo.NewSuppressionRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
 	d.Repositories = Repositories{
+		ChannelAccount:    channelAccountRepo,
+		Template:          templateRepo,
+		Campaign:          campaignRepo,
+		OutreachMessage:   messageRepo,
+		OutreachEvent:     eventRepo,
+		Suppression:       suppressionRepo,
 		CompanyContact:    companyContactRepo,
 		EnrichmentRequest: enrichmentRequestRepo,
 		User:              userRepo,

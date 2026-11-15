@@ -34,20 +34,34 @@ const (
 )
 
 const (
-	PermissionCandidateRead   Permission = "candidate:read"
-	PermissionCandidateUpdate Permission = "candidate:update"
-	PermissionResumeCreate    Permission = "resume:create"
-	PermissionResumeRead      Permission = "resume:read"
-	PermissionResumeUpdate    Permission = "resume:update"
-	PermissionResumeDelete    Permission = "resume:delete"
-	PermissionMatchRead       Permission = "match:read"
-	PermissionContactRead     Permission = "contact:read"
-	PermissionContactEnrich   Permission = "contact:enrich"
-	PermissionJobRead         Permission = "job:read"
-	PermissionJobIngest       Permission = "job:ingest"
-	PermissionAPIClientCreate Permission = "api_client:create"
-	PermissionAPIClientRead   Permission = "api_client:read"
-	PermissionAPIClientRevoke Permission = "api_client:revoke"
+	PermissionCandidateRead          Permission = "candidate:read"
+	PermissionCandidateUpdate        Permission = "candidate:update"
+	PermissionResumeCreate           Permission = "resume:create"
+	PermissionResumeRead             Permission = "resume:read"
+	PermissionResumeUpdate           Permission = "resume:update"
+	PermissionResumeDelete           Permission = "resume:delete"
+	PermissionMatchRead              Permission = "match:read"
+	PermissionContactRead            Permission = "contact:read"
+	PermissionContactEnrich          Permission = "contact:enrich"
+	PermissionJobRead                Permission = "job:read"
+	PermissionJobIngest              Permission = "job:ingest"
+	PermissionAPIClientCreate        Permission = "api_client:create"
+	PermissionAPIClientRead          Permission = "api_client:read"
+	PermissionAPIClientRevoke        Permission = "api_client:revoke"
+	PermissionChannelAccountCreate   Permission = "channel_account:create"
+	PermissionChannelAccountRead     Permission = "channel_account:read"
+	PermissionChannelAccountUpdate   Permission = "channel_account:update"
+	PermissionChannelAccountDelete   Permission = "channel_account:delete"
+	PermissionOutreachTemplateCreate Permission = "outreach_template:create"
+	PermissionOutreachTemplateRead   Permission = "outreach_template:read"
+	PermissionOutreachTemplateUpdate Permission = "outreach_template:update"
+	PermissionOutreachTemplateDelete Permission = "outreach_template:delete"
+	PermissionOutreachCampaignCreate Permission = "outreach_campaign:create"
+	PermissionOutreachCampaignRead   Permission = "outreach_campaign:read"
+	PermissionOutreachMessageCreate  Permission = "outreach_message:create"
+	PermissionOutreachMessageRead    Permission = "outreach_message:read"
+	PermissionOutreachMessageUpdate  Permission = "outreach_message:update"
+	PermissionOutreachCampaignUpdate Permission = "outreach_campaign:update"
 )
 
 var permissionCatalogueI = []Permission{
@@ -65,6 +79,20 @@ var permissionCatalogueI = []Permission{
 	PermissionAPIClientCreate,
 	PermissionAPIClientRead,
 	PermissionAPIClientRevoke,
+	PermissionChannelAccountCreate,
+	PermissionChannelAccountRead,
+	PermissionChannelAccountUpdate,
+	PermissionChannelAccountDelete,
+	PermissionOutreachTemplateCreate,
+	PermissionOutreachTemplateRead,
+	PermissionOutreachTemplateUpdate,
+	PermissionOutreachTemplateDelete,
+	PermissionOutreachCampaignCreate,
+	PermissionOutreachCampaignRead,
+	PermissionOutreachCampaignUpdate,
+	PermissionOutreachMessageUpdate,
+	PermissionOutreachMessageRead,
+	PermissionOutreachMessageCreate,
 }
 
 var accessScopesI = []AccessScope{ScopeOwn, ScopeAny}
@@ -81,6 +109,20 @@ var rolePoliciesI = map[string][]string{
 		"contact:read:own",
 		"contact:enrich:own",
 		"job:read:any",
+		"channel_account:create:own",
+		"channel_account:read:own",
+		"channel_account:update:own",
+		"channel_account:delete:own",
+		"outreach_template:create:own",
+		"outreach_template:read:own",
+		"outreach_template:update:own",
+		"outreach_template:delete:own",
+		"outreach_campaign:create:own",
+		"outreach_campaign:read:own",
+		"outreach_campaign:update:own",
+		"outreach_message:update:own",
+		"outreach_message:read:own",
+		"outreach_message:create:own",
 	},
 	RoleAdmin: grantEveryPermission(ScopeAny),
 }

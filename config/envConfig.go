@@ -86,6 +86,7 @@ type openAIConfig struct {
 	embeddingDimension int
 	timeout            time.Duration
 	maxInputChars      int
+	chatModel          string
 }
 
 type matchConfig struct {
@@ -131,6 +132,10 @@ func Init() {
 		loadStorageConfig()
 		loadAuthorizationPolicy()
 		loadRateLimitConfig()
+		loadResumeParsingConfig()
+		loadEmailConfig()
+		loadChannelAccountConfig()
+		loadOutreachConfig()
 		enforceProductionRequirements()
 	})
 }
@@ -194,6 +199,7 @@ func loadEnvConfig() envConfig {
 			embeddingDimension: getEnvIntWithDefault("OPENAI_EMBEDDING_DIMENSIONS", 1536),
 			timeout:            getEnvDurationWithDefault("OPENAI_TIMEOUT", 30*time.Second),
 			maxInputChars:      getEnvIntWithDefault("OPENAI_EMBEDDING_MAX_INPUT_CHARS", 24000),
+			chatModel:          getEnvWithDefault("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
 		},
 		app: appConfig{
 			env:      getEnvWithDefault("APP_ENV", constI.app.envLocal),
@@ -402,6 +408,7 @@ func GetOpenAIEmbeddingModel() string      { return envConfigI.openAI.embeddingM
 func GetOpenAIEmbeddingDimensions() int    { return envConfigI.openAI.embeddingDimension }
 func GetOpenAITimeout() time.Duration      { return envConfigI.openAI.timeout }
 func GetOpenAIEmbeddingMaxInputChars() int { return envConfigI.openAI.maxInputChars }
+func GetOpenAIChatModel() string           { return envConfigI.openAI.chatModel }
 
 func GetBackgroundMaxGoroutines() int { return envConfigI.concurrency.backgroundMaxGoroutines }
 

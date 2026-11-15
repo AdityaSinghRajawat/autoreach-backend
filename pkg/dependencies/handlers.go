@@ -6,6 +6,7 @@ import (
 	enrichmentHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/enrichmentManagement"
 	jobHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/jobManagement"
 	matchingHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/matchingManagement"
+	outreachHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/outreachManagement"
 )
 
 type Handlers struct {
@@ -14,6 +15,7 @@ type Handlers struct {
 	Job        *jobHandler.JobHandler
 	Matching   *matchingHandler.MatchingHandler
 	Enrichment *enrichmentHandler.EnrichmentHandler
+	Outreach   *outreachHandler.OutreachHandler
 }
 
 func (d *Dependencies) initHandlers() error {
@@ -42,7 +44,13 @@ func (d *Dependencies) initHandlers() error {
 		return err
 	}
 
+	outreach, err := outreachHandler.NewOutreachHandler(d.Services.Outreach)
+	if err != nil {
+		return err
+	}
+
 	d.Handlers = Handlers{
+		Outreach:   outreach,
 		Enrichment: enrichment,
 		Auth:       auth,
 		Candidate:  candidate,

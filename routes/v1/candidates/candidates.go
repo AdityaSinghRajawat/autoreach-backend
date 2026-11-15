@@ -12,8 +12,13 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 	candidateHandler := deps.Handlers.Candidate
 	matchingHandler := deps.Handlers.Matching
 	enrichmentHandler := deps.Handlers.Enrichment
+	outreachHandler := deps.Handlers.Outreach
 	jobContactsPath := "/jobs/:" + config.GetJobIDParam() + "/contacts"
 	resumePath := "/resumes/:" + config.GetResumeIDParam()
+	channelAccountPath := "/channel-accounts/:" + config.GetAccountIDParam()
+	templatePath := "/outreach-templates/:" + config.GetTemplateIDParam()
+	campaignPath := "/outreach-campaigns/:" + config.GetCampaignIDParam()
+	messagePath := "/outreach-messages/:" + config.GetMessageIDParam()
 
 	candidateGroup := group.Group(
 		"/candidates/:"+config.GetCandidateIDParam(),
@@ -79,5 +84,93 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 		middlewares.Authorize(config.PermissionContactEnrich),
 		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyContactEnrich),
 		enrichmentHandler.RequestJobEnrichment,
+	)
+
+	candidateGroup.GET(
+		"/channel-accounts",
+		middlewares.Authorize(config.PermissionChannelAccountRead),
+		outreachHandler.ListChannelAccounts,
+	)
+	candidateGroup.POST(
+		"/channel-accounts",
+		middlewares.Authorize(config.PermissionChannelAccountCreate),
+		outreachHandler.CreateChannelAccount,
+	)
+	candidateGroup.DELETE(
+		channelAccountPath,
+		middlewares.Authorize(config.PermissionChannelAccountDelete),
+		outreachHandler.DeleteChannelAccount,
+	)
+	candidateGroup.POST(
+		channelAccountPath+"/verify",
+		middlewares.Authorize(config.PermissionChannelAccountUpdate),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyMailboxVerify),
+		outreachHandler.VerifyChannelAccount,
+	)
+	candidateGroup.GET(
+		"/outreach-templates",
+		middlewares.Authorize(config.PermissionOutreachTemplateRead),
+		outreachHandler.ListTemplates,
+	)
+	candidateGroup.POST(
+		"/outreach-templates",
+		middlewares.Authorize(config.PermissionOutreachTemplateCreate),
+		outreachHandler.CreateTemplate,
+	)
+	candidateGroup.GET(
+		templatePath,
+		middlewares.Authorize(config.PermissionOutreachTemplateRead),
+		outreachHandler.GetTemplate,
+	)
+	candidateGroup.PATCH(
+		templatePath,
+		middlewares.Authorize(config.PermissionOutreachTemplateUpdate),
+		outreachHandler.UpdateTemplate,
+	)
+	candidateGroup.DELETE(
+		templatePath,
+		middlewares.Authorize(config.PermissionOutreachTemplateDelete),
+		outreachHandler.DeleteTemplate,
+	)
+	candidateGroup.GET(
+		"/outreach-campaigns",
+		middlewares.Authorize(config.PermissionOutreachCampaignRead),
+		outreachHandler.ListCampaigns,
+	)
+	candidateGroup.POST(
+		"/outreach-campaigns",
+		middlewares.Authorize(config.PermissionOutreachCampaignCreate),
+		outreachHandler.CreateCampaign,
+	)
+	candidateGroup.GET(
+		campaignPath,
+		middlewares.Authorize(config.PermissionOutreachCampaignRead),
+		outreachHandler.GetCampaign,
+	)
+	candidateGroup.PATCH(
+		campaignPath,
+		middlewares.Authorize(config.PermissionOutreachCampaignUpdate),
+		outreachHandler.UpdateCampaign,
+	)
+	candidateGroup.GET(
+		"/outreach-messages",
+		middlewares.Authorize(config.PermissionOutreachMessageRead),
+		outreachHandler.ListMessages,
+	)
+	candidateGroup.POST(
+		"/outreach-messages",
+		middlewares.Authorize(config.PermissionOutreachMessageCreate),
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyOutreachCreate),
+		outreachHandler.CreateMessages,
+	)
+	candidateGroup.GET(
+		messagePath,
+		middlewares.Authorize(config.PermissionOutreachMessageRead),
+		outreachHandler.GetMessage,
+	)
+	candidateGroup.PATCH(
+		messagePath,
+		middlewares.Authorize(config.PermissionOutreachMessageUpdate),
+		outreachHandler.UpdateMessage,
 	)
 }

@@ -2,14 +2,21 @@ package dependencies
 
 import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
-	openaiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/embeddings/openai"
+	openaiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/openai"
 	enrichmentProviders "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 func (d *Dependencies) initIntegrations() error {
-	if d.Embedder == nil {
-		d.Embedder = openaiIntegration.NewOpenAIIntegration()
+	if d.Embedder == nil || d.ChatCompleter == nil {
+		openAI := openaiIntegration.NewOpenAIIntegration(config.GetOpenAIBaseURL())
+		if d.Embedder == nil {
+			d.Embedder = openAI
+		}
+
+		if d.ChatCompleter == nil {
+			d.ChatCompleter = openAI
+		}
 	}
 
 	if d.EnrichmentProviders == nil {
@@ -17,6 +24,22 @@ func (d *Dependencies) initIntegrations() error {
 			config.GetEnrichmentProviderPolicies(),
 			config.GetSignalHireCallbackURL(),
 		)
+	}
+
+	if d.EmailUtil == nil {
+		d.EmailUtil = utils.NewEmailUtil()
+	}
+
+	if d.CredentialCipher == nil && len(config.GetCredentialKeys()) > 0 {
+		credentialCipher, err := utils.NewCredentialCipher(
+			config.GetCredentialKeys(),
+			config.GetActiveCredentialKeyVersion(),
+		)
+		if err != nil {
+			return err
+		}
+
+		d.CredentialCipher = credentialCipher
 	}
 
 	if d.EmailVerifier == nil {

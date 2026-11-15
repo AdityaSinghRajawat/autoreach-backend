@@ -23,9 +23,12 @@ type Dependencies struct {
 	WorkerStrategy      workerConfigs.IWorkerStrategy
 	WorkerClient        workerConfigs.IWorkerClient
 	Embedder            sharedTypes.Embedder
+	ChatCompleter       sharedTypes.ChatCompleter
 	FileStore           sharedTypes.FileStore
 	EnrichmentProviders []enrichmentProviders.Provider
 	EmailVerifier       *utils.EmailVerifier
+	CredentialCipher    *utils.CredentialCipher
+	EmailUtil           *utils.EmailUtil
 	Repositories        Repositories
 	Services            Services
 	Handlers            Handlers
@@ -66,7 +69,8 @@ func (d *Dependencies) Wire() error {
 	if d.Logger == nil || d.Postgres == nil || d.TransactionManager == nil ||
 		d.RateLimiter == nil ||
 		d.WorkerClient == nil ||
-		d.Embedder == nil {
+		d.Embedder == nil ||
+		d.ChatCompleter == nil {
 		return fmt.Errorf("wire dependencies: %w", config.ErrMissingDependency)
 	}
 

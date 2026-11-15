@@ -10,6 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	candidateService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/candidateManagement"
 	jobService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement"
+	outreachService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
@@ -17,6 +18,7 @@ type CronManagerDependencies struct {
 	RedisUtil        *utils.RedisUtil
 	JobService       *jobService.JobService
 	CandidateService *candidateService.CandidateService
+	OutreachService  *outreachService.OutreachService
 }
 
 type CronManager struct {
@@ -24,12 +26,14 @@ type CronManager struct {
 	redisUtil        *utils.RedisUtil
 	jobService       *jobService.JobService
 	candidateService *candidateService.CandidateService
+	outreachService  *outreachService.OutreachService
 }
 
 func NewCronManager(dependencies CronManagerDependencies) (*CronManager, error) {
 	if dependencies.RedisUtil == nil ||
 		dependencies.JobService == nil ||
-		dependencies.CandidateService == nil {
+		dependencies.CandidateService == nil ||
+		dependencies.OutreachService == nil {
 		return nil, fmt.Errorf("new cron manager: %w", config.ErrMissingDependency)
 	}
 
@@ -38,11 +42,14 @@ func NewCronManager(dependencies CronManagerDependencies) (*CronManager, error) 
 		redisUtil:        dependencies.RedisUtil,
 		jobService:       dependencies.JobService,
 		candidateService: dependencies.CandidateService,
+		outreachService:  dependencies.OutreachService,
 	}, nil
 }
 
 func (cm *CronManager) StartJobs(ctx context.Context) {
 	cm.stuckWorkReconcilerJob(ctx)
+	cm.outreachDispatcherJob(ctx)
+	cm.replySweeperJob(ctx)
 	cm.cronInstance.Start()
 }
 

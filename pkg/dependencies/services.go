@@ -6,6 +6,7 @@ import (
 	enrichmentService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement"
 	jobService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement"
 	matchingService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/matchingManagement"
+	outreachService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement"
 )
 
 type Services struct {
@@ -14,6 +15,7 @@ type Services struct {
 	Job        *jobService.JobService
 	Matching   *matchingService.MatchingService
 	Enrichment *enrichmentService.EnrichmentService
+	Outreach   *outreachService.OutreachService
 }
 
 func (d *Dependencies) initServices() error {
@@ -36,6 +38,7 @@ func (d *Dependencies) initServices() error {
 			WorkerClient:       d.WorkerClient,
 			FileStore:          d.FileStore,
 			Embedder:           d.Embedder,
+			ChatCompleter:      d.ChatCompleter,
 		},
 	)
 	if err != nil {
@@ -84,7 +87,28 @@ func (d *Dependencies) initServices() error {
 		return err
 	}
 
+	outreach, err := outreachService.NewOutreachService(outreachService.OutreachServiceDependencies{
+		ChannelAccountRepo: d.Repositories.ChannelAccount,
+		TemplateRepo:       d.Repositories.Template,
+		CampaignRepo:       d.Repositories.Campaign,
+		MessageRepo:        d.Repositories.OutreachMessage,
+		EventRepo:          d.Repositories.OutreachEvent,
+		SuppressionRepo:    d.Repositories.Suppression,
+		CandidateRepo:      d.Repositories.Candidate,
+		ResumeRepo:         d.Repositories.Resume,
+		CompanyContactRepo: d.Repositories.CompanyContact,
+		JobPostingRepo:     d.Repositories.JobPosting,
+		TransactionManager: d.TransactionManager,
+		WorkerClient:       d.WorkerClient,
+		CredentialCipher:   d.CredentialCipher,
+		EmailUtil:          d.EmailUtil,
+	})
+	if err != nil {
+		return err
+	}
+
 	d.Services = Services{
+		Outreach:   outreach,
 		Enrichment: enrichment,
 		Auth:       auth,
 		Candidate:  candidate,

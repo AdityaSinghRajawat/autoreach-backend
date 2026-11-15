@@ -57,6 +57,7 @@ func NewWorkerServer(_ context.Context, deps *dependencies.Dependencies) (*Worke
 
 func (ws *WorkerServer) loadCrons() error {
 	cronManager, err := cronJobs.NewCronManager(cronJobs.CronManagerDependencies{
+		OutreachService:  ws.dependencies.Services.Outreach,
 		RedisUtil:        ws.dependencies.RedisUtil,
 		JobService:       ws.dependencies.Services.Job,
 		CandidateService: ws.dependencies.Services.Candidate,
@@ -103,12 +104,30 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 		return err
 	}
 
+	planOutreach, err := workerTasks.NewPlanOutreachTaskHandler(services.Outreach)
+	if err != nil {
+		return err
+	}
+
+	sendColdEmail, err := workerTasks.NewSendColdEmailTaskHandler(services.Outreach)
+	if err != nil {
+		return err
+	}
+
+	sweepMailbox, err := workerTasks.NewSweepMailboxTaskHandler(services.Outreach)
+	if err != nil {
+		return err
+	}
+
 	ws.register(workerConfigs.TaskEmbedJob, embedJob)
 	ws.register(workerConfigs.TaskEmbedJobBatch, embedJobBatch)
 	ws.register(workerConfigs.TaskProcessResume, processResume)
 	ws.register(workerConfigs.TaskMatchResume, matchResume)
 	ws.register(workerConfigs.TaskMatchJob, matchJob)
 	ws.register(workerConfigs.TaskEnrichContacts, enrichContacts)
+	ws.register(workerConfigs.TaskPlanOutreach, planOutreach)
+	ws.register(workerConfigs.TaskSendColdEmail, sendColdEmail)
+	ws.register(workerConfigs.TaskSweepMailbox, sweepMailbox)
 
 	return nil
 }

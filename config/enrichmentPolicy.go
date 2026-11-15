@@ -162,3 +162,5 @@ func (p ProviderPolicy) RateLimitPolicy() RateLimitPolicy {
 		Burst:  p.RateBurst,
 	}
 }
+
+func GetPublicBaseURL() string { return enrichmentConfigI.publicBaseURL }

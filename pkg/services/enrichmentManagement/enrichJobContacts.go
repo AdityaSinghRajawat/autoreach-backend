@@ -45,6 +45,8 @@ func (s *EnrichmentService) EnrichJobContacts(
 	if reused > 0 {
 		result.Reused = reused
 
+		s.publishOutreachPlans(ctx, jobID)
+
 		return result, nil
 	}
 
@@ -79,6 +81,10 @@ func (s *EnrichmentService) EnrichJobContacts(
 			s.requestAsyncContact(ctx, job, saved, selected[index].Person) {
 			result.PendingAsync++
 		}
+	}
+
+	if result.Saved > 0 {
+		s.publishOutreachPlans(ctx, jobID)
 	}
 
 	return result, nil
