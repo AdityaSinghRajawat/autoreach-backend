@@ -161,6 +161,42 @@ func candidateRouteCases() []routeCase {
 			map[string]any{"status": "SENT"},
 		},
 		{
+			"get application profile",
+			http.MethodGet,
+			func(id string) string { return candidatePath(id) + "/application-profile" },
+			nil,
+		},
+		{
+			"update application profile",
+			http.MethodPut,
+			func(id string) string { return candidatePath(id) + "/application-profile" },
+			map[string]any{"phone": "1"},
+		},
+		{
+			"list applications",
+			http.MethodGet,
+			func(id string) string { return candidatePath(id) + "/applications" },
+			nil,
+		},
+		{
+			"create application",
+			http.MethodPost,
+			func(id string) string { return candidatePath(id) + "/applications" },
+			map[string]any{"jobId": jobID},
+		},
+		{
+			"get application",
+			http.MethodGet,
+			func(id string) string { return candidatePath(id) + "/applications/" + resumeID },
+			nil,
+		},
+		{
+			"update application",
+			http.MethodPatch,
+			func(id string) string { return candidatePath(id) + "/applications/" + resumeID },
+			map[string]any{"status": "SUBMITTED"},
+		},
+		{
 			"request enrichment",
 			http.MethodPost,
 			func(id string) string { return candidatePath(id) + "/jobs/" + jobID + "/contacts/enrich" },
