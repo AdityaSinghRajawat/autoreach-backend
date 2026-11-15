@@ -3446,6 +3446,308 @@
           }
         }
       }
+    },
+    "/api/v1/admin/job-sources": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "listJobSources",
+        "summary": "List job boards that are polled",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/JobSource"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "createJobSource",
+        "summary": "Add a Greenhouse or Lever job board and poll it",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/JobSource"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJobSourceRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/job-sources/{sourceId}": {
+      "parameters": [
+        {
+          "name": "sourceId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "updateJobSource",
+        "summary": "Update or pause a job board",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/JobSource"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateJobSourceRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "deleteJobSource",
+        "summary": "Remove a job board; its jobs are kept",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/job-sources/{sourceId}/poll": {
+      "parameters": [
+        {
+          "name": "sourceId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "pollJobSource",
+        "summary": "Poll a job board now",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Poll result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PollJobSourceResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3821,6 +4123,8 @@
               "INDEED",
               "GLASSDOOR",
               "ZIPRECRUITER",
+              "NAUKRI",
+              "WELLFOUND",
               "GREENHOUSE",
               "LEVER",
               "WORKDAY",
@@ -3986,6 +4290,8 @@
               "INDEED",
               "GLASSDOOR",
               "ZIPRECRUITER",
+              "NAUKRI",
+              "WELLFOUND",
               "GREENHOUSE",
               "LEVER",
               "WORKDAY",
@@ -5507,6 +5813,164 @@
             }
           }
         ]
+      },
+      "JobSource": {
+        "type": "object",
+        "required": [
+          "sourceId",
+          "atsType",
+          "boardToken",
+          "region",
+          "companyName",
+          "companyDomain",
+          "isActive",
+          "lastPolledAt",
+          "lastJobCount",
+          "lastError",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "atsType": {
+            "type": "string",
+            "enum": [
+              "GREENHOUSE",
+              "LEVER"
+            ]
+          },
+          "boardToken": {
+            "type": "string",
+            "example": "acme"
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "GLOBAL",
+              "EU"
+            ]
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "companyDomain": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "lastPolledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastJobCount": {
+            "type": "integer",
+            "nullable": true
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateJobSourceRequest": {
+        "type": "object",
+        "required": [
+          "atsType",
+          "boardToken",
+          "companyName",
+          "companyDomain"
+        ],
+        "properties": {
+          "atsType": {
+            "type": "string",
+            "enum": [
+              "GREENHOUSE",
+              "LEVER"
+            ]
+          },
+          "boardToken": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Greenhouse board token or Lever site name"
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "GLOBAL",
+              "EU"
+            ],
+            "description": "Lever only; defaults to GLOBAL"
+          },
+          "companyName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "companyDomain": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "acme.com"
+          }
+        }
+      },
+      "UpdateJobSourceRequest": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "companyDomain": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PollJobSourceResult": {
+        "type": "object",
+        "required": [
+          "sourceId",
+          "fetched",
+          "ingested",
+          "skipped",
+          "closed"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fetched": {
+            "type": "integer"
+          },
+          "ingested": {
+            "type": "integer"
+          },
+          "skipped": {
+            "type": "integer",
+            "description": "Jobs that failed validation"
+          },
+          "closed": {
+            "type": "integer",
+            "description": "Jobs the board no longer lists"
+          }
+        }
       }
     },
     "responses": {
@@ -5613,6 +6077,16 @@
       },
       "ServiceUnavailable": {
         "description": "A dependency the request needs is temporarily unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "BadGateway": {
+        "description": "The job board rejected the request (for example, an unknown board token)",
         "content": {
           "application/json": {
             "schema": {

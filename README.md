@@ -90,6 +90,13 @@ LinkedIn has no public API for invites or messages, so the default provider is *
 - A LinkedIn message to a contact who was sent an invite waits until the invite is confirmed accepted, and is cancelled after `LINKEDIN_ACCEPTANCE_WAIT`.
 - Automation providers implement `linkedinProviders.Provider` (`SendInvite`, `SendMessage`) and are chosen with `LINKEDIN_PROVIDER`; the caps and note limit apply to every provider.
 
+## Job sources
+
+Jobs reach AutoReach in two ways:
+
+- **Board polling.** Admins add company job boards with `POST /api/v1/admin/job-sources` (`GREENHOUSE` board token or `LEVER` site name, `EU` region for Lever's EU instance). Every `JOB_SOURCE_POLL_INTERVAL` (and right after a board is added, or on `POST /admin/job-sources/{id}/poll`), `task:poll_job_source` reads the board's public API, converts descriptions to plain text and feeds the jobs through the normal ingest path (deduplication, embedding, matching). Jobs the board no longer lists are closed; a failed fetch is recorded on the source and closes nothing. Boards can be paused (`PATCH`, `isActive: false`) or removed.
+- **Ingest API.** External feeds push jobs to `POST /api/v1/jobs/ingest` with an API key. Accepted sources: LinkedIn, Indeed, Glassdoor, ZipRecruiter, Naukri, Wellfound, Greenhouse, Lever, Workday and direct career pages. AutoReach does not scrape the job sites itself.
+
 ## Job applications
 
 Greenhouse and Lever only accept applications through their APIs with the employer's own key, and their hosted forms are protected by reCAPTCHA, so AutoReach does **assisted apply**:
@@ -173,4 +180,4 @@ tests              unit, integration, setup, helpers, mocks
 
 ## Status
 
-Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, and assisted job applications for Greenhouse and Lever. The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
+Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, assisted job applications for Greenhouse and Lever, and Greenhouse and Lever job board polling. The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
