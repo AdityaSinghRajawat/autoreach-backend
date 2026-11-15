@@ -53,3 +53,14 @@ func (c *Candidate) Validate() error {
 
 	return nil
 }
+
+func (c *Candidate) IsEmailTrackingEnabled() bool {
+	settings := map[string]any{}
+	if err := json.Unmarshal(c.Settings, &settings); err != nil {
+		return false
+	}
+
+	enabled, _ := settings[config.GetTrackingSettingKey()].(bool)
+
+	return enabled
+}

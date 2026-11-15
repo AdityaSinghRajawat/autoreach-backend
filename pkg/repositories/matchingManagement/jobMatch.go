@@ -119,6 +119,25 @@ func (r *JobMatchRepo) ClaimFanOut(
 	return jobIDs, nil
 }
 
+func (r *JobMatchRepo) ListFannedOutCandidateIDs(
+	ctx context.Context,
+	jobID string,
+) ([]string, error) {
+	rows, err := r.postgres.Executor(ctx).Query(ctx, `
+		SELECT candidate_id FROM `+r.jobMatchesTable+` WHERE job_id = $1 AND fanned_out_at IS NOT NULL
+	`, jobID)
+	if err != nil {
+		return nil, fmt.Errorf("list fanned out candidates: %w", err)
+	}
+
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("list fanned out candidates: %w", err)
+	}
+
+	return ids, nil
+}
+
 func (r *JobMatchRepo) ReleaseFanOut(ctx context.Context, candidateID, jobID string) error {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
 		UPDATE `+r.jobMatchesTable+`

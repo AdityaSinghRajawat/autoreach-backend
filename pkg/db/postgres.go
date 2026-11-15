@@ -91,6 +91,12 @@ func IsNoRows(err error) bool {
 	return errors.Is(err, pgx.ErrNoRows)
 }
 
+func IsForeignKeyViolation(err error) bool {
+	var postgresErr *pgconn.PgError
+
+	return errors.As(err, &postgresErr) && postgresErr.Code == config.GetForeignKeyViolationCode()
+}
+
 func IsUniqueViolation(err error) bool {
 	var postgresErr *pgconn.PgError
 

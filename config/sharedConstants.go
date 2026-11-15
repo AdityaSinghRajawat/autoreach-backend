@@ -14,6 +14,7 @@ type sharedConstants struct {
 	defaultTimezone         string
 	emptyJSONObject         string
 	uniqueViolationCode     string
+	foreignKeyViolationCode string
 	argonEncodingFormat     string
 	maxErrorBodyBytes       int64
 	dailyCounterTTL         time.Duration
@@ -91,6 +92,7 @@ var sharedConstI = sharedConstants{
 	defaultTimezone:         "UTC",
 	emptyJSONObject:         `{}`,
 	uniqueViolationCode:     "23505",
+	foreignKeyViolationCode: "23503",
 	argonEncodingFormat:     "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
 	maxErrorBodyBytes:       2048,
 	dailyCounterTTL:         48 * time.Hour,
@@ -183,14 +185,17 @@ var vendorConstI = vendorConstants{
 	reasonNoContactReturned:  "provider returned no contact",
 }
 
-func GetTokenTypeBearer() string           { return sharedConstI.tokenTypeBearer }
-func GetAPIKeySeparator() string           { return sharedConstI.apiKeySeparator }
-func GetStuckWorkReconcilerLock() string   { return sharedConstI.stuckWorkReconcilerLock }
-func GetOpenAPISpecPath() string           { return sharedConstI.openAPISpecPath }
-func GetSwaggerUIPath() string             { return sharedConstI.swaggerUIPath }
-func GetDefaultTimezone() string           { return sharedConstI.defaultTimezone }
-func GetEmptyJSONObject() string           { return sharedConstI.emptyJSONObject }
-func GetUniqueViolationCode() string       { return sharedConstI.uniqueViolationCode }
+func GetTokenTypeBearer() string         { return sharedConstI.tokenTypeBearer }
+func GetAPIKeySeparator() string         { return sharedConstI.apiKeySeparator }
+func GetStuckWorkReconcilerLock() string { return sharedConstI.stuckWorkReconcilerLock }
+func GetOpenAPISpecPath() string         { return sharedConstI.openAPISpecPath }
+func GetSwaggerUIPath() string           { return sharedConstI.swaggerUIPath }
+func GetDefaultTimezone() string         { return sharedConstI.defaultTimezone }
+func GetEmptyJSONObject() string         { return sharedConstI.emptyJSONObject }
+func GetUniqueViolationCode() string     { return sharedConstI.uniqueViolationCode }
+func GetForeignKeyViolationCode() string {
+	return sharedConstI.foreignKeyViolationCode
+}
 func GetArgonEncodingFormat() string       { return sharedConstI.argonEncodingFormat }
 func GetMaxErrorBodyBytes() int64          { return sharedConstI.maxErrorBodyBytes }
 func GetDailyCounterTTL() time.Duration    { return sharedConstI.dailyCounterTTL }

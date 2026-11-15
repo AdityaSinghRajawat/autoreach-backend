@@ -9,16 +9,23 @@ import (
 type Table string
 
 const (
-	TableUsers              Table = "users"
-	TableRefreshTokens      Table = "refresh_tokens"
-	TableCandidates         Table = "candidates"
-	TableAPIClients         Table = "api_clients"
-	TableJobPostings        Table = "job_postings"
-	TableCandidateResumes   Table = "candidate_resumes"
-	TableJobMatches         Table = "job_matches"
-	TableCompanyContacts    Table = "company_contacts"
-	TableJobContacts        Table = "job_contacts"
-	TableEnrichmentRequests Table = "enrichment_requests"
+	TableUsers                 Table = "users"
+	TableRefreshTokens         Table = "refresh_tokens"
+	TableCandidates            Table = "candidates"
+	TableAPIClients            Table = "api_clients"
+	TableJobPostings           Table = "job_postings"
+	TableCandidateResumes      Table = "candidate_resumes"
+	TableJobMatches            Table = "job_matches"
+	TableCompanyContacts       Table = "company_contacts"
+	TableJobContacts           Table = "job_contacts"
+	TableEnrichmentRequests    Table = "enrichment_requests"
+	TableChannelAccounts       Table = "candidate_channel_accounts"
+	TableOutreachTemplates     Table = "outreach_templates"
+	TableOutreachCampaigns     Table = "outreach_campaigns"
+	TableOutreachCampaignSteps Table = "outreach_campaign_steps"
+	TableOutreachMessages      Table = "outreach_messages"
+	TableOutreachEvents        Table = "outreach_events"
+	TableSuppressionEntries    Table = "suppression_entries"
 )
 
 var declaredTables = []Table{
@@ -32,6 +39,13 @@ var declaredTables = []Table{
 	TableCompanyContacts,
 	TableJobContacts,
 	TableEnrichmentRequests,
+	TableChannelAccounts,
+	TableOutreachTemplates,
+	TableOutreachCampaigns,
+	TableOutreachCampaignSteps,
+	TableOutreachMessages,
+	TableOutreachEvents,
+	TableSuppressionEntries,
 }
 
 var (
