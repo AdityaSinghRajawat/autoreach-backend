@@ -155,6 +155,12 @@ func candidateRouteCases() []routeCase {
 			map[string]any{"status": "CANCELLED"},
 		},
 		{
+			"confirm outreach message",
+			http.MethodPost,
+			func(id string) string { return candidatePath(id) + "/outreach-messages/" + resumeID + "/confirm" },
+			map[string]any{"status": "SENT"},
+		},
+		{
 			"request enrichment",
 			http.MethodPost,
 			func(id string) string { return candidatePath(id) + "/jobs/" + jobID + "/contacts/enrich" },
