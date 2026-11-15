@@ -55,6 +55,10 @@
     {
       "name": "Tracking",
       "description": "Email open and click tracking (off unless the candidate sets settings.emailTracking)"
+    },
+    {
+      "name": "Unsubscribe",
+      "description": "Opt-out links carried in every outreach email (List-Unsubscribe, RFC 8058)"
     }
   ],
   "paths": {
@@ -2802,6 +2806,83 @@
         "responses": {
           "302": {
             "description": "Redirect to the original link"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/u/{outreachId}": {
+      "parameters": [
+        {
+          "name": "outreachId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Unsubscribe"
+        ],
+        "operationId": "showUnsubscribePage",
+        "summary": "Confirmation page; changes nothing, so link scanners cannot unsubscribe anyone",
+        "parameters": [
+          {
+            "name": "s",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirmation page",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Unsubscribe"
+        ],
+        "operationId": "unsubscribe",
+        "summary": "One-click unsubscribe (also the page's button): suppresses the address for this candidate and cancels pending messages",
+        "parameters": [
+          {
+            "name": "s",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unsubscribed page",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
