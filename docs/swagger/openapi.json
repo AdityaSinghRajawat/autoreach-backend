@@ -2436,7 +2436,7 @@
                         "data": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/OutreachMessage"
+                            "$ref": "#/components/schemas/OutreachMessageDetail"
                           }
                         },
                         "meta": {
@@ -2641,7 +2641,7 @@
                       ],
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/OutreachMessage"
+                          "$ref": "#/components/schemas/OutreachMessageDetail"
                         }
                       }
                     }
@@ -4692,6 +4692,59 @@
             "description": "SENT from ACTION_REQUIRED; ACCEPTED (connection requests) from ACTION_REQUIRED or SENT; REPLIED from any of those, which pauses the remaining steps to the contact."
           }
         }
+      },
+      "OutreachMessageContact": {
+        "type": "object",
+        "required": [
+          "contactId",
+          "fullName",
+          "title",
+          "companyName",
+          "linkedinUrl"
+        ],
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "linkedinUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OutreachMessageDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OutreachMessage"
+          },
+          {
+            "type": "object",
+            "required": [
+              "contact"
+            ],
+            "properties": {
+              "contact": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/OutreachMessageContact"
+                  }
+                ],
+                "nullable": true,
+                "description": "Who the message is for, including the LinkedIn profile to open for ACTION_REQUIRED items."
+              }
+            }
+          }
+        ]
       }
     },
     "responses": {

@@ -206,6 +206,31 @@ func TestLinkedinInviteWaitsForTheCandidateAndTheMessageWaitsForAcceptance(t *te
 	)
 	assert.WithinDuration(t, time.Now().Add(24*time.Hour), messages[1].ScheduledAt, time.Hour)
 
+	queue := helpers.Do(t, fixture.router, http.MethodGet,
+		candidatePath(fixture.candidateID)+"/outreach-messages?status=ACTION_REQUIRED", nil,
+		bearer(fixture.userToken))
+	require.Equal(t, http.StatusOK, queue.Recorder.Code)
+	helpers.AssertMatchesSpec(t, queue)
+
+	todo := helpers.DecodeData[[]outreachTypes.MessageDetail](t, queue)
+	require.Len(t, todo, 1)
+	require.NotNil(t, todo[0].Contact)
+	assert.Equal(t, "Sarah Lee", todo[0].Contact.FullName)
+	require.NotNil(t, todo[0].Contact.LinkedinURL)
+	assert.Equal(t, "https://www.linkedin.com/in/sarah-lee", *todo[0].Contact.LinkedinURL,
+		"the queue item carries the profile to open")
+
+	single := helpers.Do(t, fixture.router, http.MethodGet,
+		candidatePath(fixture.candidateID)+"/outreach-messages/"+todo[0].ID, nil,
+		bearer(fixture.userToken))
+	require.Equal(t, http.StatusOK, single.Recorder.Code)
+	helpers.AssertMatchesSpec(t, single)
+	assert.Equal(
+		t,
+		"Sarah Lee",
+		helpers.DecodeData[outreachTypes.MessageDetail](t, single).Contact.FullName,
+	)
+
 	fixture.confirm(t, messages[1].ID, "SENT", http.StatusConflict)
 	assert.Equal(
 		t,
