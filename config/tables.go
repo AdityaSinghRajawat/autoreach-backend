@@ -27,6 +27,7 @@ const (
 	TableOutreachEvents        Table = "outreach_events"
 	TableSuppressionEntries    Table = "suppression_entries"
 	TableApplications          Table = "applications"
+	TableJobSources            Table = "job_sources"
 )
 
 var declaredTables = []Table{
@@ -48,6 +49,7 @@ var declaredTables = []Table{
 	TableOutreachEvents,
 	TableSuppressionEntries,
 	TableApplications,
+	TableJobSources,
 }
 
 var (

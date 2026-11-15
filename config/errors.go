@@ -103,6 +103,8 @@ var (
 	ErrUnsupportedApplicationForm = errors.New("unsupported application form")
 	ErrATSRateLimited             = errors.New("application site rate limit reached")
 	ErrATSRejected                = errors.New("the application site rejected the submission")
+	ErrJobSourceNotFound          = errors.New("job source not found")
+	ErrUnsupportedJobBoard        = errors.New("job board type is not supported")
 	ErrRateLimiterUnavailable     = errors.New("rate limiter is unavailable")
 	ErrTrailingRequestData        = errors.New("unexpected trailing data")
 	ErrUnexpectedRedisReply       = errors.New("unexpected redis reply")

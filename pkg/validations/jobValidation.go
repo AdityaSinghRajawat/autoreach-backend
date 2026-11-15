@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -80,4 +81,10 @@ func isPublicHostname(host string) bool {
 	}
 
 	return true
+}
+
+var boardTokenPatternI = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
+
+func ValidateBoardToken(fieldLevel validator.FieldLevel) bool {
+	return boardTokenPatternI.MatchString(fieldLevel.Field().String())
 }

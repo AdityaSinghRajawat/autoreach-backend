@@ -45,3 +45,10 @@ func NormalizeDomain(domain string) string {
 
 	return strings.TrimPrefix(normalized, "www.")
 }
+
+type JobSourceRegion string
+
+const (
+	JobSourceRegionGlobal JobSourceRegion = "GLOBAL"
+	JobSourceRegionEU     JobSourceRegion = "EU"
+)

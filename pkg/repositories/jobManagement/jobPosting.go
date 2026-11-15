@@ -19,7 +19,7 @@ const jobPostingColumns = `id, job_hash, source::text, company_name, company_dom
 	normalized_title, job_description, description_hash, location, department,
 	salary_min::float8, salary_max::float8, salary_currency, ats_type, external_url,
 	external_job_id, status::text, (embedding IS NOT NULL) AS is_embedded,
-	posted_at, last_seen_at, created_at, updated_at`
+	posted_at, last_seen_at, created_at, updated_at, job_source_id`
 
 type JobPostingRepo struct {
 	postgres         *db.PostgresConn
@@ -50,11 +50,11 @@ func (r *JobPostingRepo) UpsertMany(
 			job_hash, source, company_name, company_domain, job_title, normalized_title,
 			job_description, description_hash, location, department, salary_min, salary_max,
 			salary_currency, ats_type, external_url, external_job_id, raw_payload, posted_at,
-			last_seen_at, created_at, updated_at
+			last_seen_at, created_at, updated_at, job_source_id
 		)
 		VALUES (
 			$1, $2::job_source, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
-			$17::jsonb, $18, $19, $20, $21
+			$17::jsonb, $18, $19, $20, $21, $22
 		)
 		ON CONFLICT (job_hash) DO UPDATE SET
 			job_description = EXCLUDED.job_description,
@@ -72,6 +72,7 @@ func (r *JobPostingRepo) UpsertMany(
 			salary_currency = COALESCE(EXCLUDED.salary_currency, existing.salary_currency),
 			posted_at = COALESCE(existing.posted_at, EXCLUDED.posted_at),
 			status = 'ACTIVE',
+			job_source_id = COALESCE(EXCLUDED.job_source_id, existing.job_source_id),
 			last_seen_at = EXCLUDED.last_seen_at,
 			updated_at = EXCLUDED.updated_at
 		RETURNING id, (embedding IS NULL) AS needs_embedding`
@@ -84,7 +85,7 @@ func (r *JobPostingRepo) UpsertMany(
 			job.NormalizedTitle, job.JobDescription, job.DescriptionHash, job.Location,
 			job.Department, job.SalaryMin, job.SalaryMax, job.SalaryCurrency, job.ATSType,
 			job.ExternalURL, job.ExternalJobID, string(job.RawPayload), job.PostedAt,
-			job.LastSeenAt, job.CreatedAt, job.UpdatedAt,
+			job.LastSeenAt, job.CreatedAt, job.UpdatedAt, job.JobSourceID,
 		)
 	}
 
@@ -266,7 +267,7 @@ func scanJobPosting(row db.RowScanner) (*jobModel.JobPosting, error) {
 		&job.NormalizedTitle, &job.JobDescription, &job.DescriptionHash, &job.Location,
 		&job.Department, &job.SalaryMin, &job.SalaryMax, &job.SalaryCurrency, &job.ATSType,
 		&job.ExternalURL, &job.ExternalJobID, &job.Status, &job.IsEmbedded,
-		&job.PostedAt, &job.LastSeenAt, &job.CreatedAt, &job.UpdatedAt,
+		&job.PostedAt, &job.LastSeenAt, &job.CreatedAt, &job.UpdatedAt, &job.JobSourceID,
 	)
 	if err != nil {
 		return nil, err

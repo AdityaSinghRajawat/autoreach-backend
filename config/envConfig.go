@@ -138,6 +138,7 @@ func Init() {
 		loadOutreachConfig()
 		loadLinkedinConfig()
 		loadApplicationConfig()
+		loadJobSourceConfig()
 		enforceProductionRequirements()
 	})
 }

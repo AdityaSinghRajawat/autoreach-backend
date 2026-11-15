@@ -24,6 +24,7 @@ var customValidationsI = map[string]validator.Func{
 	"validate_resume_file":      ValidateResumeFile,
 	"validate_role":             ValidateRole,
 	"validate_api_client_grant": ValidateAPIClientGrant,
+	"validate_board_token":      ValidateBoardToken,
 }
 
 func GetValidator() *validator.Validate {

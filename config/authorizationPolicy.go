@@ -48,6 +48,10 @@ const (
 	PermissionAPIClientCreate        Permission = "api_client:create"
 	PermissionAPIClientRead          Permission = "api_client:read"
 	PermissionAPIClientRevoke        Permission = "api_client:revoke"
+	PermissionJobSourceDelete        Permission = "job_source:delete"
+	PermissionJobSourceUpdate        Permission = "job_source:update"
+	PermissionJobSourceRead          Permission = "job_source:read"
+	PermissionJobSourceCreate        Permission = "job_source:create"
 	PermissionChannelAccountCreate   Permission = "channel_account:create"
 	PermissionChannelAccountRead     Permission = "channel_account:read"
 	PermissionChannelAccountUpdate   Permission = "channel_account:update"
@@ -82,6 +86,10 @@ var permissionCatalogueI = []Permission{
 	PermissionAPIClientCreate,
 	PermissionAPIClientRead,
 	PermissionAPIClientRevoke,
+	PermissionJobSourceDelete,
+	PermissionJobSourceUpdate,
+	PermissionJobSourceRead,
+	PermissionJobSourceCreate,
 	PermissionChannelAccountCreate,
 	PermissionChannelAccountRead,
 	PermissionChannelAccountUpdate,
