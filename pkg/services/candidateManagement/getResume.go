@@ -38,18 +38,3 @@ func (s *CandidateService) GetResume(
 
 	return resume, nil
 }
-
-func (s *CandidateService) ListResumes(
-	ctx context.Context,
-	candidateID string,
-) ([]*candidateModel.Resume, *config.CustomError) {
-	resumes, err := s.resumeRepo.ListByCandidate(ctx, candidateID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("list resumes: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
-
-	return resumes, nil
-}
