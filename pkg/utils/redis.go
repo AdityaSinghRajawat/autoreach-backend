@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,6 +11,14 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
+
+func BuildKey(parts ...string) string {
+	segments := make([]string, 0, len(parts)+1)
+	segments = append(segments, config.GetKeyPrefix())
+	segments = append(segments, parts...)
+
+	return strings.Join(segments, config.GetKeyDelimiter())
+}
 
 var releaseLockScriptI = redis.NewScript(`
 if redis.call("GET", KEYS[1]) == ARGV[1] then

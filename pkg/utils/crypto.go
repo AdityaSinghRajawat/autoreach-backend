@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -11,6 +14,42 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
+
+func Fingerprint(secret string) string {
+	digest := sha256.Sum256([]byte(secret))
+
+	return hex.EncodeToString(digest[:])
+}
+
+func DeriveKey(secret []byte, label string) []byte {
+	mac := hmac.New(sha256.New, secret)
+	mac.Write([]byte(label))
+
+	return mac.Sum(nil)
+}
+
+func Sign(key []byte, parts ...string) string {
+	mac := hmac.New(sha256.New, key)
+	for _, part := range parts {
+		mac.Write([]byte(part))
+		mac.Write([]byte{0})
+	}
+
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func VerifySignature(key []byte, signature string, parts ...string) bool {
+	return hmac.Equal([]byte(signature), []byte(Sign(key, parts...)))
+}
+
+func NewRandomHex(size int) (string, error) {
+	buffer := make([]byte, size)
+	if _, err := rand.Read(buffer); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(buffer), nil
+}
 
 func HashPassword(password string) (string, error) {
 	salt := make([]byte, config.GetArgonSaltLength())

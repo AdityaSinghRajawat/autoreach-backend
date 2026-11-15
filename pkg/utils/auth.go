@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
@@ -76,4 +77,19 @@ func NewOpaqueToken() (string, string, error) {
 	token := base64.RawURLEncoding.EncodeToString(raw)
 
 	return token, Fingerprint(token), nil
+}
+
+func SetPrincipal(c *gin.Context, principal sharedTypes.Principal) {
+	c.Set(config.GetPrincipalContextKey(), principal)
+}
+
+func GetPrincipal(c *gin.Context) (sharedTypes.Principal, bool) {
+	value, found := c.Get(config.GetPrincipalContextKey())
+	if !found {
+		return sharedTypes.Principal{}, false
+	}
+
+	principal, isPrincipal := value.(sharedTypes.Principal)
+
+	return principal, isPrincipal
 }
