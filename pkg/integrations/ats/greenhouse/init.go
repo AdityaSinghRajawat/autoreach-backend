@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -25,6 +26,24 @@ type (
 		Name   string       `json:"name"`
 		Type   string       `json:"type"`
 		Values []fieldValue `json:"values"`
+	}
+
+	boardJobsResponse struct {
+		Jobs []boardJob `json:"jobs"`
+	}
+
+	boardJob struct {
+		ID          int64      `json:"id"`
+		Title       string     `json:"title"`
+		AbsoluteURL string     `json:"absolute_url"`
+		Content     string     `json:"content"`
+		UpdatedAt   *time.Time `json:"updated_at"`
+		Location    struct {
+			Name string `json:"name"`
+		} `json:"location"`
+		Departments []struct {
+			Name string `json:"name"`
+		} `json:"departments"`
 	}
 
 	fieldValue struct {

@@ -24,6 +24,7 @@ const (
 	TaskSendLinkedinDM     WorkerTaskID = "task:send_linkedin_dm"
 	TaskQueueApplications  WorkerTaskID = "task:queue_applications"
 	TaskPrepareApplication WorkerTaskID = "task:prepare_application"
+	TaskPollJobSource      WorkerTaskID = "task:poll_job_source"
 	TaskUnroutable         WorkerTaskID = "task:unroutable"
 
 	QueueEmbedding   = "embedding_queue"
@@ -128,6 +129,12 @@ var taskConfigsI = map[WorkerTaskID]TaskConfig{
 		MaxRetry:     3,
 		RetryBackoff: enrichmentBackoffI,
 		Timeout:      time.Minute,
+	},
+	TaskPollJobSource: {
+		QueueName:    QueueEmbedding,
+		MaxRetry:     3,
+		RetryBackoff: enrichmentBackoffI,
+		Timeout:      2 * time.Minute,
 	},
 	TaskSweepMailbox: {
 		QueueName: QueueOutreach,

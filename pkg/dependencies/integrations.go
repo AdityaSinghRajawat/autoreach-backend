@@ -5,6 +5,7 @@ import (
 	openaiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/openai"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/applicationManagement/appliers"
 	enrichmentProviders "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement/jobBoards"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement/linkedinProviders"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
@@ -26,6 +27,14 @@ func (d *Dependencies) initIntegrations() error {
 			config.GetEnrichmentProviderPolicies(),
 			config.GetSignalHireCallbackURL(),
 		)
+	}
+
+	if d.JobBoards == nil {
+		d.JobBoards = jobBoards.NewJobBoardRegistry(jobBoards.RegistryOptions{
+			GreenhouseAPIURL: config.GetGreenhouseBoardsAPIURL(),
+			LeverAPIURL:      config.GetLeverPostingsAPIURL(),
+			LeverEUAPIURL:    config.GetLeverEUPostingsAPIURL(),
+		})
 	}
 
 	if d.Appliers == nil {

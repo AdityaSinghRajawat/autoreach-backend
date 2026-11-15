@@ -7,6 +7,7 @@ import (
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	jobRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement/jobBoards"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
@@ -15,6 +16,9 @@ type JobServiceDependencies struct {
 	TransactionManager db.TransactionManager
 	WorkerClient       workerConfigs.IWorkerClient
 	Embedder           sharedTypes.Embedder
+	JobSourceRepo      *jobRepo.JobSourceRepo
+	RateLimiter        sharedTypes.Limiter
+	JobBoards          []jobBoards.JobBoard
 }
 
 type JobService struct {
@@ -22,13 +26,18 @@ type JobService struct {
 	transactionManager db.TransactionManager
 	workerClient       workerConfigs.IWorkerClient
 	embedder           sharedTypes.Embedder
+	jobSourceRepo      *jobRepo.JobSourceRepo
+	rateLimiter        sharedTypes.Limiter
+	jobBoards          []jobBoards.JobBoard
 }
 
 func NewJobService(dependencies JobServiceDependencies) (*JobService, error) {
 	if dependencies.JobPostingRepo == nil ||
 		dependencies.TransactionManager == nil ||
 		dependencies.WorkerClient == nil ||
-		dependencies.Embedder == nil {
+		dependencies.Embedder == nil ||
+		dependencies.JobSourceRepo == nil ||
+		dependencies.RateLimiter == nil {
 		return nil, fmt.Errorf("new job service: %w", config.ErrMissingDependency)
 	}
 
@@ -37,5 +46,8 @@ func NewJobService(dependencies JobServiceDependencies) (*JobService, error) {
 		transactionManager: dependencies.TransactionManager,
 		workerClient:       dependencies.WorkerClient,
 		embedder:           dependencies.Embedder,
+		jobSourceRepo:      dependencies.JobSourceRepo,
+		rateLimiter:        dependencies.RateLimiter,
+		jobBoards:          dependencies.JobBoards,
 	}, nil
 }

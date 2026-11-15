@@ -52,6 +52,9 @@ func (d *Dependencies) initServices() error {
 		TransactionManager: d.TransactionManager,
 		WorkerClient:       d.WorkerClient,
 		Embedder:           d.Embedder,
+		JobSourceRepo:      d.Repositories.JobSource,
+		RateLimiter:        d.RateLimiter,
+		JobBoards:          d.JobBoards,
 	})
 	if err != nil {
 		return err

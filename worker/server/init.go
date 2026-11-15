@@ -140,6 +140,11 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 		return err
 	}
 
+	pollJobSource, err := workerTasks.NewPollJobSourceTaskHandler(services.Job)
+	if err != nil {
+		return err
+	}
+
 	ws.register(workerConfigs.TaskEmbedJob, embedJob)
 	ws.register(workerConfigs.TaskEmbedJobBatch, embedJobBatch)
 	ws.register(workerConfigs.TaskProcessResume, processResume)
@@ -153,6 +158,7 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 	ws.register(workerConfigs.TaskSendLinkedinDM, sendLinkedinDM)
 	ws.register(workerConfigs.TaskQueueApplications, queueApplications)
 	ws.register(workerConfigs.TaskPrepareApplication, prepareApplication)
+	ws.register(workerConfigs.TaskPollJobSource, pollJobSource)
 
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 )
 
 type Repositories struct {
+	JobSource         *jobRepo.JobSourceRepo
 	Application       *applicationRepo.ApplicationRepo
 	User              *authRepo.UserRepo
 	RefreshToken      *authRepo.RefreshTokenRepo
@@ -110,7 +111,13 @@ func (d *Dependencies) initRepositories() error {
 		return err
 	}
 
+	jobSourceRepo, err := jobRepo.NewJobSourceRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
 	d.Repositories = Repositories{
+		JobSource:         jobSourceRepo,
 		Application:       applicationRepository,
 		ChannelAccount:    channelAccountRepo,
 		Template:          templateRepo,

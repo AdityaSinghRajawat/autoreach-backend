@@ -55,6 +55,7 @@ func (cm *CronManager) StartJobs(ctx context.Context) {
 	cm.stuckWorkReconcilerJob(ctx)
 	cm.outreachDispatcherJob(ctx)
 	cm.replySweeperJob(ctx)
+	cm.jobSourcePollerJob(ctx)
 	cm.cronInstance.Start()
 }
 
