@@ -95,6 +95,8 @@ func (s *OutreachService) handleInbound(
 	switch {
 	case email.IsBounce:
 		return s.recordBounce(ctx, message)
+	case email.IsUnsubscribeRequest:
+		return s.recordUnsubscribe(ctx, message)
 	case email.IsAutoReply:
 		return s.recordEvent(ctx, message.ID, modelHelpers.OutreachEventAutoReplied)
 	default:

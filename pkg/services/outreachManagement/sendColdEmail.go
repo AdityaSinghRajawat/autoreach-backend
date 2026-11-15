@@ -74,6 +74,11 @@ func (s *OutreachService) SendColdEmail(ctx context.Context, messageID string) *
 		Date:        now,
 	}
 
+	email.ListUnsubscribe, email.OneClickUnsubscribe = unsubscribeHeader(
+		message,
+		delivery.Account.EmailAddress,
+	)
+
 	return s.recordSendOutcome(
 		ctx,
 		message,

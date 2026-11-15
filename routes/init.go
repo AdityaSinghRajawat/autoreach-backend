@@ -50,6 +50,14 @@ func NewRoutes(deps *dependencies.Dependencies) http.Handler {
 		config.GetTrackingClickPath()+":"+config.GetTrackingTokenParam(),
 		deps.Handlers.Outreach.TrackClick,
 	)
+	router.GET(
+		config.GetUnsubscribePath()+":"+config.GetMessageIDParam(),
+		deps.Handlers.Outreach.ShowUnsubscribePage,
+	)
+	router.POST(
+		config.GetUnsubscribePath()+":"+config.GetMessageIDParam(),
+		deps.Handlers.Outreach.Unsubscribe,
+	)
 	loadOperatorRoutes(router)
 	loadAPIRoutes(router, deps)
 

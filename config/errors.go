@@ -88,6 +88,7 @@ var (
 	ErrSendOutcomeUnknown     = errors.New("send outcome unknown after a worker interruption")
 	ErrConversationEnded      = errors.New("the contact already replied or bounced")
 	ErrInvalidTrackingLink    = errors.New("tracking link is invalid")
+	ErrInvalidUnsubscribeLink = errors.New("unsubscribe link is invalid")
 	ErrRateLimiterUnavailable = errors.New("rate limiter is unavailable")
 	ErrTrailingRequestData    = errors.New("unexpected trailing data")
 	ErrUnexpectedRedisReply   = errors.New("unexpected redis reply")

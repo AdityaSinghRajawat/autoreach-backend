@@ -53,6 +53,20 @@ func BuildEmailMessage(email sharedTypes.OutgoingEmail) ([]byte, error) {
 			[2]string{"References", email.InReplyTo})
 	}
 
+	if email.ListUnsubscribe != "" {
+		headers = append(
+			headers,
+			[2]string{config.GetListUnsubscribeHeader(), email.ListUnsubscribe},
+		)
+	}
+
+	if email.OneClickUnsubscribe {
+		headers = append(headers, [2]string{
+			config.GetListUnsubscribePostHeader(),
+			config.GetListUnsubscribeOneClickValue(),
+		})
+	}
+
 	headers = append(headers, [2]string{"MIME-Version", "1.0"})
 
 	if email.HTMLBody == "" {
@@ -125,6 +139,9 @@ func ParseInboundEmail(uid uint32, raw []byte) (sharedTypes.InboundEmail, error)
 		MessageID:     strings.TrimSpace(message.Header.Get("Message-ID")),
 		ReferencedIDs: referencedIDs(message.Header),
 		IsAutoReply:   isAutoReply(message.Header),
+		IsUnsubscribeRequest: isUnsubscribeSubject(
+			decodeHeader(message.Header.Get("Subject")),
+		),
 	}
 
 	if from, err := mail.ParseAddress(message.Header.Get("From")); err == nil {
@@ -196,4 +213,30 @@ func flattenParts(body []byte, boundary string) []byte {
 	}
 
 	return flattened.Bytes()
+}
+
+func isUnsubscribeSubject(subject string) bool {
+	subject = strings.ToLower(strings.TrimSpace(subject))
+
+	for trimmed := true; trimmed; {
+		trimmed = false
+
+		for _, prefix := range config.GetReplySubjectPrefixes() {
+			if strings.HasPrefix(subject, prefix) {
+				subject = strings.TrimSpace(strings.TrimPrefix(subject, prefix))
+				trimmed = true
+			}
+		}
+	}
+
+	return subject == config.GetUnsubscribeKeyword()
+}
+
+func decodeHeader(value string) string {
+	decoded, err := new(mime.WordDecoder).DecodeHeader(value)
+	if err != nil {
+		return value
+	}
+
+	return decoded
 }

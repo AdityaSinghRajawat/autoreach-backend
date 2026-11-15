@@ -16,7 +16,7 @@ import (
 type Event struct {
 	ID         string                         `db:"id"          validate:"required,uuid"`
 	MessageID  string                         `db:"message_id"  validate:"required,uuid"`
-	EventType  modelHelpers.OutreachEventType `db:"event_type"  validate:"required,oneof=SENT OPENED CLICKED BOUNCED REPLIED AUTO_REPLIED"`
+	EventType  modelHelpers.OutreachEventType `db:"event_type"  validate:"required,oneof=SENT OPENED CLICKED BOUNCED REPLIED AUTO_REPLIED UNSUBSCRIBED"`
 	Metadata   json.RawMessage                `db:"metadata"    validate:"required,validate_json_object"`
 	OccurredAt time.Time                      `db:"occurred_at" validate:"required"`
 	CreatedAt  time.Time                      `db:"created_at"  validate:"required"`

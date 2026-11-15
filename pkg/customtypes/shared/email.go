@@ -22,25 +22,28 @@ type MailboxCursor struct {
 }
 
 type OutgoingEmail struct {
-	FromAddress string
-	FromName    string
-	ToAddress   string
-	ToName      string
-	Subject     string
-	Body        string
-	HTMLBody    string
-	MessageID   string
-	InReplyTo   string
-	Date        time.Time
+	FromAddress         string
+	FromName            string
+	ToAddress           string
+	ToName              string
+	Subject             string
+	Body                string
+	HTMLBody            string
+	MessageID           string
+	InReplyTo           string
+	Date                time.Time
+	ListUnsubscribe     string
+	OneClickUnsubscribe bool
 }
 
 type InboundEmail struct {
-	UID               uint32
-	MessageID         string
-	FromAddress       string
-	ReferencedIDs     []string
-	IsAutoReply       bool
-	IsBounce          bool
-	BouncedMessageIDs []string
-	BouncedAddresses  []string
+	UID                  uint32
+	MessageID            string
+	FromAddress          string
+	ReferencedIDs        []string
+	IsAutoReply          bool
+	IsBounce             bool
+	IsUnsubscribeRequest bool
+	BouncedMessageIDs    []string
+	BouncedAddresses     []string
 }

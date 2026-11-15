@@ -60,12 +60,13 @@ const (
 type OutreachEventType string
 
 const (
-	OutreachEventSent        OutreachEventType = "SENT"
-	OutreachEventOpened      OutreachEventType = "OPENED"
-	OutreachEventClicked     OutreachEventType = "CLICKED"
-	OutreachEventBounced     OutreachEventType = "BOUNCED"
-	OutreachEventReplied     OutreachEventType = "REPLIED"
-	OutreachEventAutoReplied OutreachEventType = "AUTO_REPLIED"
+	OutreachEventSent         OutreachEventType = "SENT"
+	OutreachEventOpened       OutreachEventType = "OPENED"
+	OutreachEventClicked      OutreachEventType = "CLICKED"
+	OutreachEventBounced      OutreachEventType = "BOUNCED"
+	OutreachEventReplied      OutreachEventType = "REPLIED"
+	OutreachEventAutoReplied  OutreachEventType = "AUTO_REPLIED"
+	OutreachEventUnsubscribed OutreachEventType = "UNSUBSCRIBED"
 )
 
 type SuppressionType string
