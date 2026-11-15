@@ -10,7 +10,7 @@ import (
 )
 
 func (h *OutreachHandler) GetMessage(c *gin.Context) {
-	message, customErr := h.outreachService.GetMessage(
+	message, customErr := h.outreachService.GetMessageDetail(
 		c.Request.Context(),
 		c.Param(config.GetCandidateIDParam()),
 		c.Param(config.GetMessageIDParam()),

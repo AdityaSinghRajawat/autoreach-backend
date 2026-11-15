@@ -14,7 +14,7 @@ func (s *OutreachService) ListMessages(
 	ctx context.Context,
 	candidateID string,
 	params outreachTypes.ListMessagesParams,
-) ([]*outreachModel.Message, *sharedTypes.PaginationMeta, *config.CustomError) {
+) ([]*outreachTypes.MessageDetail, *sharedTypes.PaginationMeta, *config.CustomError) {
 	page := params.Normalize()
 
 	messages, total, err := s.messageRepo.ListByCandidate(
@@ -30,7 +30,27 @@ func (s *OutreachService) ListMessages(
 		)
 	}
 
+	details, customErr := s.withContacts(ctx, messages)
+	if customErr != nil {
+		return nil, nil, customErr
+	}
+
 	meta := sharedTypes.NewPaginationMeta(page, total)
 
-	return messages, &meta, nil
+	return details, &meta, nil
+}
+
+func (s *OutreachService) withContacts(
+	ctx context.Context,
+	messages []*outreachModel.Message,
+) ([]*outreachTypes.MessageDetail, *config.CustomError) {
+	contacts, err := s.companyContactRepo.ListByIDs(ctx, outreachTypes.ContactIDs(messages))
+	if err != nil {
+		return nil, config.NewCustomError(
+			fmt.Errorf("load message contacts: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
+	}
+
+	return outreachTypes.NewMessageDetails(messages, contacts), nil
 }

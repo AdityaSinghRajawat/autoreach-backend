@@ -101,6 +101,17 @@ func (r *CompanyContactRepo) FindByID(
 	return db.FindOne(row, scanCompanyContact, "find company contact")
 }
 
+func (r *CompanyContactRepo) ListByIDs(
+	ctx context.Context,
+	contactIDs []string,
+) ([]*enrichmentModel.CompanyContact, error) {
+	return r.list(ctx, "list contacts by id", `
+		SELECT `+qualifiedContactColumns+`
+		FROM `+r.companyContactsTable+` AS contact
+		WHERE contact.id = ANY($1)
+	`, contactIDs)
+}
+
 func (r *CompanyContactRepo) FindExisting(
 	ctx context.Context,
 	contact *enrichmentModel.CompanyContact,
