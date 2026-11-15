@@ -16,7 +16,7 @@ import (
 type JobPosting struct {
 	ID              string                 `db:"id"               json:"jobId"          validate:"required,uuid"`
 	JobHash         string                 `db:"job_hash"         json:"-"              validate:"required,len=64,hexadecimal"`
-	Source          string                 `db:"source"           json:"source"         validate:"required,oneof=LINKEDIN INDEED GLASSDOOR ZIPRECRUITER GREENHOUSE LEVER WORKDAY DIRECT"`
+	Source          string                 `db:"source"           json:"source"         validate:"required,oneof=LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY DIRECT"`
 	CompanyName     string                 `db:"company_name"     json:"companyName"    validate:"required,max=255"`
 	CompanyDomain   string                 `db:"company_domain"   json:"companyDomain"  validate:"required,fqdn,max=255"`
 	JobTitle        string                 `db:"job_title"        json:"jobTitle"       validate:"required,max=255,validate_job_title"`
@@ -30,6 +30,7 @@ type JobPosting struct {
 	SalaryCurrency  *string                `db:"salary_currency"  json:"salaryCurrency" validate:"omitnil,iso4217"`
 	ATSType         string                 `db:"ats_type"         json:"atsType"        validate:"required,oneof=GREENHOUSE LEVER WORKDAY OTHER"`
 	ExternalURL     string                 `db:"external_url"     json:"externalUrl"    validate:"required,max=1000,validate_external_url"`
+	JobSourceID     *string                `db:"job_source_id"    json:"-"              validate:"omitnil,uuid"`
 	ExternalJobID   *string                `db:"external_job_id"  json:"externalJobId"  validate:"omitnil,max=255"`
 	RawPayload      json.RawMessage        `db:"raw_payload"      json:"-"              validate:"required,validate_json_object"`
 	Status          modelHelpers.JobStatus `db:"status"           json:"status"         validate:"required,oneof=ACTIVE CLOSED ARCHIVED"`
