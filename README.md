@@ -149,6 +149,10 @@ The `/dashboard` routes use the signed-in user's candidate; admins pass `?candid
 
 `STORAGE_DRIVER` chooses where uploaded files go: `local` (the default, under `STORAGE_LOCAL_DIR`) or `s3` (configured by the `S3_*` settings). `S3_ENDPOINT` and `S3_USE_PATH_STYLE` cover S3-compatible services such as Cloudflare R2 or MinIO. Startup fails if `s3` is chosen and the bucket is missing or unreachable, or if the driver name is unknown. Files already on local disk are not copied across automatically.
 
+## Production
+
+`docker-compose.yml` is the production stack (server, worker, Postgres with pgvector, Redis, migrations). It reads `.env`, refuses to start without its secrets, runs the app as a non-root user on a read-only filesystem with all capabilities dropped, shares the upload volume between server and worker, and binds every port to loopback for a TLS proxy in front. `docs/RUNBOOK.md` covers deployment, upgrades, backups, secret rotation, monitoring, admin operations, incidents and measured performance; `docs/SECURITY.md` is the security checklist with the evidence for each control.
+
 ## Tests
 
 ```bash
@@ -156,6 +160,10 @@ make test-unit                  # no infrastructure
 make test-up                    # throwaway postgres :55432, redis :56379, S3 mock :59090, mail :53025/:53143
 make test-integration           # real database, real queue; -p 1
 make test-live                  # reads real public job boards (LIVE_JOB_BOARDS=TYPE:token,...)
+make vuln                       # known vulnerabilities (govulncheck)
+make secrets-scan               # secrets in git history (gitleaks)
+make loadtest-api               # API latency against a running stack (scripts/README.md)
+make loadtest-apply             # application throughput against a stub ATS
 make test-down
 make tools                      # install the pinned golangci-lint
 make fmt                        # format, wrap at 100 columns, fix blank-line rules
@@ -219,4 +227,4 @@ tests              unit, integration, setup, helpers, mocks
 
 ## Status
 
-Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, assisted job applications for Greenhouse and Lever, job polling from Greenhouse, Lever, Ashby, SmartRecruiters and Workday boards, Adzuna searches and career pages with JobPosting data (boards checked against live sites with `make test-live`), the candidate dashboard (metrics, funnel, activity feed and live stream), admin operations (queues and dead tasks, provider status, suppressions) and Prometheus metrics per pipeline stage. The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
+Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, assisted job applications for Greenhouse and Lever, job polling from Greenhouse, Lever, Ashby, SmartRecruiters and Workday boards, Adzuna searches and career pages with JobPosting data (boards checked against live sites with `make test-live`), the candidate dashboard (metrics, funnel, activity feed and live stream), admin operations (queues and dead tasks, provider status, suppressions, contact erasure), contacts kept current from replies, bounces, LinkedIn responses and enrichment (with history and optional anonymizing retention), Prometheus metrics per pipeline stage, and production hardening (authorization matrix over every route, dependency and secret scans in CI, hardened Compose, runbook, load and soak tests: 1,800 API requests/s at p95 21 ms, about 220,000 applications/hour against a stub ATS, server and worker under 100 MB). The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
