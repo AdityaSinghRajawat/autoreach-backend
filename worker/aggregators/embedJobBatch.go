@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 	workerCustomTypes "github.com/AdityaSinghRajawat/autoreach-backend/worker/customtypes"
 )
@@ -23,7 +24,7 @@ func AggregateEmbedJobs(
 			continue
 		}
 
-		if err := payload.Validate(); err != nil {
+		if err := validations.Validate(&payload); err != nil {
 			continue
 		}
 
