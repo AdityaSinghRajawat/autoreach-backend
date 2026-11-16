@@ -121,6 +121,30 @@ Greenhouse and Lever only accept applications through their APIs with the employ
 
 Requests to each application site are rate limited; transient failures are retried and stalled applications are re-queued by the reconciler. Every step is recorded in `executionLogs`.
 
+## Dashboard and operations
+
+**Candidates** (and admins, for any candidate):
+
+- `GET /candidates/{id}/metrics`: jobs scraped (active jobs overall), jobs matched (at or above the candidate's threshold), applications submitted, contacts discovered for matched jobs, cold emails sent, LinkedIn requests sent and accepted, recruiter responses (contacts who replied on any channel), and `responseRatePercentage` = responses / cold emails x 100.
+- `GET /dashboard/funnel`: the same counts as funnel stages, from jobs scraped to interviews.
+- `GET /dashboard/activity?limit=&before=`: matches, application changes and outreach events (sent, opened, clicked, replied, accepted, bounced, unsubscribed), newest first, paged with `nextCursor`.
+- `GET /dashboard/activity/stream`: the same feed live as server-sent events. Each event's `id` is a cursor; reconnecting with `Last-Event-ID` resumes without gaps.
+
+The `/dashboard` routes use the signed-in user's candidate; admins pass `?candidateId=`. The feed is the `activity_events` view (migration 0022) over the tables that already record each step, so nothing has to write it separately.
+
+**Admins:**
+
+- `GET /admin/queues`: depth of each queue by state, and today's processed and failed counts.
+- `GET /admin/queues/{queue}/dead`: tasks that used up their retries or failed permanently, with payload and last error. `POST /admin/queues/{queue}/dead/{taskId}/retry` runs one again.
+- `GET /admin/providers`: each enrichment provider's configuration, rate limit and credits used today, and cold-email deliverability over the last 7 days.
+- `GET/POST /admin/suppressions`, `DELETE /admin/suppressions/{id}`: addresses and domains outreach must never contact, for every candidate or one.
+
+**Prometheus** (`GET /metrics` on the API and the worker's ops port; behind the internal secret in production):
+
+- `autoreach_http_requests_total` and `autoreach_http_request_duration_seconds`, by method, route template and status.
+- `autoreach_worker_tasks_total` (`outcome` = success, retry or failed) and `autoreach_worker_task_duration_seconds`, by pipeline `stage` (INGESTION, EMBEDDING, RESUME, MATCHING, ENRICHMENT, OUTREACH, APPLICATION) and task.
+- `autoreach_queue_tasks`: tasks per queue and state (pending, active, scheduled, retry, dead), from the worker.
+
 ## File storage
 
 `STORAGE_DRIVER` chooses where uploaded files go: `local` (the default, under `STORAGE_LOCAL_DIR`) or `s3` (configured by the `S3_*` settings). `S3_ENDPOINT` and `S3_USE_PATH_STYLE` cover S3-compatible services such as Cloudflare R2 or MinIO. Startup fails if `s3` is chosen and the bucket is missing or unreachable, or if the driver name is unknown. Files already on local disk are not copied across automatically.
@@ -195,4 +219,4 @@ tests              unit, integration, setup, helpers, mocks
 
 ## Status
 
-Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, assisted job applications for Greenhouse and Lever, job polling from Greenhouse, Lever, Ashby, SmartRecruiters and Workday boards, Adzuna searches and career pages with JobPosting data (boards checked against live sites with `make test-live`). The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
+Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, assisted job applications for Greenhouse and Lever, job polling from Greenhouse, Lever, Ashby, SmartRecruiters and Workday boards, Adzuna searches and career pages with JobPosting data (boards checked against live sites with `make test-live`), the candidate dashboard (metrics, funnel, activity feed and live stream), admin operations (queues and dead tasks, provider status, suppressions) and Prometheus metrics per pipeline stage. The three provider clients are tested against a stub server only and have not yet been run against the live APIs.

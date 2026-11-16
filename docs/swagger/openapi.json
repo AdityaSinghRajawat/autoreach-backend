@@ -63,6 +63,10 @@
     {
       "name": "Applications",
       "description": "Assisted job applications and the application profile"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Candidate metrics, funnel and activity feed"
     }
   ],
   "paths": {
@@ -3748,6 +3752,752 @@
           }
         }
       }
+    },
+    "/api/v1/candidates/{candidateId}/metrics": {
+      "parameters": [
+        {
+          "name": "candidateId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "operationId": "getCandidateMetrics",
+        "summary": "Aggregated counts for the candidate's dashboard",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CandidateMetrics"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard/funnel": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "operationId": "getFunnel",
+        "summary": "Counts at each step from scraped jobs to interviews",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Funnel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Funnel"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "parameters": [
+          {
+            "name": "candidateId",
+            "in": "query",
+            "description": "Admins only: the candidate to report on; others get their own candidate",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/activity": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "operationId": "listActivity",
+        "summary": "Recent activity, newest first: matches, applications and outreach events",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ActivityPage"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "parameters": [
+          {
+            "name": "candidateId",
+            "in": "query",
+            "description": "Admins only: the candidate to report on; others get their own candidate",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "nextCursor from the previous page",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/activity/stream": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "operationId": "streamActivity",
+        "summary": "Live activity as server-sent events",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "An event stream. Each `activity` event's data is an ActivityItem and its id is a cursor; reconnect with Last-Event-ID to resume. Comment lines are keep-alives. The server ends the stream after ACTIVITY_STREAM_MAX_DURATION.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "parameters": [
+          {
+            "name": "candidateId",
+            "in": "query",
+            "description": "Admins only: the candidate to report on; others get their own candidate",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/queues": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "listQueues",
+        "summary": "Queue depths and today's processed and failed counts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Queues",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/QueueSummary"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/queues/{queue}/dead": {
+      "parameters": [
+        {
+          "name": "queue",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "embedding_queue",
+              "matching_queue",
+              "enrichment_queue",
+              "outreach_queue",
+              "application_queue"
+            ]
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "listDeadTasks",
+        "summary": "Tasks that used up their retries or failed permanently",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dead tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data",
+                        "meta"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/DeadTask"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/queues/{queue}/dead/{taskId}/retry": {
+      "parameters": [
+        {
+          "name": "queue",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "embedding_queue",
+              "matching_queue",
+              "enrichment_queue",
+              "outreach_queue",
+              "application_queue"
+            ]
+          }
+        },
+        {
+          "name": "taskId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "retryDeadTask",
+        "summary": "Run a dead task again",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Moved back to pending"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/providers": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "listProviders",
+        "summary": "Enrichment provider credit use and cold-email deliverability",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Providers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ProviderStatus"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/suppressions": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "listSuppressions",
+        "summary": "Suppressed email addresses and domains, newest first",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suppression entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data",
+                        "meta"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/SuppressionEntry"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Text the value contains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "candidateId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "createSuppression",
+        "summary": "Stop all outreach to an address or domain",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SuppressionEntry"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSuppressionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/suppressions/{suppressionId}": {
+      "parameters": [
+        {
+          "name": "suppressionId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "deleteSuppression",
+        "summary": "Remove a suppression entry",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6031,6 +6781,479 @@
           "unchanged": {
             "type": "integer",
             "description": "Jobs still listed that were not re-read (SmartRecruiters)"
+          }
+        }
+      },
+      "CandidateMetrics": {
+        "type": "object",
+        "required": [
+          "candidateId",
+          "metrics"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metrics": {
+            "type": "object",
+            "required": [
+              "totalJobsScraped",
+              "jobsMatched",
+              "applicationsSubmitted",
+              "contactsDiscovered",
+              "coldEmailsSent",
+              "linkedinRequestsSent",
+              "linkedinConnectionsAccepted",
+              "recruiterResponses",
+              "responseRatePercentage"
+            ],
+            "properties": {
+              "totalJobsScraped": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "jobsMatched": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "applicationsSubmitted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "contactsDiscovered": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "coldEmailsSent": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "linkedinRequestsSent": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "linkedinConnectionsAccepted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "recruiterResponses": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "responseRatePercentage": {
+                "type": "number",
+                "description": "recruiterResponses / coldEmailsSent x 100, two decimals; 0 before any email is sent",
+                "example": 16.07
+              }
+            }
+          }
+        },
+        "example": {
+          "candidateId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+          "metrics": {
+            "totalJobsScraped": 45200,
+            "jobsMatched": 128,
+            "applicationsSubmitted": 94,
+            "contactsDiscovered": 156,
+            "coldEmailsSent": 112,
+            "linkedinRequestsSent": 84,
+            "linkedinConnectionsAccepted": 24,
+            "recruiterResponses": 18,
+            "responseRatePercentage": 16.07
+          }
+        }
+      },
+      "Funnel": {
+        "type": "object",
+        "required": [
+          "candidateId",
+          "stages"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "stage",
+                "count"
+              ],
+              "properties": {
+                "stage": {
+                  "type": "string",
+                  "enum": [
+                    "JOBS_SCRAPED",
+                    "JOBS_MATCHED",
+                    "APPLICATIONS_SUBMITTED",
+                    "COLD_EMAILS_SENT",
+                    "LINKEDIN_REQUESTS_SENT",
+                    "RECRUITER_RESPONSES",
+                    "INTERVIEWS"
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      },
+      "ActivityItem": {
+        "type": "object",
+        "required": [
+          "eventId",
+          "eventType",
+          "channel",
+          "occurredAt",
+          "jobId",
+          "jobTitle",
+          "companyName",
+          "contactId",
+          "contactName",
+          "applicationId",
+          "messageId"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "JOB_MATCHED",
+              "APPLICATION_SUBMITTED",
+              "APPLICATION_ACTION_REQUIRED",
+              "APPLICATION_INTERVIEWING",
+              "APPLICATION_REJECTED",
+              "OUTREACH_SENT",
+              "OUTREACH_OPENED",
+              "OUTREACH_CLICKED",
+              "OUTREACH_BOUNCED",
+              "OUTREACH_REPLIED",
+              "OUTREACH_AUTO_REPLIED",
+              "OUTREACH_UNSUBSCRIBED",
+              "OUTREACH_ACCEPTED"
+            ]
+          },
+          "channel": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "EMAIL",
+              "LINKEDIN_CONNECT",
+              "LINKEDIN_DM",
+              null
+            ]
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobTitle": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "contactId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "contactName": {
+            "type": "string",
+            "nullable": true
+          },
+          "applicationId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        }
+      },
+      "ActivityPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityItem"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Pass as `before` for the next page; null on the last page"
+          }
+        }
+      },
+      "QueueSummary": {
+        "type": "object",
+        "required": [
+          "queue",
+          "size",
+          "pending",
+          "active",
+          "scheduled",
+          "retry",
+          "dead",
+          "processedToday",
+          "failedToday",
+          "paused",
+          "latencySeconds"
+        ],
+        "properties": {
+          "queue": {
+            "type": "string",
+            "enum": [
+              "embedding_queue",
+              "matching_queue",
+              "enrichment_queue",
+              "outreach_queue",
+              "application_queue"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "active": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scheduled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "retry": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dead": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "processedToday": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failedToday": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "latencySeconds": {
+            "type": "number",
+            "description": "Age of the oldest pending task"
+          }
+        }
+      },
+      "DeadTask": {
+        "type": "object",
+        "required": [
+          "taskId",
+          "taskType",
+          "queue",
+          "payload",
+          "lastError",
+          "lastFailedAt",
+          "retried",
+          "maxRetry"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string",
+            "example": "task:poll_job_source"
+          },
+          "queue": {
+            "type": "string"
+          },
+          "payload": {
+            "description": "The task's payload"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "lastFailedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "retried": {
+            "type": "integer"
+          },
+          "maxRetry": {
+            "type": "integer"
+          }
+        }
+      },
+      "ProviderStatus": {
+        "type": "object",
+        "required": [
+          "enrichment",
+          "email"
+        ],
+        "properties": {
+          "enrichment": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "configured",
+                "dailyCreditLimit",
+                "creditsUsedToday",
+                "rateLimit",
+                "rateWindowSeconds"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "example": "APOLLO"
+                },
+                "configured": {
+                  "type": "boolean"
+                },
+                "dailyCreditLimit": {
+                  "type": "integer"
+                },
+                "creditsUsedToday": {
+                  "type": "integer"
+                },
+                "rateLimit": {
+                  "type": "integer"
+                },
+                "rateWindowSeconds": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "email": {
+            "type": "object",
+            "required": [
+              "windowDays",
+              "sent",
+              "bounced",
+              "deliverabilityPercentage"
+            ],
+            "properties": {
+              "windowDays": {
+                "type": "integer"
+              },
+              "sent": {
+                "type": "integer"
+              },
+              "bounced": {
+                "type": "integer"
+              },
+              "deliverabilityPercentage": {
+                "type": "number",
+                "nullable": true,
+                "description": "(sent - bounced) / sent x 100; null before any email is sent"
+              }
+            }
+          }
+        }
+      },
+      "SuppressionEntry": {
+        "type": "object",
+        "required": [
+          "suppressionId",
+          "candidateId",
+          "entryType",
+          "value",
+          "reason",
+          "createdAt"
+        ],
+        "properties": {
+          "suppressionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "null for entries that apply to every candidate"
+          },
+          "entryType": {
+            "type": "string",
+            "enum": [
+              "EMAIL",
+              "DOMAIN"
+            ]
+          },
+          "value": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "BOUNCED",
+              "UNSUBSCRIBED",
+              "COMPLAINT",
+              "MANUAL"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateSuppressionRequest": {
+        "type": "object",
+        "required": [
+          "entryType",
+          "value"
+        ],
+        "properties": {
+          "entryType": {
+            "type": "string",
+            "enum": [
+              "EMAIL",
+              "DOMAIN"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "An email address for EMAIL, a domain for DOMAIN"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Limit the entry to one candidate; omit for every candidate"
           }
         }
       }
