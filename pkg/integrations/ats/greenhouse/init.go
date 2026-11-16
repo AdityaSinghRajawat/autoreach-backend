@@ -33,12 +33,11 @@ type (
 	}
 
 	boardJob struct {
-		ID          int64      `json:"id"`
-		Title       string     `json:"title"`
-		AbsoluteURL string     `json:"absolute_url"`
-		Content     string     `json:"content"`
-		UpdatedAt   *time.Time `json:"updated_at"`
-		Location    struct {
+		ID        int64      `json:"id"`
+		Title     string     `json:"title"`
+		Content   string     `json:"content"`
+		UpdatedAt *time.Time `json:"updated_at"`
+		Location  struct {
 			Name string `json:"name"`
 		} `json:"location"`
 		Departments []struct {
@@ -56,8 +55,8 @@ type GreenhouseIntegration struct {
 	httpClient *utils.HttpClient
 }
 
-func NewGreenhouseIntegration(baseURL string) *GreenhouseIntegration {
-	return &GreenhouseIntegration{httpClient: utils.NewHttpClient(baseURL, config.GetATSTimeout())}
+func NewGreenhouseIntegration(baseURL string, timeout time.Duration) *GreenhouseIntegration {
+	return &GreenhouseIntegration{httpClient: utils.NewHttpClient(baseURL, timeout)}
 }
 
 func jobPath(boardToken, jobID string) string {

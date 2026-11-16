@@ -1,7 +1,8 @@
 package lever
 
 import (
-	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	"time"
+
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
@@ -40,8 +41,8 @@ type LeverIntegration struct {
 	httpClient *utils.HttpClient
 }
 
-func NewLeverIntegration(baseURL string) *LeverIntegration {
-	return &LeverIntegration{httpClient: utils.NewHttpClient(baseURL, config.GetATSTimeout())}
+func NewLeverIntegration(baseURL string, timeout time.Duration) *LeverIntegration {
+	return &LeverIntegration{httpClient: utils.NewHttpClient(baseURL, timeout)}
 }
 
 func postingPath(site, postingID string) string {

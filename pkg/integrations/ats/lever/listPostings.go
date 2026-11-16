@@ -41,8 +41,10 @@ func (i *LeverIntegration) ListPostings(
 			Title:       item.Text,
 			Description: strings.TrimSpace(strings.Join(sections, "\n\n")),
 			URL:         item.HostedURL,
-			Location:    optional(item.Categories.Location),
-			Department:  optional(firstNonEmpty(item.Categories.Department, item.Categories.Team)),
+			Location:    utils.NilIfEmpty(item.Categories.Location),
+			Department: utils.NilIfEmpty(
+				utils.FirstNonEmpty(item.Categories.Department, item.Categories.Team),
+			),
 		}
 
 		if item.CreatedAt > 0 {
@@ -54,22 +56,4 @@ func (i *LeverIntegration) ListPostings(
 	}
 
 	return jobs, nil
-}
-
-func optional(value string) *string {
-	if value == "" {
-		return nil
-	}
-
-	return &value
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if value != "" {
-			return value
-		}
-	}
-
-	return ""
 }

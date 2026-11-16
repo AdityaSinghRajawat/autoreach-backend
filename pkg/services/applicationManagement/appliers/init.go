@@ -3,6 +3,7 @@ package appliers
 import (
 	"context"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	applicationTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/applicationManagement"
 	greenhouseIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ats/greenhouse"
 	leverIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ats/lever"
@@ -37,12 +38,15 @@ type RegistryOptions struct {
 func NewApplierRegistry(options RegistryOptions) []Applier {
 	return []Applier{
 		greenhouseApplier.NewGreenhouseApplier(
-			greenhouseIntegration.NewGreenhouseIntegration(options.GreenhouseAPIURL),
+			greenhouseIntegration.NewGreenhouseIntegration(
+				options.GreenhouseAPIURL,
+				config.GetATSTimeout(),
+			),
 			options.GreenhouseKeys,
 		),
 		leverApplier.NewLeverApplier(
-			leverIntegration.NewLeverIntegration(options.LeverAPIURL),
-			leverIntegration.NewLeverIntegration(options.LeverEUAPIURL),
+			leverIntegration.NewLeverIntegration(options.LeverAPIURL, config.GetATSTimeout()),
+			leverIntegration.NewLeverIntegration(options.LeverEUAPIURL, config.GetATSTimeout()),
 			options.LeverKeys,
 		),
 	}

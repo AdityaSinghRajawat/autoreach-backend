@@ -33,25 +33,17 @@ func (i *GreenhouseIntegration) ListBoardJobs(
 			ExternalID:  strconv.FormatInt(item.ID, 10),
 			Title:       item.Title,
 			Description: utils.HTMLToText(item.Content),
-			URL:         item.AbsoluteURL,
+			URL:         fmt.Sprintf(config.GetGreenhouseJobURLFormat(), boardToken, item.ID),
 			PostedAt:    item.UpdatedAt,
-			Location:    optional(item.Location.Name),
+			Location:    utils.NilIfEmpty(item.Location.Name),
 		}
 
 		if len(item.Departments) > 0 {
-			job.Department = optional(item.Departments[0].Name)
+			job.Department = utils.NilIfEmpty(item.Departments[0].Name)
 		}
 
 		jobs = append(jobs, job)
 	}
 
 	return jobs, nil
-}
-
-func optional(value string) *string {
-	if value == "" {
-		return nil
-	}
-
-	return &value
 }
