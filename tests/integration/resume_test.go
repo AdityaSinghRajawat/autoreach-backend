@@ -469,6 +469,30 @@ func TestResumesAreInvisibleToOtherTenantsAndDeletionRemovesTheFile(t *testing.T
 	assert.Equal(t, http.StatusNotFound, again.Recorder.Code)
 }
 
+func TestDeletingAResumeKeepsTheMatchesMadeFromIt(t *testing.T) {
+	fixture := newJobFixture(t)
+	resume := fixture.processedResume(t, "Alex Candidate, Go")
+	jobID := fixture.ingest(t, validJob()).QueuedTasks[0].JobID
+
+	_, err := fixture.deps.Postgres.GetPool().Exec(context.Background(), `
+		INSERT INTO job_matches (candidate_id, job_id, resume_id, raw_similarity, match_score)
+		VALUES ($1, $2, $3, 0.9, 0.9)
+	`, fixture.candidateID, jobID, resume.ID)
+	require.NoError(t, err)
+
+	deleted := helpers.Do(t, fixture.router, http.MethodDelete,
+		resumesPath(fixture.candidateID)+"/"+resume.ID, nil, bearer(fixture.userToken))
+	require.Equal(t, http.StatusNoContent, deleted.Recorder.Code, string(deleted.Body))
+
+	matched, err := fixture.deps.Repositories.JobMatch.Exists(
+		context.Background(),
+		fixture.candidateID,
+		jobID,
+	)
+	require.NoError(t, err)
+	assert.True(t, matched, "the match behind applications and outreach survives the resume")
+}
+
 func TestResumeIsMatchedAgainstJobsAndListedByScore(t *testing.T) {
 	fixture := newJobFixture(t)
 	pinMatchingVectors(setup.Embedder(t))

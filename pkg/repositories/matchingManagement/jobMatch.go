@@ -77,7 +77,7 @@ func (r *JobMatchRepo) DeleteStaleForCandidate(
 ) error {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
 		DELETE FROM `+r.jobMatchesTable+`
-		WHERE candidate_id = $1 AND resume_id <> $2 AND fanned_out_at IS NULL
+		WHERE candidate_id = $1 AND resume_id IS DISTINCT FROM $2 AND fanned_out_at IS NULL
 	`, candidateID, currentResumeID)
 	if err != nil {
 		return fmt.Errorf("delete stale job matches: %w", err)
