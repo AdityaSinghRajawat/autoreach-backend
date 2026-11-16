@@ -131,6 +131,7 @@ func TestUpdateCandidateAppliesOnlyTheSuppliedFields(t *testing.T) {
 		"autoApplyEnabled":   false,
 		"timezone":           "Asia/Kolkata",
 		"settings": map[string]any{
+			"emailTracking":      true,
 			"applicationProfile": map[string]any{"phone": "+10000000000"},
 		},
 	}, headers)
@@ -145,7 +146,8 @@ func TestUpdateCandidateAppliesOnlyTheSuppliedFields(t *testing.T) {
 	assert.False(t, updated.AutoApplyEnabled)
 	assert.True(t, updated.AutoOutreachEnabled, "a field that was not sent must keep its value")
 	assert.Equal(t, "Asia/Kolkata", updated.Timezone)
-	assert.JSONEq(t, `{"applicationProfile":{"phone":"+10000000000"}}`, string(updated.Settings))
+	assert.JSONEq(t, `{"emailTracking":true}`, string(updated.Settings),
+		"settings merge, and the application profile only changes through its own endpoint")
 	assert.True(
 		t,
 		updated.UpdatedAt.After(updated.CreatedAt) || updated.UpdatedAt.Equal(updated.CreatedAt),

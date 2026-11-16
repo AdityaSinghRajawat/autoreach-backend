@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
 )
 
@@ -62,8 +63,38 @@ func (r *UpdateCandidateRequest) ToCandidateModel(
 	}
 
 	if len(r.Settings) > 0 {
-		candidate.Settings = r.Settings
+		candidate.Settings = mergeSettings(existing.Settings, r.Settings)
 	}
 
 	return &candidate
+}
+
+// mergeSettings applies a JSON merge patch at the top level: keys in the patch replace stored keys,
+// null removes one, and the application profile is left to its own endpoint.
+func mergeSettings(stored, patch json.RawMessage) json.RawMessage {
+	merged := map[string]json.RawMessage{}
+	_ = json.Unmarshal(stored, &merged)
+
+	changes := map[string]json.RawMessage{}
+	if json.Unmarshal(patch, &changes) != nil {
+		return patch
+	}
+
+	for key, value := range changes {
+		switch {
+		case key == config.GetApplicationProfileKey():
+			continue
+		case string(value) == "null":
+			delete(merged, key)
+		default:
+			merged[key] = value
+		}
+	}
+
+	encoded, err := json.Marshal(merged)
+	if err != nil {
+		return stored
+	}
+
+	return encoded
 }
