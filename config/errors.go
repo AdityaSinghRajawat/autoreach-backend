@@ -49,12 +49,19 @@ var (
 		"calibration pair needs resume, job and a good or bad label",
 	)
 	ErrContactNotFound         = errors.New("contact not found")
+	ErrSystemMailNotConfigured = errors.New("system mail is not configured")
+	ErrEmailNotVerified        = errors.New("email address not verified yet")
+	ErrVerificationLinkInvalid = errors.New("verification link is invalid or expired")
+	ErrTooManyStreams          = errors.New("too many open activity streams")
 	ErrContactSignalNotFound   = errors.New("contact signal not found")
 	ErrJobNotMatched           = errors.New("job is not matched to the candidate")
 	ErrProviderUnavailable     = errors.New("enrichment provider circuit is open")
 	ErrProviderRateLimited     = errors.New("enrichment provider rate limit reached")
 	ErrProviderBudgetExhausted = errors.New(
 		"enrichment provider daily credit budget exhausted",
+	)
+	ErrProviderOutOfTime = errors.New(
+		"not enough task time left for another enrichment provider call",
 	)
 	ErrNoDiscoveryProvider             = errors.New("no enrichment provider can discover people")
 	ErrMalformedProviderPayload        = errors.New("malformed provider payload")

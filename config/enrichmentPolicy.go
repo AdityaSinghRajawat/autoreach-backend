@@ -44,6 +44,8 @@ type enrichmentConfig struct {
 	signalHireWebhookSecret string
 }
 
+const enrichmentSaveReserve = 5 * time.Second
+
 var (
 	enrichmentConfigI    enrichmentConfig
 	providerDefaultURLsI = map[string]string{
@@ -163,3 +165,7 @@ func (p ProviderPolicy) RateLimitPolicy() RateLimitPolicy {
 }
 
 func GetPublicBaseURL() string { return enrichmentConfigI.publicBaseURL }
+
+// GetEnrichmentSaveReserve is the task time kept back after the last provider call, so contacts
+// already paid for are saved before the task times out and is retried.
+func GetEnrichmentSaveReserve() time.Duration { return enrichmentSaveReserve }

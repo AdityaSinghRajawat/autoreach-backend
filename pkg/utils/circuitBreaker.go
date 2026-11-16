@@ -12,14 +12,17 @@ type breakerEvent struct {
 	failed bool
 }
 
+// CircuitBreaker opens when too many calls fail. After the cooldown it lets a single probe through
+// (half-open): the probe's result closes the circuit or opens it for another cooldown.
 type CircuitBreaker struct {
-	mutex       sync.Mutex
-	window      time.Duration
-	cooldown    time.Duration
-	minRequests int
-	failureRate float64
-	events      []breakerEvent
-	openedAt    time.Time
+	mutex          sync.Mutex
+	window         time.Duration
+	cooldown       time.Duration
+	minRequests    int
+	failureRate    float64
+	events         []breakerEvent
+	openedAt       time.Time
+	probeStartedAt time.Time
 }
 
 func NewCircuitBreaker() *CircuitBreaker {
@@ -39,12 +42,17 @@ func (b *CircuitBreaker) Allow() bool {
 		return true
 	}
 
-	if time.Since(b.openedAt) < b.cooldown {
+	now := time.Now()
+	if now.Sub(b.openedAt) < b.cooldown {
 		return false
 	}
 
-	b.openedAt = time.Time{}
-	b.events = nil
+	// A probe that never reported back (its caller gave up first) must not block recovery.
+	if !b.probeStartedAt.IsZero() && now.Sub(b.probeStartedAt) < b.cooldown {
+		return false
+	}
+
+	b.probeStartedAt = now
 
 	return true
 }
@@ -54,6 +62,20 @@ func (b *CircuitBreaker) Record(failed, tripImmediately bool) {
 	defer b.mutex.Unlock()
 
 	now := time.Now()
+
+	if !b.probeStartedAt.IsZero() {
+		b.probeStartedAt = time.Time{}
+		b.events = nil
+
+		if failed || tripImmediately {
+			b.openedAt = now
+		} else {
+			b.openedAt = time.Time{}
+		}
+
+		return
+	}
+
 	if tripImmediately {
 		b.openedAt = now
 

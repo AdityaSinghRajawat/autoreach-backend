@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
@@ -20,6 +21,11 @@ func (s *EnrichmentService) callProvider(
 	code := provider.Code()
 	policy, _ := config.GetEnrichmentProviderPolicy(code)
 	circuitBreaker := s.circuitBreakers[code]
+
+	if deadline, bounded := ctx.Deadline(); bounded &&
+		time.Until(deadline) < policy.Timeout+config.GetEnrichmentSaveReserve() {
+		return fmt.Errorf("%s: %w", code, config.ErrProviderOutOfTime)
+	}
 
 	if !circuitBreaker.Allow() {
 		return fmt.Errorf("%s: %w", code, config.ErrProviderUnavailable)
@@ -69,10 +75,13 @@ func classifyProviderFailure(err error) (failed, tripImmediately bool) {
 		return false, false
 	}
 
+	// A rejected key or exhausted plan stops calls until the cooldown, then a probe checks again.
 	var apiErr *utils.APIError
 	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode >= http.StatusInternalServerError,
-			apiErr.StatusCode == http.StatusTooManyRequests
+			apiErr.StatusCode == http.StatusTooManyRequests ||
+				apiErr.StatusCode == http.StatusUnauthorized ||
+				apiErr.StatusCode == http.StatusForbidden
 	}
 
 	return true, false
@@ -81,5 +90,6 @@ func classifyProviderFailure(err error) (failed, tripImmediately bool) {
 func isProviderSkipped(err error) bool {
 	return errors.Is(err, config.ErrProviderUnavailable) ||
 		errors.Is(err, config.ErrProviderRateLimited) ||
-		errors.Is(err, config.ErrProviderBudgetExhausted)
+		errors.Is(err, config.ErrProviderBudgetExhausted) ||
+		errors.Is(err, config.ErrProviderOutOfTime)
 }

@@ -126,6 +126,26 @@ func TestCircuitBreakerTripsOnRateLimitAndOnFailureRateThenRecovers(t *testing.T
 	assert.True(t, healthy.Allow())
 }
 
+func TestCircuitBreakerLetsOneProbeThroughAfterTheCooldown(t *testing.T) {
+	setup.Config(t)
+
+	breaker := utils.NewCircuitBreaker()
+	breaker.Record(false, true)
+	time.Sleep(config.GetBreakerCooldown() + 50*time.Millisecond)
+
+	require.True(t, breaker.Allow(), "one probe is let through")
+	assert.False(t, breaker.Allow(), "everything else waits for the probe's result")
+
+	breaker.Record(true, false)
+	assert.False(t, breaker.Allow(), "a failed probe opens the circuit again")
+
+	time.Sleep(config.GetBreakerCooldown() + 50*time.Millisecond)
+	require.True(t, breaker.Allow())
+	breaker.Record(false, false)
+	assert.True(t, breaker.Allow(), "a successful probe closes the circuit")
+	assert.True(t, breaker.Allow())
+}
+
 func TestProviderRegistrySkipsProvidersWithoutCredentialsOrCallback(t *testing.T) {
 	stub := helpers.NewEnrichmentStub(t)
 	policies := stub.Policies()
