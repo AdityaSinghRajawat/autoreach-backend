@@ -4,9 +4,12 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -42,10 +45,33 @@ const leverPostings = `[{"id":"abc-123","text":"Backend Engineer","hostedUrl":"h
 	"lists":[{"text":"Requirements","content":"<li>Go</li><li>Kubernetes</li>"}],
 	"categories":{"location":"London","team":"Platform"}}]`
 
+const ashbyBoard = `{"apiVersion":"1","jobs":[
+	{"id":"ash-1","title":"Platform Engineer","department":"Engineering","team":"Infra","location":"Austin",
+	 "isListed":true,"publishedAt":"2026-11-02T09:00:00.000+00:00","jobUrl":"https://jobs.ashbyhq.com/initech/ash-1",
+	 "descriptionPlain":"","descriptionHtml":"<p>Run&nbsp;the platform.</p>"},
+	{"id":"ash-2","title":"Hidden Role","location":"Austin","isListed":false,
+	 "jobUrl":"https://jobs.ashbyhq.com/initech/ash-2","descriptionPlain":"Not public."}
+]}`
+
+const smartRecruitersPostingsFirstPage = `{"offset":0,"limit":1,"totalFound":2,"content":[
+	{"id":"sr-1","name":"Data Engineer","releasedDate":"2026-11-03T08:00:00.000Z",
+	 "location":{"city":"Pune","fullLocation":"Pune, Maharashtra, India"},"department":{"label":"Data"}}]}`
+
+const smartRecruitersPostingsSecondPage = `{"offset":1,"limit":1,"totalFound":2,"content":[
+	{"id":"sr-2","name":"ML Engineer","location":{"city":"Bengaluru"},"department":{"label":"AI"}}]}`
+
+const smartRecruitersPosting = `{"id":"%s","name":"%s","postingUrl":"https://jobs.smartrecruiters.com/Hooli/%s",
+	"location":{"city":"Pune","fullLocation":"Pune, Maharashtra, India"},"department":{"label":"Data"},
+	"jobAd":{"sections":{"companyDescription":{"title":"Company Description","text":"<p>Hooli builds things.</p>"},
+	"jobDescription":{"title":"Job Description","text":"<p>Own the pipelines.</p>"},
+	"qualifications":{"title":"Qualifications","text":"<ul><li>SQL</li></ul>"},
+	"additionalInformation":{"title":"Additional Information","text":""}}}}`
+
 type boardsStub struct {
-	server       *httptest.Server
-	jobRemoved   atomic.Bool
-	boardFailing atomic.Bool
+	server                 *httptest.Server
+	jobRemoved             atomic.Bool
+	boardFailing           atomic.Bool
+	smartRecruitersDetails atomic.Int32
 }
 
 func newBoardsStub(t *testing.T) *boardsStub {
@@ -69,6 +95,22 @@ func newBoardsStub(t *testing.T) *boardsStub {
 				_, _ = io.WriteString(writer, greenhouseBoardBothJobs)
 			case request.URL.Path == "/lever-eu/postings/globex" && request.URL.Query().Get("mode") == "json":
 				_, _ = io.WriteString(writer, leverPostings)
+			case request.URL.Path == "/ashby/job-board/initech":
+				_, _ = io.WriteString(writer, ashbyBoard)
+			case request.URL.Path == "/smartrecruiters/companies/hooli/postings":
+				if request.URL.Query().Get("offset") == "1" {
+					_, _ = io.WriteString(writer, smartRecruitersPostingsSecondPage)
+
+					return
+				}
+
+				_, _ = io.WriteString(writer, smartRecruitersPostingsFirstPage)
+			case strings.HasPrefix(request.URL.Path, "/smartrecruiters/companies/hooli/postings/"):
+				stub.smartRecruitersDetails.Add(1)
+
+				postingID := path.Base(request.URL.Path)
+				name := map[string]string{"sr-1": "Data Engineer", "sr-2": "ML Engineer"}[postingID]
+				_, _ = fmt.Fprintf(writer, smartRecruitersPosting, postingID, name, postingID)
 			default:
 				writer.WriteHeader(http.StatusNotFound)
 			}
@@ -92,9 +134,11 @@ func newJobSourceFixture(t *testing.T) jobSourceFixture {
 	stub := newBoardsStub(t)
 
 	fixture.deps.JobBoards = jobBoards.NewJobBoardRegistry(jobBoards.RegistryOptions{
-		GreenhouseAPIURL: stub.server.URL + "/greenhouse",
-		LeverAPIURL:      stub.server.URL + "/lever",
-		LeverEUAPIURL:    stub.server.URL + "/lever-eu",
+		GreenhouseAPIURL:      stub.server.URL + "/greenhouse",
+		LeverAPIURL:           stub.server.URL + "/lever",
+		LeverEUAPIURL:         stub.server.URL + "/lever-eu",
+		AshbyAPIURL:           stub.server.URL + "/ashby",
+		SmartRecruitersAPIURL: stub.server.URL + "/smartrecruiters",
 	})
 	require.NoError(t, fixture.deps.Wire())
 	fixture.router = routes.NewRoutes(fixture.deps)
@@ -142,7 +186,7 @@ func (f jobSourceFixture) sourceJobs(t *testing.T, sourceID string) map[string]j
 
 	rows, err := f.deps.Postgres.GetPool().Query(context.Background(), `
 		SELECT external_job_id, job_title, job_description, COALESCE(location, ''), COALESCE(department, ''),
-			source::text, status::text
+			source::text, status::text, external_url
 		FROM job_postings WHERE job_source_id = $1
 	`, sourceID)
 	require.NoError(t, err)
@@ -164,6 +208,7 @@ func (f jobSourceFixture) sourceJobs(t *testing.T, sourceID string) map[string]j
 			&department,
 			&job.Source,
 			&job.Status,
+			&job.ExternalURL,
 		))
 		job.Location, job.Department = &location, &department
 		jobs[externalID] = job
@@ -207,6 +252,8 @@ func TestGreenhouseBoardPollIngestsJobsAndClosesRemovedOnes(t *testing.T) {
 	assert.Equal(t, "Engineering", *jobs["1"].Department)
 	assert.Equal(t, "Berlin", *jobs["2"].Location)
 	assert.Equal(t, "GREENHOUSE", jobs["1"].Source)
+	assert.Equal(t, "https://job-boards.greenhouse.io/acme/jobs/1", jobs["1"].ExternalURL,
+		"board jobs link to the canonical Greenhouse page, whatever absolute_url says")
 
 	fixture.stub.jobRemoved.Store(true)
 	second := fixture.poll(t, source.ID)
@@ -356,4 +403,57 @@ func TestNaukriAndWellfoundJobsCanBeIngested(t *testing.T) {
 	)
 
 	assert.Equal(t, 2, ingested.IngestedCount)
+}
+
+func TestAshbyBoardPollSkipsUnlistedJobs(t *testing.T) {
+	fixture := newJobSourceFixture(t)
+	source := fixture.createSource(t, map[string]any{
+		"atsType":       "ASHBY",
+		"boardToken":    "initech",
+		"companyName":   "Initech",
+		"companyDomain": "initech.com",
+	})
+
+	polled := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, polled.Recorder.Code, string(polled.Body))
+
+	jobs := fixture.sourceJobs(t, source.ID)
+	require.Len(t, jobs, 1, "unlisted Ashby jobs are not public")
+	assert.Equal(t, "Run the platform.", jobs["ash-1"].JobDescription)
+	assert.Equal(t, "Engineering", *jobs["ash-1"].Department)
+	assert.Equal(t, "ASHBY", jobs["ash-1"].Source)
+}
+
+func TestSmartRecruitersBoardPollReadsOnlyNewPostings(t *testing.T) {
+	fixture := newJobSourceFixture(t)
+	source := fixture.createSource(t, map[string]any{
+		"atsType":       "SMARTRECRUITERS",
+		"boardToken":    "Hooli",
+		"companyName":   "Hooli",
+		"companyDomain": "hooli.com",
+	})
+
+	first := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, first.Recorder.Code, string(first.Body))
+	assert.Equal(t, 2, helpers.DecodeData[jobTypes.PollJobSourceResult](t, first).Ingested)
+
+	jobs := fixture.sourceJobs(t, source.ID)
+	require.Len(t, jobs, 2)
+	assert.Equal(
+		t,
+		"Company Description\nHooli builds things.\n\nJob Description\nOwn the pipelines.\n\nQualifications\nSQL",
+		jobs["sr-1"].JobDescription,
+	)
+	assert.Equal(t, "https://jobs.smartrecruiters.com/Hooli/sr-1", jobs["sr-1"].ExternalURL)
+	assert.Equal(t, "Pune, Maharashtra, India", *jobs["sr-1"].Location)
+	assert.Equal(t, int32(2), fixture.stub.smartRecruitersDetails.Load())
+
+	second := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, second.Recorder.Code, string(second.Body))
+	secondResult := helpers.DecodeData[jobTypes.PollJobSourceResult](t, second)
+
+	assert.Equal(t, 2, secondResult.Unchanged)
+	assert.Zero(t, secondResult.Closed, "postings kept but not re-read must stay active")
+	assert.Equal(t, int32(2), fixture.stub.smartRecruitersDetails.Load(),
+		"known postings are not fetched again")
 }

@@ -16,7 +16,7 @@ MIGRATE ?= docker run --rm --network host -v "$(CURDIR)/migrations:/migrations:r
 ROWS ?= 50000
 PAIRS ?= pairs.jsonl
 
-.PHONY: vector-bench calibrate build run-server run-worker dev tools fmt lint lint-fix vet test test-unit test-integration test-all cover check \
+.PHONY: vector-bench calibrate build run-server run-worker dev tools fmt lint lint-fix vet test test-unit test-integration test-live test-all cover check \
 	migrate-up migrate-down docker-build docker-up docker-down docker-logs dev-up dev-down test-up test-down
 
 build:
@@ -55,6 +55,9 @@ test-unit:
 
 test-integration:
 	TEST_REQUIRE_SERVICES=1 go test -tags=integration -count=1 -p 1 ./tests/integration/...
+
+test-live:
+	go test -tags=live -count=1 -v ./tests/live/...
 
 test-all: test-unit test-integration
 
