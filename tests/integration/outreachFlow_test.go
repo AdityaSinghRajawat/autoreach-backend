@@ -570,6 +570,11 @@ func TestTrackingRecordsOpensAndOnlyFollowsSignedLinks(t *testing.T) {
 	assert.Equal(t, "image/gif", opened.Recorder.Header().Get("Content-Type"))
 
 	link := "https://acme.test/careers"
+	_, err := fixture.deps.Postgres.GetPool().Exec(ctx,
+		"UPDATE outreach_messages SET body_content = body_content || ' See '"+
+			" || $2::text WHERE id = $1", messageID, link)
+	require.NoError(t, err)
+
 	signature := utils.Sign(
 		utils.DeriveKey(config.GetJWTSecret(), config.GetTrackingKeyLabel()),
 		token,
@@ -598,6 +603,17 @@ func TestTrackingRecordsOpensAndOnlyFollowsSignedLinks(t *testing.T) {
 		nil,
 	)
 	assert.Equal(t, http.StatusNotFound, forged.Recorder.Code, "unsigned links are not redirected")
+
+	notInMessage := "https://evil.test/login"
+	query = url.Values{"u": {notInMessage}, "s": {utils.Sign(
+		utils.DeriveKey(config.GetJWTSecret(), config.GetTrackingKeyLabel()),
+		token,
+		notInMessage,
+	)}}
+	signedElsewhere := helpers.Do(t, fixture.router, http.MethodGet,
+		"/t/c/"+token+"?"+query.Encode(), nil, nil)
+	assert.Equal(t, http.StatusNotFound, signedElsewhere.Recorder.Code,
+		"a validly signed link that is not in the message is not followed")
 
 	var events []string
 
