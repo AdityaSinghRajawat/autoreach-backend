@@ -619,4 +619,12 @@ func TestWorkerConsumesAggregatesAndEmbedsIngestedJobsEndToEnd(t *testing.T) {
 		3,
 		"embedding tasks should be batched into fewer provider calls",
 	)
+
+	metrics := string(helpers.Do(t, fixture.router, http.MethodGet, "/metrics", nil, nil).Body)
+	assert.Contains(
+		t,
+		metrics,
+		`autoreach_worker_tasks_total{outcome="success",stage="EMBEDDING",task="task:embed_job_batch"}`,
+	)
+	assert.Contains(t, metrics, `autoreach_queue_tasks{queue="embedding_queue",state="dead"}`)
 }
