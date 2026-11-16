@@ -100,7 +100,7 @@ func (s *OutreachService) handleInbound(
 	case email.IsAutoReply:
 		return s.recordEvent(ctx, message.ID, modelHelpers.OutreachEventAutoReplied)
 	default:
-		return s.recordReply(ctx, message)
+		return s.recordReply(ctx, message, email.FromAddress)
 	}
 }
 

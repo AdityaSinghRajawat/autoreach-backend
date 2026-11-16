@@ -98,4 +98,14 @@ func LoadAdminRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 		middlewares.Authorize(config.PermissionSuppressionDelete),
 		outreachHandler.DeleteSuppression,
 	)
+	adminGroup.GET(
+		"/contacts",
+		middlewares.Authorize(config.PermissionContactRead),
+		outreachHandler.ListContactsByIdentity,
+	)
+	adminGroup.DELETE(
+		"/contacts/:"+config.GetContactIDParam(),
+		middlewares.Authorize(config.PermissionContactErase),
+		outreachHandler.EraseContact,
+	)
 }

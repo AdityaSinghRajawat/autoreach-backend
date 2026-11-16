@@ -140,6 +140,7 @@ func Init() {
 		loadApplicationConfig()
 		loadJobSourceConfig()
 		loadDashboardConfig()
+		loadPrivacyConfig()
 		enforceProductionRequirements()
 	})
 }

@@ -85,4 +85,5 @@ const (
 	SuppressionReasonBounced      SuppressionReason = "BOUNCED"
 	SuppressionReasonUnsubscribed SuppressionReason = "UNSUBSCRIBED"
 	SuppressionReasonManual       SuppressionReason = "MANUAL"
+	SuppressionReasonErased       SuppressionReason = "ERASED"
 )

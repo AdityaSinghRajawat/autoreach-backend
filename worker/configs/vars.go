@@ -25,6 +25,7 @@ const (
 	TaskQueueApplications  WorkerTaskID = "task:queue_applications"
 	TaskPrepareApplication WorkerTaskID = "task:prepare_application"
 	TaskPollJobSource      WorkerTaskID = "task:poll_job_source"
+	TaskRefreshContact     WorkerTaskID = "task:refresh_contact"
 	TaskUnroutable         WorkerTaskID = "task:unroutable"
 
 	QueueEmbedding   = "embedding_queue"
@@ -163,6 +164,13 @@ var taskConfigsI = map[WorkerTaskID]TaskConfig{
 		Stage:     StageOutreach,
 		QueueName: QueueOutreach,
 		Timeout:   2 * time.Minute,
+	},
+	TaskRefreshContact: {
+		Stage:        StageEnrichment,
+		QueueName:    QueueEnrichment,
+		MaxRetry:     3,
+		RetryBackoff: enrichmentBackoffI,
+		Timeout:      30 * time.Second,
 	},
 	TaskEnrichContacts: {
 		Stage:        StageEnrichment,

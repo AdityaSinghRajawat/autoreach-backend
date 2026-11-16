@@ -4498,6 +4498,126 @@
           }
         }
       }
+    },
+    "/api/v1/admin/contacts": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "listContactsByIdentity",
+        "summary": "Find the contact records held about a person",
+        "description": "Give at least one of email and linkedinUrl. Used to answer access and erasure requests.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "email"
+            }
+          },
+          {
+            "name": "linkedinUrl",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CompanyContact"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/contacts/{contactId}": {
+      "parameters": [
+        {
+          "name": "contactId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "eraseContact",
+        "summary": "Erase a contact on their request",
+        "description": "Deletes the contact with their job links, messages and events, and adds their email address to the global suppression list so they are never contacted again.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Erased"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5455,7 +5575,11 @@
           "isEmailVerified",
           "emailVerificationStatus",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "lastInteractionAt",
+          "emailConfirmedAt",
+          "linkedinConfirmedAt",
+          "anonymizedAt"
         ],
         "properties": {
           "contactId": {
@@ -5521,6 +5645,30 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "lastInteractionAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Last reply or LinkedIn response from this person"
+          },
+          "emailConfirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When a reply proved the current email address works; cleared when the address changes or bounces"
+          },
+          "linkedinConfirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the person accepted an invite or replied on LinkedIn"
+          },
+          "anonymizedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set when retention removed this contact's personal details; their outreach history is kept"
           }
         }
       },
@@ -7222,7 +7370,8 @@
               "BOUNCED",
               "UNSUBSCRIBED",
               "COMPLAINT",
-              "MANUAL"
+              "MANUAL",
+              "ERASED"
             ]
           },
           "createdAt": {

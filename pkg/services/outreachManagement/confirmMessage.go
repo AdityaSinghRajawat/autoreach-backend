@@ -6,6 +6,7 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	outreachTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/outreachManagement"
+	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -39,7 +40,7 @@ func (s *OutreachService) ConfirmMessage(
 	case modelHelpers.OutreachStatusReplied:
 		message.Status = modelHelpers.OutreachStatusSent
 
-		if customErr := s.recordReply(ctx, message); customErr != nil {
+		if customErr := s.recordReply(ctx, message, ""); customErr != nil {
 			return nil, customErr
 		}
 
@@ -49,7 +50,15 @@ func (s *OutreachService) ConfirmMessage(
 		message.UpdateTimestamp()
 
 		return message, s.closeConversation(ctx, message, modelHelpers.OutreachEventAccepted,
-			func(context.Context) error { return nil })
+			func(ctx context.Context) error {
+				return s.updateContact(
+					ctx,
+					message.ContactID,
+					func(contact *enrichmentModel.CompanyContact) {
+						contact.RecordLinkedinResponse(now)
+					},
+				)
+			})
 	default:
 		message.MarkSent()
 		message.UpdateTimestamp()

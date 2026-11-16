@@ -354,7 +354,7 @@ func (s *EnrichmentService) saveContact(
 	}
 
 	if existing != nil {
-		contact.AdoptIdentity(existing)
+		contact.AdoptIdentity(existing, utils.GetCurrTimeStamp())
 	}
 
 	contact.UpdateTimestamp()

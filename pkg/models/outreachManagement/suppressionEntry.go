@@ -16,7 +16,7 @@ type SuppressionEntry struct {
 	CandidateID *string                        `db:"candidate_id" json:"candidateId" validate:"omitnil,uuid"`
 	EntryType   modelHelpers.SuppressionType   `db:"entry_type" json:"entryType" validate:"required,oneof=EMAIL DOMAIN"`
 	Value       string                         `db:"value" json:"value" validate:"required,max=255"`
-	Reason      modelHelpers.SuppressionReason `db:"reason" json:"reason" validate:"required,oneof=BOUNCED UNSUBSCRIBED COMPLAINT MANUAL"`
+	Reason      modelHelpers.SuppressionReason `db:"reason" json:"reason" validate:"required,oneof=BOUNCED UNSUBSCRIBED COMPLAINT MANUAL ERASED"`
 	CreatedAt   time.Time                      `db:"created_at" json:"createdAt" validate:"required"`
 }
 

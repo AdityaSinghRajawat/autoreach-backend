@@ -16,20 +16,23 @@ import (
 const (
 	companyContactColumns = `id, company_domain, company_name, full_name, role_type, title,
 	work_email, phone_number, linkedin_url, enrichment_provider, provider_person_id,
-	is_email_verified, email_verification_status, enrichment_metadata, created_at, updated_at`
+	is_email_verified, email_verification_status, enrichment_metadata, created_at, updated_at,
+	last_interaction_at, email_confirmed_at, linkedin_confirmed_at, anonymized_at`
 
 	qualifiedContactColumns = `contact.id, contact.company_domain, contact.company_name,
 	contact.full_name, contact.role_type::text, contact.title, contact.work_email,
 	contact.phone_number, contact.linkedin_url, contact.enrichment_provider,
 	contact.provider_person_id, contact.is_email_verified, contact.email_verification_status,
-	contact.enrichment_metadata, contact.created_at, contact.updated_at`
+	contact.enrichment_metadata, contact.created_at, contact.updated_at, contact.last_interaction_at,
+	contact.email_confirmed_at, contact.linkedin_confirmed_at, contact.anonymized_at`
 )
 
 type CompanyContactRepo struct {
-	postgres             *db.PostgresConn
-	companyContactsTable string
-	jobContactsTable     string
-	jobMatchesTable      string
+	postgres              *db.PostgresConn
+	companyContactsTable  string
+	jobContactsTable      string
+	jobMatchesTable       string
+	outreachMessagesTable string
 }
 
 func NewCompanyContactRepo(postgres *db.PostgresConn) (*CompanyContactRepo, error) {
@@ -38,10 +41,11 @@ func NewCompanyContactRepo(postgres *db.PostgresConn) (*CompanyContactRepo, erro
 	}
 
 	return &CompanyContactRepo{
-		postgres:             postgres,
-		companyContactsTable: config.GetTableName(config.TableCompanyContacts),
-		jobContactsTable:     config.GetTableName(config.TableJobContacts),
-		jobMatchesTable:      config.GetTableName(config.TableJobMatches),
+		postgres:              postgres,
+		companyContactsTable:  config.GetTableName(config.TableCompanyContacts),
+		jobContactsTable:      config.GetTableName(config.TableJobContacts),
+		jobMatchesTable:       config.GetTableName(config.TableJobMatches),
+		outreachMessagesTable: config.GetTableName(config.TableOutreachMessages),
 	}, nil
 }
 
@@ -53,9 +57,10 @@ func (r *CompanyContactRepo) Upsert(
 		INSERT INTO `+r.companyContactsTable+` (`+companyContactColumns+`)
 		VALUES (
 			$1, $2, $3, $4, $5::contact_role, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb,
-			$15, $16
+			$15, $16, $17, $18, $19, $20
 		)
 		ON CONFLICT (id) DO UPDATE SET
+			company_domain = EXCLUDED.company_domain,
 			company_name = EXCLUDED.company_name,
 			full_name = EXCLUDED.full_name,
 			role_type = EXCLUDED.role_type,
@@ -68,6 +73,10 @@ func (r *CompanyContactRepo) Upsert(
 			is_email_verified = EXCLUDED.is_email_verified,
 			email_verification_status = EXCLUDED.email_verification_status,
 			enrichment_metadata = EXCLUDED.enrichment_metadata,
+			last_interaction_at = EXCLUDED.last_interaction_at,
+			email_confirmed_at = EXCLUDED.email_confirmed_at,
+			linkedin_confirmed_at = EXCLUDED.linkedin_confirmed_at,
+			anonymized_at = EXCLUDED.anonymized_at,
 			updated_at = EXCLUDED.updated_at
 	`,
 		contact.ID, contact.CompanyDomain, contact.CompanyName, contact.FullName,
@@ -75,6 +84,8 @@ func (r *CompanyContactRepo) Upsert(
 		contact.LinkedinURL, contact.EnrichmentProvider, contact.ProviderPersonID,
 		contact.IsEmailVerified, string(contact.EmailVerificationStatus),
 		string(contact.EnrichmentMetadata), contact.CreatedAt, contact.UpdatedAt,
+		contact.LastInteractionAt, contact.EmailConfirmedAt, contact.LinkedinConfirmedAt,
+		contact.AnonymizedAt,
 	)
 	if err != nil {
 		if db.IsUniqueViolation(err) {
@@ -140,7 +151,7 @@ func (r *CompanyContactRepo) ListFreshByCompany(
 	return r.list(ctx, "list fresh company contacts", `
 		SELECT `+qualifiedContactColumns+`
 		FROM `+r.companyContactsTable+` AS contact
-		WHERE contact.company_domain = $1 AND contact.updated_at >= $2
+		WHERE contact.company_domain = $1 AND contact.updated_at >= $2 AND contact.anonymized_at IS NULL
 		ORDER BY contact.is_email_verified DESC, contact.updated_at DESC
 	`, companyDomain, since)
 }
@@ -246,11 +257,26 @@ func scanCompanyContact(row db.RowScanner) (*enrichmentModel.CompanyContact, err
 	var metadata []byte
 
 	err := row.Scan(
-		&contact.ID, &contact.CompanyDomain, &contact.CompanyName, &contact.FullName,
-		&contact.RoleType, &contact.Title, &contact.WorkEmail, &contact.PhoneNumber,
-		&contact.LinkedinURL, &contact.EnrichmentProvider, &contact.ProviderPersonID,
-		&contact.IsEmailVerified, &contact.EmailVerificationStatus, &metadata,
-		&contact.CreatedAt, &contact.UpdatedAt,
+		&contact.ID,
+		&contact.CompanyDomain,
+		&contact.CompanyName,
+		&contact.FullName,
+		&contact.RoleType,
+		&contact.Title,
+		&contact.WorkEmail,
+		&contact.PhoneNumber,
+		&contact.LinkedinURL,
+		&contact.EnrichmentProvider,
+		&contact.ProviderPersonID,
+		&contact.IsEmailVerified,
+		&contact.EmailVerificationStatus,
+		&metadata,
+		&contact.CreatedAt,
+		&contact.UpdatedAt,
+		&contact.LastInteractionAt,
+		&contact.EmailConfirmedAt,
+		&contact.LinkedinConfirmedAt,
+		&contact.AnonymizedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -259,4 +285,82 @@ func scanCompanyContact(row db.RowScanner) (*enrichmentModel.CompanyContact, err
 	contact.EnrichmentMetadata = metadata
 
 	return &contact, nil
+}
+
+// ListByIdentity returns every contact with the email address or LinkedIn URL.
+func (r *CompanyContactRepo) ListByIdentity(
+	ctx context.Context,
+	email, linkedinURL string,
+) ([]*enrichmentModel.CompanyContact, error) {
+	return r.list(ctx, "list contacts by identity", `
+		SELECT `+qualifiedContactColumns+`
+		FROM `+r.companyContactsTable+` AS contact
+		WHERE ($1 <> '' AND LOWER(contact.work_email) = LOWER($1))
+			OR ($2 <> '' AND LOWER(contact.linkedin_url) = LOWER($2))
+		ORDER BY contact.created_at, contact.id
+	`, email, linkedinURL)
+}
+
+// Delete removes the contact; their job links, messages and events go with it.
+func (r *CompanyContactRepo) Delete(ctx context.Context, contactID string) (bool, error) {
+	tag, err := r.postgres.Executor(ctx).
+		Exec(ctx, `DELETE FROM `+r.companyContactsTable+` WHERE id = $1`, contactID)
+	if err != nil {
+		return false, fmt.Errorf("delete contact: %w", err)
+	}
+
+	return tag.RowsAffected() == 1, nil
+}
+
+// AnonymizeStale blanks the personal details of contacts not refreshed, contacted or heard from
+// since the cutoff, and the text of the messages sent to them, keeping the rows so outreach history
+// and metrics stay intact.
+func (r *CompanyContactRepo) AnonymizeStale(
+	ctx context.Context,
+	cutoff, now time.Time,
+) (int, error) {
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		WITH stale AS (
+			SELECT contact.id FROM `+r.companyContactsTable+` contact
+			WHERE contact.anonymized_at IS NULL
+				AND contact.updated_at < $1
+				AND (contact.last_interaction_at IS NULL OR contact.last_interaction_at < $1)
+				AND NOT EXISTS (
+					SELECT 1 FROM `+r.outreachMessagesTable+` message
+					WHERE message.contact_id = contact.id AND message.created_at >= $1
+				)
+		),
+		redacted_messages AS (
+			UPDATE `+r.outreachMessagesTable+` SET subject = NULL, body_content = '', linkedin_note = NULL
+			WHERE contact_id IN (SELECT id FROM stale)
+		)
+		UPDATE `+r.companyContactsTable+` SET
+			full_name = $3, work_email = NULL, phone_number = NULL, linkedin_url = NULL,
+			provider_person_id = NULL, is_email_verified = FALSE, email_verification_status = 'UNVERIFIED',
+			enrichment_metadata = '{}'::jsonb, anonymized_at = $2, updated_at = $2
+		WHERE id IN (SELECT id FROM stale)
+	`, cutoff, now, config.GetAnonymizedContactName())
+	if err != nil {
+		return 0, fmt.Errorf("anonymize stale contacts: %w", err)
+	}
+
+	return int(tag.RowsAffected()), nil
+}
+
+// EmailInUse reports whether another contact at the company already has the address.
+func (r *CompanyContactRepo) EmailInUse(
+	ctx context.Context,
+	companyDomain, address, exceptID string,
+) (bool, error) {
+	var inUse bool
+
+	err := r.postgres.Executor(ctx).QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM `+r.companyContactsTable+`
+			WHERE company_domain = $1 AND LOWER(work_email) = LOWER($2) AND id <> $3)
+	`, companyDomain, address, exceptID).Scan(&inUse)
+	if err != nil {
+		return false, fmt.Errorf("check contact email: %w", err)
+	}
+
+	return inUse, nil
 }

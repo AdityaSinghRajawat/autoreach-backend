@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS company_contacts (
     is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     email_verification_status VARCHAR(20) NOT NULL DEFAULT 'UNVERIFIED',
     enrichment_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    last_interaction_at TIMESTAMPTZ,
+    email_confirmed_at TIMESTAMPTZ,
+    linkedin_confirmed_at TIMESTAMPTZ,
+    anonymized_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

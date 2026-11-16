@@ -163,3 +163,22 @@ func ResolveTargetRoles(requested []string, job *jobModel.JobPosting) []string {
 
 	return config.GetDefaultTargetRoles(job.JobTitle, department)
 }
+
+// PersonFromContact describes a stored contact the way providers are asked about people.
+func PersonFromContact(contact *enrichmentModel.CompanyContact) Person {
+	person := Person{
+		FullName:    contact.FullName,
+		Title:       contact.Title,
+		CompanyName: contact.CompanyName,
+	}
+
+	if contact.ProviderPersonID != nil {
+		person.ProviderPersonID = *contact.ProviderPersonID
+	}
+
+	if contact.LinkedinURL != nil {
+		person.LinkedinURL = *contact.LinkedinURL
+	}
+
+	return person
+}

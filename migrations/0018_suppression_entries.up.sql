@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS suppression_entries (
     candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
     entry_type VARCHAR(10) NOT NULL CHECK (entry_type IN ('EMAIL', 'DOMAIN')),
     value VARCHAR(255) NOT NULL,
-    reason VARCHAR(20) NOT NULL CHECK (reason IN ('BOUNCED', 'UNSUBSCRIBED', 'COMPLAINT', 'MANUAL')),
+    reason VARCHAR(20) NOT NULL CHECK (reason IN ('BOUNCED', 'UNSUBSCRIBED', 'COMPLAINT', 'MANUAL', 'ERASED')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

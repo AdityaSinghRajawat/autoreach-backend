@@ -145,6 +145,11 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 		return err
 	}
 
+	refreshContact, err := workerTasks.NewRefreshContactTaskHandler(services.Enrichment)
+	if err != nil {
+		return err
+	}
+
 	ws.register(workerConfigs.TaskEmbedJob, embedJob)
 	ws.register(workerConfigs.TaskEmbedJobBatch, embedJobBatch)
 	ws.register(workerConfigs.TaskProcessResume, processResume)
@@ -159,6 +164,7 @@ func (ws *WorkerServer) registerWorkerHandlers() error {
 	ws.register(workerConfigs.TaskQueueApplications, queueApplications)
 	ws.register(workerConfigs.TaskPrepareApplication, prepareApplication)
 	ws.register(workerConfigs.TaskPollJobSource, pollJobSource)
+	ws.register(workerConfigs.TaskRefreshContact, refreshContact)
 
 	return nil
 }
