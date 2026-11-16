@@ -34,8 +34,27 @@ func TestWebFetcherRefusesPrivateAddresses(t *testing.T) {
 
 	fetcher := utils.NewWebFetcher(5*time.Second, 1024, "AutoReachBot/1.0", nil)
 
-	for _, target := range []string{"http://127.0.0.1:1/", "http://169.254.169.254/latest", "http://10.0.0.1/"} {
+	for _, target := range []string{
+		"http://127.0.0.1:1/",
+		"http://169.254.169.254/latest",
+		"http://10.0.0.1/",
+		"http://100.64.0.1/",
+		"http://198.18.0.1/",
+		"http://[64:ff9b::a00:1]/",
+		"http://[2002:a00:1::]/",
+	} {
 		_, err := fetcher.Fetch(context.Background(), target)
 		assert.ErrorIs(t, err, config.ErrPrivateNetworkAddress, target)
 	}
+}
+
+func TestLogsNeverCarryEmailAddresses(t *testing.T) {
+	setup.Config(t)
+
+	assert.Equal(
+		t,
+		"smtp rcpt: 550 5.1.1 <[redacted]@acme.com> user unknown",
+		utils.RedactEmailAddresses("smtp rcpt: 550 5.1.1 <riley.lee+jobs@acme.com> user unknown"),
+	)
+	assert.Equal(t, "no address here", utils.RedactEmailAddresses("no address here"))
 }

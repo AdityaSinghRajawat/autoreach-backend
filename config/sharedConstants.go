@@ -20,6 +20,7 @@ type sharedConstants struct {
 	maxResponseBodyBytes    int64
 	cronClaimHoldPercent    time.Duration
 	taskIDFormat            string
+	redactedEmail           string
 	dailyCounterTTL         time.Duration
 	storageDirectoryMode    fs.FileMode
 	storageFileMode         fs.FileMode
@@ -103,6 +104,7 @@ var sharedConstI = sharedConstants{
 	maxResponseBodyBytes:    64 << 20,
 	cronClaimHoldPercent:    90,
 	taskIDFormat:            "%s:%x",
+	redactedEmail:           "[redacted]@$1",
 	dailyCounterTTL:         48 * time.Hour,
 	storageDirectoryMode:    0o750,
 	storageFileMode:         0o600,
@@ -201,15 +203,16 @@ var vendorConstI = vendorConstants{
 	reasonNoContactReturned:  "provider returned no contact",
 }
 
-func GetTokenTypeBearer() string         { return sharedConstI.tokenTypeBearer }
-func GetTaskIDFormat() string            { return sharedConstI.taskIDFormat }
-func GetAPIKeySeparator() string         { return sharedConstI.apiKeySeparator }
-func GetStuckWorkReconcilerLock() string { return sharedConstI.stuckWorkReconcilerLock }
-func GetOpenAPISpecPath() string         { return sharedConstI.openAPISpecPath }
-func GetSwaggerUIPath() string           { return sharedConstI.swaggerUIPath }
-func GetDefaultTimezone() string         { return sharedConstI.defaultTimezone }
-func GetEmptyJSONObject() string         { return sharedConstI.emptyJSONObject }
-func GetUniqueViolationCode() string     { return sharedConstI.uniqueViolationCode }
+func GetTokenTypeBearer() string          { return sharedConstI.tokenTypeBearer }
+func GetTaskIDFormat() string             { return sharedConstI.taskIDFormat }
+func GetRedactedEmailReplacement() string { return sharedConstI.redactedEmail }
+func GetAPIKeySeparator() string          { return sharedConstI.apiKeySeparator }
+func GetStuckWorkReconcilerLock() string  { return sharedConstI.stuckWorkReconcilerLock }
+func GetOpenAPISpecPath() string          { return sharedConstI.openAPISpecPath }
+func GetSwaggerUIPath() string            { return sharedConstI.swaggerUIPath }
+func GetDefaultTimezone() string          { return sharedConstI.defaultTimezone }
+func GetEmptyJSONObject() string          { return sharedConstI.emptyJSONObject }
+func GetUniqueViolationCode() string      { return sharedConstI.uniqueViolationCode }
 func GetForeignKeyViolationCode() string {
 	return sharedConstI.foreignKeyViolationCode
 }
@@ -293,3 +296,21 @@ func IsSignalHireVerifiedRating(rating string) bool {
 func GetCronClaimHold(interval time.Duration) time.Duration {
 	return interval * sharedConstI.cronClaimHoldPercent / 100
 }
+
+var reservedNetworksI = []string{
+	"0.0.0.0/8",
+	"100.64.0.0/10",
+	"192.0.0.0/24",
+	"192.0.2.0/24",
+	"198.18.0.0/15",
+	"198.51.100.0/24",
+	"203.0.113.0/24",
+	"240.0.0.0/4",
+	"64:ff9b::/96",
+	"64:ff9b:1::/48",
+	"100::/64",
+	"2001:db8::/32",
+	"2002::/16",
+}
+
+func GetReservedNetworks() []string { return append([]string(nil), reservedNetworksI...) }

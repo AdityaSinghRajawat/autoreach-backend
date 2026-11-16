@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -23,7 +24,30 @@ type (
 var (
 	loggerI    *slog.Logger
 	loggerOnce sync.Once
+
+	emailAddressPattern = regexp.MustCompile(
+		`[A-Za-z0-9._%+\-]+@([A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+)`,
+	)
 )
+
+// redactEmailAddresses keeps people's addresses out of logs, including those quoted inside mail
+// server replies and wrapped errors; the domain stays for debugging.
+func redactEmailAddresses(_ []string, attr slog.Attr) slog.Attr {
+	switch attr.Value.Kind() {
+	case slog.KindString:
+		attr.Value = slog.StringValue(RedactEmailAddresses(attr.Value.String()))
+	case slog.KindAny:
+		if err, isError := attr.Value.Any().(error); isError {
+			attr.Value = slog.StringValue(RedactEmailAddresses(err.Error()))
+		}
+	}
+
+	return attr
+}
+
+func RedactEmailAddresses(text string) string {
+	return emailAddressPattern.ReplaceAllString(text, config.GetRedactedEmailReplacement())
+}
 
 type correlationHandler struct {
 	slog.Handler
@@ -49,7 +73,10 @@ func InitLogger(mode string) *slog.Logger {
 	loggerOnce.Do(func() {
 		handler := slog.NewJSONHandler(
 			logWriter(mode),
-			&slog.HandlerOptions{Level: parseLogLevel(config.GetLogLevel())},
+			&slog.HandlerOptions{
+				Level:       parseLogLevel(config.GetLogLevel()),
+				ReplaceAttr: redactEmailAddresses,
+			},
 		)
 		loggerI = slog.New(correlationHandler{Handler: handler}).With(
 			slog.String("service", config.GetServiceName()),
