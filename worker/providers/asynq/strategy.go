@@ -39,7 +39,7 @@ func (s *Strategy) InitializeClient(_ context.Context) (workerConfigs.IWorkerCli
 		return nil, fmt.Errorf("initialize asynq client: %w", err)
 	}
 
-	return &Client{client: client}, nil
+	return &Client{client: client, inspector: asynq.NewInspector(redisOptions())}, nil
 }
 
 func (s *Strategy) InitializeServer(

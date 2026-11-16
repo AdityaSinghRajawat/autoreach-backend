@@ -412,3 +412,51 @@ func (f jobFixture) metricsFor(t *testing.T) string {
 
 	return string(helpers.DecodeEnvelope(t, exchange).Data)
 }
+
+// registerQueue lists the queue again after Redis was flushed; the shared client only lists a queue
+// the first time it publishes to it.
+func registerQueue(t *testing.T, queue string) {
+	t.Helper()
+
+	client := asynq.NewClient(asynq.RedisClientOpt{
+		Addr:     config.GetRedisAddr(),
+		Password: config.GetRedisPassword(),
+		DB:       config.GetRedisDB(),
+	})
+
+	t.Cleanup(func() { _ = client.Close() })
+
+	info, err := client.Enqueue(asynq.NewTask("register", nil), asynq.Queue(queue))
+	require.NoError(t, err)
+	require.NoError(t, testInspector(t).DeleteTask(queue, info.ID))
+}
+
+func TestPublishingTheSameWorkTwiceQueuesItOnce(t *testing.T) {
+	fixture := newJobFixture(t)
+	inspector := testInspector(t)
+	taskConfig, _ := workerConfigs.GetTaskConfig(workerConfigs.TaskPollJobSource)
+	registerQueue(t, taskConfig.QueueName)
+
+	params := workerConfigs.PublishParams{
+		TaskID:  workerConfigs.TaskPollJobSource,
+		Payload: workerCustomTypes.PollJobSourcePayload{SourceID: uuid.NewString()},
+	}
+
+	first, err := fixture.deps.WorkerClient.Publish(context.Background(), params)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { _ = inspector.DeleteTask(first.QueueName, first.MessageID) })
+
+	second, err := fixture.deps.WorkerClient.Publish(context.Background(), params)
+	require.NoError(t, err)
+	assert.Equal(t, first.MessageID, second.MessageID, "a duplicate joins the waiting task")
+
+	require.NoError(t, inspector.ArchiveTask(first.QueueName, first.MessageID))
+
+	third, err := fixture.deps.WorkerClient.Publish(context.Background(), params)
+	require.NoError(t, err)
+
+	info, err := inspector.GetTaskInfo(third.QueueName, third.MessageID)
+	require.NoError(t, err)
+	assert.Equal(t, asynq.TaskStatePending, info.State, "a dead task does not block new work")
+}
