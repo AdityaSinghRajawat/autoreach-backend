@@ -60,7 +60,7 @@ func (r *EnrichmentRequestRepo) FindPendingByExternalID(
 	row := r.postgres.Executor(ctx).QueryRow(ctx, `
 		SELECT `+enrichmentRequestColumns+`
 		FROM `+r.enrichmentRequestsTable+`
-		WHERE provider = $1 AND external_request_id = $2 AND status = 'PENDING'
+		WHERE provider = $1 AND external_request_id = $2 AND status = `+sqlEnrichmentStatusPending+`
 		LIMIT 1
 	`, provider, externalRequestID)
 

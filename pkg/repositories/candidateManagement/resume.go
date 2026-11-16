@@ -110,7 +110,7 @@ func (r *ResumeRepo) ListStalePendingIDs(
 ) ([]string, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		SELECT id::text FROM `+r.resumesTable+`
-		WHERE parse_status IN ('UPLOADED', 'PARSED') AND updated_at < $1
+		WHERE parse_status IN (`+sqlResumeStatusUploaded+`, `+sqlResumeStatusParsed+`) AND updated_at < $1
 		ORDER BY updated_at
 		LIMIT $2
 	`, staleBefore, limit)
@@ -135,7 +135,7 @@ func (r *ResumeRepo) UpdateEmbedding(
 ) error {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
 		UPDATE `+r.resumesTable+`
-		SET embedding = $2::vector, embedding_model = $3, parse_status = 'EMBEDDED',
+		SET embedding = $2::vector, embedding_model = $3, parse_status = `+sqlResumeStatusEmbedded+`,
 			failure_reason = NULL, updated_at = $4
 		WHERE id = $1
 	`, resumeID, db.FormatVector(embedding), model, embeddedAt)
@@ -165,7 +165,7 @@ func (r *ResumeRepo) Activate(
 	tag, err := executor.Exec(ctx, `
 		UPDATE `+r.resumesTable+`
 		SET is_active = TRUE, updated_at = $3
-		WHERE id = $2 AND candidate_id = $1 AND parse_status = 'EMBEDDED'
+		WHERE id = $2 AND candidate_id = $1 AND parse_status = `+sqlResumeStatusEmbedded+`
 	`, candidateID, resumeID, activatedAt)
 	if err != nil {
 		return false, fmt.Errorf("activate resume: %w", err)
@@ -213,7 +213,7 @@ func (r *ResumeRepo) ListActiveSimilaritiesToJob(
 		WHERE resume.is_active
 			AND resume.embedding IS NOT NULL
 			AND job.embedding IS NOT NULL
-			AND job.status = 'ACTIVE'
+			AND job.status = `+sqlJobStatusActive+`
 	`, jobID)
 	if err != nil {
 		return nil, fmt.Errorf("list resume similarities to job: %w", err)

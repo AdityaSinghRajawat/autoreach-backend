@@ -133,7 +133,7 @@ func (r *JobSourceRepo) ListActiveExternalIDs(
 ) (map[string]struct{}, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		SELECT external_job_id FROM `+r.jobPostingsTable+`
-		WHERE job_source_id = $1 AND status = 'ACTIVE' AND external_job_id IS NOT NULL
+		WHERE job_source_id = $1 AND status = `+sqlJobStatusActive+` AND external_job_id IS NOT NULL
 	`, sourceID)
 	if err != nil {
 		return nil, fmt.Errorf("list known board jobs: %w", err)
@@ -164,7 +164,7 @@ func (r *JobSourceRepo) MarkSeen(
 
 	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
 		UPDATE `+r.jobPostingsTable+` SET last_seen_at = $3
-		WHERE job_source_id = $1 AND status = 'ACTIVE' AND external_job_id = ANY($2)
+		WHERE job_source_id = $1 AND status = `+sqlJobStatusActive+` AND external_job_id = ANY($2)
 	`, sourceID, externalIDs, now)
 	if err != nil {
 		return 0, fmt.Errorf("mark board jobs seen: %w", err)
@@ -180,8 +180,8 @@ func (r *JobSourceRepo) CloseUnseen(
 	closeBefore, now time.Time,
 ) (int, error) {
 	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
-		UPDATE `+r.jobPostingsTable+` SET status = 'CLOSED', updated_at = $3
-		WHERE job_source_id = $1 AND status = 'ACTIVE' AND last_seen_at < $2
+		UPDATE `+r.jobPostingsTable+` SET status = `+sqlJobStatusClosed+`, updated_at = $3
+		WHERE job_source_id = $1 AND status = `+sqlJobStatusActive+` AND last_seen_at < $2
 	`, sourceID, closeBefore, now)
 	if err != nil {
 		return 0, fmt.Errorf("close unseen jobs: %w", err)

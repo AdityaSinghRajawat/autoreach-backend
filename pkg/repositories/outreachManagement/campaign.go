@@ -135,7 +135,7 @@ func (r *CampaignRepo) FindActive(
 	candidateID string,
 ) (*outreachModel.Campaign, error) {
 	row := r.postgres.Executor(ctx).QueryRow(ctx, `
-		SELECT `+campaignColumns+` FROM `+r.campaignsTable+` WHERE candidate_id = $1 AND status = 'ACTIVE'
+		SELECT `+campaignColumns+` FROM `+r.campaignsTable+` WHERE candidate_id = $1 AND status = `+sqlCampaignStatusActive+`
 	`, candidateID)
 
 	return db.FindOne(row, scanCampaign, "find active campaign")

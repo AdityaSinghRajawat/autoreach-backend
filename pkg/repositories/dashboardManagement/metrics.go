@@ -44,22 +44,22 @@ func (r *MetricsRepo) CountForCandidate(
 ) (*dashboardTypes.CandidateCounts, error) {
 	row := r.postgres.Executor(ctx).QueryRow(ctx, `
 		SELECT
-			(SELECT COUNT(*) FROM `+r.jobPostingsTable+` WHERE status = 'ACTIVE'),
+			(SELECT COUNT(*) FROM `+r.jobPostingsTable+` WHERE status = `+sqlJobStatusActive+`),
 			(SELECT COUNT(*) FROM `+r.jobMatchesTable+` m
 				WHERE m.candidate_id = c.id AND m.match_score >= c.min_match_score),
 			(SELECT COUNT(*) FROM `+r.applicationsTable+`
 				WHERE candidate_id = c.id AND submitted_at IS NOT NULL),
 			(SELECT COUNT(*) FROM `+r.applicationsTable+`
-				WHERE candidate_id = c.id AND status = 'INTERVIEWING'),
+				WHERE candidate_id = c.id AND status = `+sqlApplicationStatusInterviewing+`),
 			(SELECT COUNT(DISTINCT jc.contact_id) FROM `+r.jobMatchesTable+` m
 				JOIN `+r.jobContactsTable+` jc ON jc.job_id = m.job_id
 				WHERE m.candidate_id = c.id AND m.match_score >= c.min_match_score),
 			(SELECT COUNT(*) FROM `+r.outreachMessagesTable+`
-				WHERE candidate_id = c.id AND channel = 'EMAIL' AND sent_at IS NOT NULL),
+				WHERE candidate_id = c.id AND channel = `+sqlOutreachChannelEmail+` AND sent_at IS NOT NULL),
 			(SELECT COUNT(*) FROM `+r.outreachMessagesTable+`
-				WHERE candidate_id = c.id AND channel = 'LINKEDIN_CONNECT' AND sent_at IS NOT NULL),
+				WHERE candidate_id = c.id AND channel = `+sqlOutreachChannelLinkedinConnect+` AND sent_at IS NOT NULL),
 			(SELECT COUNT(*) FROM `+r.outreachMessagesTable+`
-				WHERE candidate_id = c.id AND channel = 'LINKEDIN_CONNECT' AND status IN ('ACCEPTED', 'REPLIED')),
+				WHERE candidate_id = c.id AND channel = `+sqlOutreachChannelLinkedinConnect+` AND status IN (`+sqlOutreachStatusAccepted+`, `+sqlOutreachStatusReplied+`)),
 			(SELECT COUNT(DISTINCT contact_id) FROM `+r.outreachMessagesTable+`
 				WHERE candidate_id = c.id AND replied_at IS NOT NULL)
 		FROM `+r.candidatesTable+` c
@@ -89,9 +89,9 @@ func (r *MetricsRepo) CountEmailDeliveries(ctx context.Context, since time.Time)
 	var sent, bounced int
 
 	err := r.postgres.Executor(ctx).QueryRow(ctx, `
-		SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'BOUNCED')
+		SELECT COUNT(*), COUNT(*) FILTER (WHERE status = `+sqlOutreachStatusBounced+`)
 		FROM `+r.outreachMessagesTable+`
-		WHERE channel = 'EMAIL' AND sent_at >= $1
+		WHERE channel = `+sqlOutreachChannelEmail+` AND sent_at >= $1
 	`, since).Scan(&sent, &bounced)
 	if err != nil {
 		return 0, 0, fmt.Errorf("count email deliveries: %w", err)

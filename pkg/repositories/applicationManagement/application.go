@@ -86,10 +86,10 @@ func (r *ApplicationRepo) QueueFromMatches(
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		INSERT INTO `+r.applicationsTable+` (candidate_id, job_id, resume_id, match_score, status, ats_type,
 			apply_url, created_at, updated_at)
-		SELECT match.candidate_id, match.job_id, match.resume_id, match.match_score, 'QUEUED',
+		SELECT match.candidate_id, match.job_id, match.resume_id, match.match_score, `+sqlApplicationStatusQueued+`,
 			job.ats_type, job.external_url, $3, $3
 		FROM `+r.jobMatchesTable+` AS match
-		JOIN `+r.jobPostingsTable+` AS job ON job.id = match.job_id AND job.status = 'ACTIVE'
+		JOIN `+r.jobPostingsTable+` AS job ON job.id = match.job_id AND job.status = `+sqlJobStatusActive+`
 		WHERE match.candidate_id = $1 AND match.match_score >= $2
 		ON CONFLICT ON CONSTRAINT unique_application_candidate_job DO NOTHING
 		RETURNING id
@@ -182,8 +182,8 @@ func (r *ApplicationRepo) Claim(
 ) (bool, error) {
 	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
 		UPDATE `+r.applicationsTable+`
-		SET status = 'IN_PROGRESS', attempt_count = attempt_count + 1, updated_at = $3
-		WHERE id = $1 AND (status = 'QUEUED' OR (status = 'IN_PROGRESS' AND updated_at < $2))
+		SET status = `+sqlApplicationStatusInProgress+`, attempt_count = attempt_count + 1, updated_at = $3
+		WHERE id = $1 AND (status = `+sqlApplicationStatusQueued+` OR (status = `+sqlApplicationStatusInProgress+` AND updated_at < $2))
 	`, applicationID, staleBefore, now)
 	if err != nil {
 		return false, fmt.Errorf("claim application: %w", err)
@@ -195,8 +195,8 @@ func (r *ApplicationRepo) Claim(
 // Release returns a claimed application to the queue so a retry can claim it again.
 func (r *ApplicationRepo) Release(ctx context.Context, applicationID string, now time.Time) error {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
-		UPDATE `+r.applicationsTable+` SET status = 'QUEUED', updated_at = $2
-		WHERE id = $1 AND status = 'IN_PROGRESS'
+		UPDATE `+r.applicationsTable+` SET status = `+sqlApplicationStatusQueued+`, updated_at = $2
+		WHERE id = $1 AND status = `+sqlApplicationStatusInProgress+`
 	`, applicationID, now)
 	if err != nil {
 		return fmt.Errorf("release application: %w", err)
@@ -212,7 +212,7 @@ func (r *ApplicationRepo) ListStalePendingIDs(
 ) ([]string, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		SELECT id FROM `+r.applicationsTable+`
-		WHERE status IN ('QUEUED', 'IN_PROGRESS') AND updated_at < $1
+		WHERE status IN (`+sqlApplicationStatusQueued+`, `+sqlApplicationStatusInProgress+`) AND updated_at < $1
 		ORDER BY updated_at LIMIT $2
 	`, staleBefore, limit)
 	if err != nil {

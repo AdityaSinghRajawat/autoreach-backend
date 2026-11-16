@@ -336,7 +336,7 @@ func (r *CompanyContactRepo) AnonymizeStale(
 		)
 		UPDATE `+r.companyContactsTable+` SET
 			full_name = $3, work_email = NULL, phone_number = NULL, linkedin_url = NULL,
-			provider_person_id = NULL, is_email_verified = FALSE, email_verification_status = 'UNVERIFIED',
+			provider_person_id = NULL, is_email_verified = FALSE, email_verification_status = `+sqlEmailStatusUnverified+`,
 			enrichment_metadata = '{}'::jsonb, anonymized_at = $2, updated_at = $2
 		WHERE id IN (SELECT id FROM stale)
 	`, cutoff, now, config.GetAnonymizedContactName())

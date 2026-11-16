@@ -12,6 +12,7 @@ import (
 	jobTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/jobManagement"
 	matchingTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/matchingManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
+	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
 )
 
@@ -71,7 +72,7 @@ func (r *JobPostingRepo) UpsertMany(
 			salary_max = COALESCE(EXCLUDED.salary_max, existing.salary_max),
 			salary_currency = COALESCE(EXCLUDED.salary_currency, existing.salary_currency),
 			posted_at = COALESCE(existing.posted_at, EXCLUDED.posted_at),
-			status = 'ACTIVE',
+			status = ` + db.Enum(modelHelpers.JobStatusActive) + `,
 			job_source_id = COALESCE(EXCLUDED.job_source_id, existing.job_source_id),
 			last_seen_at = EXCLUDED.last_seen_at,
 			updated_at = EXCLUDED.updated_at
@@ -146,7 +147,7 @@ func (r *JobPostingRepo) ListEmbeddingSources(
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		SELECT id, company_name, job_title, location, department, job_description, description_hash
 		FROM `+r.jobPostingsTable+`
-		WHERE id = ANY($1::uuid[]) AND embedding IS NULL AND status = 'ACTIVE'
+		WHERE id = ANY($1::uuid[]) AND embedding IS NULL AND status = `+sqlJobStatusActive+`
 		ORDER BY id
 	`, jobIDs)
 	if err != nil {
@@ -168,7 +169,7 @@ func (r *JobPostingRepo) ListStalePendingEmbeddingIDs(
 ) ([]string, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		SELECT id::text FROM `+r.jobPostingsTable+`
-		WHERE embedding IS NULL AND status = 'ACTIVE' AND updated_at < $1
+		WHERE embedding IS NULL AND status = `+sqlJobStatusActive+` AND updated_at < $1
 		ORDER BY updated_at
 		LIMIT $2
 	`, staleBefore, limit)
@@ -243,7 +244,7 @@ func (r *JobPostingRepo) ListNearestActive(
 	rows, err := executor.Query(ctx, `
 		SELECT id, (1 - (embedding <=> $1::vector))::float8
 		FROM `+r.jobPostingsTable+`
-		WHERE status = 'ACTIVE' AND embedding IS NOT NULL
+		WHERE status = `+sqlJobStatusActive+` AND embedding IS NOT NULL
 		ORDER BY embedding <=> $1::vector
 		LIMIT $2
 	`, vector, limit)

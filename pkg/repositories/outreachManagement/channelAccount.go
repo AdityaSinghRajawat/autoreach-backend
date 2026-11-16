@@ -127,7 +127,7 @@ func (r *ChannelAccountRepo) FindFirstActive(
 ) (*outreachModel.ChannelAccount, error) {
 	row := r.postgres.Executor(ctx).QueryRow(ctx, `
 		SELECT `+channelAccountColumns+` FROM `+r.channelAccountsTable+`
-		WHERE candidate_id = $1 AND status = 'ACTIVE' ORDER BY created_at LIMIT 1
+		WHERE candidate_id = $1 AND status = `+sqlChannelAccountStatusActive+` ORDER BY created_at LIMIT 1
 	`, candidateID)
 
 	return db.FindOne(row, scanChannelAccount, "find active channel account")
@@ -135,7 +135,7 @@ func (r *ChannelAccountRepo) FindFirstActive(
 
 func (r *ChannelAccountRepo) ListActiveIDs(ctx context.Context) ([]string, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
-		SELECT id FROM `+r.channelAccountsTable+` WHERE status = 'ACTIVE' ORDER BY id
+		SELECT id FROM `+r.channelAccountsTable+` WHERE status = `+sqlChannelAccountStatusActive+` ORDER BY id
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("list active channel accounts: %w", err)
@@ -192,7 +192,7 @@ func (r *ChannelAccountRepo) AdvanceCursor(
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
 		UPDATE `+r.channelAccountsTable+`
 		SET imap_uid_validity = $2, imap_last_uid = $3, last_verified_at = $4, last_error = NULL, updated_at = $4
-		WHERE id = $1 AND status = 'ACTIVE'
+		WHERE id = $1 AND status = `+sqlChannelAccountStatusActive+`
 	`, accountID, uidValidity, lastUID, now)
 	if err != nil {
 		return fmt.Errorf("advance mailbox cursor: %w", err)

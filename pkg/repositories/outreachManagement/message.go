@@ -11,6 +11,7 @@ import (
 	outreachTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/outreachManagement"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
+	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
 )
 
@@ -174,7 +175,7 @@ func (r *MessageRepo) HasConversationEnded(
 
 	err := r.postgres.Executor(ctx).QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM `+r.messagesTable+`
-			WHERE candidate_id = $1 AND contact_id = $2 AND status IN ('REPLIED', 'BOUNCED'))
+			WHERE candidate_id = $1 AND contact_id = $2 AND status IN (`+sqlOutreachStatusReplied+`, `+sqlOutreachStatusBounced+`))
 	`, candidateID, contactID).Scan(&ended)
 	if err != nil {
 		return false, fmt.Errorf("check conversation: %w", err)
@@ -212,11 +213,11 @@ func (r *MessageRepo) ClaimDue(
 	limit int,
 ) ([]outreachTypes.ClaimedMessage, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
-		UPDATE `+r.messagesTable+` SET status = 'SENDING', attempt_count = attempt_count + 1,
+		UPDATE `+r.messagesTable+` SET status = `+sqlOutreachStatusSending+`, attempt_count = attempt_count + 1,
 			updated_at = $1
 		WHERE id IN (
 			SELECT id FROM `+r.messagesTable+`
-			WHERE status = 'PENDING' AND scheduled_at <= $1
+			WHERE status = `+sqlOutreachStatusPending+` AND scheduled_at <= $1
 			ORDER BY scheduled_at
 			LIMIT $2
 			FOR UPDATE SKIP LOCKED
@@ -245,9 +246,9 @@ func (r *MessageRepo) ClaimDue(
 
 func (r *MessageRepo) ReleaseClaim(ctx context.Context, messageID string, now time.Time) error {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
-		UPDATE `+r.messagesTable+` SET status = 'PENDING', attempt_count = attempt_count - 1,
+		UPDATE `+r.messagesTable+` SET status = `+sqlOutreachStatusPending+`, attempt_count = attempt_count - 1,
 			updated_at = $2
-		WHERE id = $1 AND status = 'SENDING' AND sent_at IS NULL
+		WHERE id = $1 AND status = `+sqlOutreachStatusSending+` AND sent_at IS NULL
 	`, messageID, now)
 	if err != nil {
 		return fmt.Errorf("release message claim: %w", err)
@@ -285,7 +286,7 @@ func (r *MessageRepo) ReserveSend(
 	tag, err := executor.Exec(ctx, `
 		UPDATE `+r.messagesTable+` SET sent_at = $2, provider_message_id = $3, in_reply_to = $4,
 			tracking_token = $5, updated_at = $2
-		WHERE id = $1 AND status = 'SENDING' AND sent_at IS NULL
+		WHERE id = $1 AND status = `+sqlOutreachStatusSending+` AND sent_at IS NULL
 	`, message.ID, now, message.ProviderMessageID, message.InReplyTo, message.TrackingToken)
 	if err != nil {
 		return outreachTypes.SendReservation{}, fmt.Errorf("reserve send: %w", err)
@@ -312,8 +313,8 @@ func (r *MessageRepo) ReserveLinkedinInvite(
 
 	if err := executor.QueryRow(ctx, `
 		SELECT COUNT(*) FROM `+r.messagesTable+`
-		WHERE candidate_id = $1 AND channel = 'LINKEDIN_CONNECT'
-			AND (status = 'ACTION_REQUIRED' OR sent_at > $2)
+		WHERE candidate_id = $1 AND channel = `+sqlOutreachChannelLinkedinConnect+`
+			AND (status = `+sqlOutreachStatusActionRequired+` OR sent_at > $2)
 	`, message.CandidateID, now.Add(-config.GetSendAttemptWindow())).Scan(&used); err != nil {
 		return outreachTypes.SendReservation{}, fmt.Errorf("reserve linkedin invite: %w", err)
 	}
@@ -324,7 +325,7 @@ func (r *MessageRepo) ReserveLinkedinInvite(
 
 	tag, err := executor.Exec(ctx, `
 		UPDATE `+r.messagesTable+` SET sent_at = $2, updated_at = $2
-		WHERE id = $1 AND status = 'SENDING' AND sent_at IS NULL
+		WHERE id = $1 AND status = `+sqlOutreachStatusSending+` AND sent_at IS NULL
 	`, message.ID, now)
 	if err != nil {
 		return outreachTypes.SendReservation{}, fmt.Errorf("reserve linkedin invite: %w", err)
@@ -337,8 +338,15 @@ func (r *MessageRepo) FindLinkedinInvite(
 	ctx context.Context,
 	candidateID, contactID string,
 ) (*outreachModel.Message, error) {
-	return r.findOne(ctx, `candidate_id = $1 AND contact_id = $2 AND channel = 'LINKEDIN_CONNECT'
-		ORDER BY created_at DESC LIMIT 1`, candidateID, contactID)
+	return r.findOne(
+		ctx,
+		`candidate_id = $1 AND contact_id = $2 AND channel = `+db.Enum(
+			modelHelpers.OutreachChannelLinkedinConnect,
+		)+`
+		ORDER BY created_at DESC LIMIT 1`,
+		candidateID,
+		contactID,
+	)
 }
 
 func (r *MessageRepo) OldestSendSince(
@@ -363,8 +371,16 @@ func (r *MessageRepo) PauseForContact(
 	candidateID, contactID string,
 	now time.Time,
 ) error {
-	return r.transition(ctx, `candidate_id = $2 AND contact_id = $3 AND status = 'PENDING'`,
-		"PAUSED", now, candidateID, contactID)
+	return r.transition(
+		ctx,
+		`candidate_id = $2 AND contact_id = $3 AND status = `+db.Enum(
+			modelHelpers.OutreachStatusPending,
+		),
+		modelHelpers.OutreachStatusPaused,
+		now,
+		candidateID,
+		contactID,
+	)
 }
 
 func (r *MessageRepo) CancelForContact(
@@ -374,8 +390,11 @@ func (r *MessageRepo) CancelForContact(
 ) error {
 	return r.transition(
 		ctx,
-		`candidate_id = $2 AND contact_id = $3 AND status IN ('PENDING', 'PAUSED')`,
-		"CANCELLED",
+		`candidate_id = $2 AND contact_id = $3 AND status IN (`+db.Enum(
+			modelHelpers.OutreachStatusPending,
+			modelHelpers.OutreachStatusPaused,
+		)+`)`,
+		modelHelpers.OutreachStatusCancelled,
 		now,
 		candidateID,
 		contactID,
@@ -387,7 +406,13 @@ func (r *MessageRepo) SetCampaignPaused(
 	campaignID string,
 	now time.Time,
 ) error {
-	return r.transition(ctx, `campaign_id = $2 AND status = 'PENDING'`, "PAUSED", now, campaignID)
+	return r.transition(
+		ctx,
+		`campaign_id = $2 AND status = `+db.Enum(modelHelpers.OutreachStatusPending),
+		modelHelpers.OutreachStatusPaused,
+		now,
+		campaignID,
+	)
 }
 
 func (r *MessageRepo) SetCampaignResumed(
@@ -395,11 +420,22 @@ func (r *MessageRepo) SetCampaignResumed(
 	campaignID string,
 	now time.Time,
 ) error {
-	return r.transition(ctx, `campaign_id = $2 AND status = 'PAUSED' AND NOT EXISTS (
+	return r.transition(
+		ctx,
+		`campaign_id = $2 AND status = `+db.Enum(
+			modelHelpers.OutreachStatusPaused,
+		)+` AND NOT EXISTS (
 			SELECT 1 FROM `+r.messagesTable+` AS ended
 			WHERE ended.candidate_id = `+r.messagesTable+`.candidate_id
 				AND ended.contact_id = `+r.messagesTable+`.contact_id
-				AND ended.status IN ('REPLIED', 'BOUNCED'))`, "PENDING", now, campaignID)
+				AND ended.status IN (`+db.Enum(
+			modelHelpers.OutreachStatusReplied,
+			modelHelpers.OutreachStatusBounced,
+		)+`))`,
+		modelHelpers.OutreachStatusPending,
+		now,
+		campaignID,
+	)
 }
 
 func (r *MessageRepo) SetCampaignCancelled(
@@ -407,8 +443,16 @@ func (r *MessageRepo) SetCampaignCancelled(
 	campaignID string,
 	now time.Time,
 ) error {
-	return r.transition(ctx, `campaign_id = $2 AND status IN ('PENDING', 'PAUSED')`,
-		"CANCELLED", now, campaignID)
+	return r.transition(
+		ctx,
+		`campaign_id = $2 AND status IN (`+db.Enum(
+			modelHelpers.OutreachStatusPending,
+			modelHelpers.OutreachStatusPaused,
+		)+`)`,
+		modelHelpers.OutreachStatusCancelled,
+		now,
+		campaignID,
+	)
 }
 
 func (r *MessageRepo) FailStaleSending(
@@ -417,10 +461,10 @@ func (r *MessageRepo) FailStaleSending(
 ) (int, error) {
 	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
 		UPDATE `+r.messagesTable+`
-		SET status = CASE WHEN sent_at IS NULL THEN 'PENDING'::outreach_status ELSE 'FAILED'::outreach_status END,
+		SET status = CASE WHEN sent_at IS NULL THEN `+sqlOutreachStatusPending+`::outreach_status ELSE `+sqlOutreachStatusFailed+`::outreach_status END,
 			failure_reason = CASE WHEN sent_at IS NULL THEN failure_reason ELSE $3 END,
 			updated_at = $2
-		WHERE status = 'SENDING' AND updated_at < $1
+		WHERE status = `+sqlOutreachStatusSending+` AND updated_at < $1
 	`, staleBefore, now, config.ErrSendOutcomeUnknown.Error())
 	if err != nil {
 		return 0, fmt.Errorf("fail stale sending messages: %w", err)
@@ -431,12 +475,13 @@ func (r *MessageRepo) FailStaleSending(
 
 func (r *MessageRepo) transition(
 	ctx context.Context,
-	condition, status string,
+	condition string,
+	status modelHelpers.OutreachStatus,
 	now time.Time,
 	arguments ...any,
 ) error {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
-		UPDATE `+r.messagesTable+` SET status = '`+status+`', updated_at = $1 WHERE `+condition,
+		UPDATE `+r.messagesTable+` SET status = `+db.Enum(status)+`, updated_at = $1 WHERE `+condition,
 		append([]any{now}, arguments...)...)
 	if err != nil {
 		return fmt.Errorf("update outreach messages to %s: %w", status, err)
@@ -534,8 +579,8 @@ func (r *MessageRepo) Cancel(
 	now time.Time,
 ) (bool, error) {
 	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
-		UPDATE `+r.messagesTable+` SET status = 'CANCELLED', updated_at = $3
-		WHERE id = $1 AND candidate_id = $2 AND status IN ('PENDING', 'PAUSED', 'ACTION_REQUIRED')
+		UPDATE `+r.messagesTable+` SET status = `+sqlOutreachStatusCancelled+`, updated_at = $3
+		WHERE id = $1 AND candidate_id = $2 AND status IN (`+sqlOutreachStatusPending+`, `+sqlOutreachStatusPaused+`, `+sqlOutreachStatusActionRequired+`)
 	`, messageID, candidateID, now)
 	if err != nil {
 		return false, fmt.Errorf("cancel outreach message: %w", err)
