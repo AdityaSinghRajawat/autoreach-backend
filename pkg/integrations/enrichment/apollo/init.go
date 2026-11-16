@@ -38,6 +38,17 @@ type (
 		Organization *Organization `json:"organization"`
 	}
 
+	organizationSearchRequest struct {
+		Name    string `json:"q_organization_name"`
+		Page    int    `json:"page"`
+		PerPage int    `json:"per_page"`
+	}
+
+	OrganizationSearchResponse struct {
+		Organizations []Organization `json:"organizations"`
+		Accounts      []Organization `json:"accounts"`
+	}
+
 	Organization struct {
 		Name          string `json:"name"`
 		PrimaryDomain string `json:"primary_domain"`

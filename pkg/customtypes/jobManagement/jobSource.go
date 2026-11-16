@@ -4,22 +4,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
 )
 
 type CreateJobSourceRequest struct {
-	ATSType       string  `json:"atsType"       validate:"required,oneof=GREENHOUSE LEVER ASHBY SMARTRECRUITERS"`
-	BoardToken    string  `json:"boardToken"    validate:"required,max=100"`
-	Region        *string `json:"region"        validate:"omitnil,oneof=GLOBAL EU"`
-	CompanyName   string  `json:"companyName"   validate:"required,max=255"`
-	CompanyDomain string  `json:"companyDomain" validate:"required,fqdn,max=255"`
+	BoardType      string  `json:"boardType"      validate:"required,oneof=GREENHOUSE LEVER ASHBY SMARTRECRUITERS WORKDAY ADZUNA CAREER_PAGE"`
+	BoardToken     string  `json:"boardToken"     validate:"required,max=500"`
+	SearchQuery    *string `json:"searchQuery"    validate:"omitnil,max=255"`
+	SearchLocation *string `json:"searchLocation" validate:"omitnil,max=255"`
+	Region         *string `json:"region"         validate:"omitnil,oneof=GLOBAL EU"`
+	CompanyName    *string `json:"companyName"    validate:"omitnil,max=255"`
+	CompanyDomain  *string `json:"companyDomain"  validate:"omitnil,max=255"`
 }
 
 type UpdateJobSourceRequest struct {
-	CompanyName   *string `json:"companyName"   validate:"omitnil,min=1,max=255"`
-	CompanyDomain *string `json:"companyDomain" validate:"omitnil,fqdn,max=255"`
-	IsActive      *bool   `json:"isActive"`
+	SearchQuery    *string `json:"searchQuery"    validate:"omitnil,min=1,max=255"`
+	SearchLocation *string `json:"searchLocation" validate:"omitnil,min=1,max=255"`
+	CompanyName    *string `json:"companyName"    validate:"omitnil,min=1,max=255"`
+	CompanyDomain  *string `json:"companyDomain"  validate:"omitnil,fqdn,max=255"`
+	IsActive       *bool   `json:"isActive"`
 }
 
 type PollJobSourceResult struct {
@@ -32,23 +37,41 @@ type PollJobSourceResult struct {
 }
 
 type BoardJob struct {
-	ExternalID  string
-	Title       string
-	Description string
-	Location    *string
-	Department  *string
-	URL         string
-	PostedAt    *time.Time
+	ExternalID     string
+	Title          string
+	Description    string
+	Location       *string
+	Department     *string
+	URL            string
+	PostedAt       *time.Time
+	SalaryMin      *float64
+	SalaryMax      *float64
+	SalaryCurrency *string
+	// CompanyName and CompanyDomain are set only by boards that list many companies.
+	CompanyName   string
+	CompanyDomain string
 	// DetailsSkipped marks a job already stored that the board did not re-read.
 	DetailsSkipped bool
 }
 
+// BoardListing is one poll's jobs; Complete is false when the board may not list every open job.
+type BoardListing struct {
+	Jobs     []BoardJob
+	Complete bool
+}
+
 func (r *CreateJobSourceRequest) ToJobSourceModel() *jobModel.JobSource {
 	source := jobModel.NewJobSource()
-	source.ATSType = r.ATSType
-	source.BoardToken = strings.ToLower(strings.TrimSpace(r.BoardToken))
-	source.CompanyName = strings.TrimSpace(r.CompanyName)
-	source.CompanyDomain = strings.ToLower(r.CompanyDomain)
+	source.BoardType = modelHelpers.BoardType(r.BoardType)
+	source.BoardToken = strings.TrimSpace(r.BoardToken)
+	source.SearchQuery = trimmed(r.SearchQuery)
+	source.SearchLocation = trimmed(r.SearchLocation)
+	source.CompanyName = trimmed(r.CompanyName)
+	source.CompanyDomain = lowered(r.CompanyDomain)
+
+	if r.BoardType != config.GetCareerPageBoardType() {
+		source.BoardToken = strings.ToLower(source.BoardToken)
+	}
 
 	if r.Region != nil {
 		source.Region = modelHelpers.JobSourceRegion(*r.Region)
@@ -58,7 +81,8 @@ func (r *CreateJobSourceRequest) ToJobSourceModel() *jobModel.JobSource {
 }
 
 func (r *UpdateJobSourceRequest) IsEmpty() bool {
-	return r.CompanyName == nil && r.CompanyDomain == nil && r.IsActive == nil
+	return r.SearchQuery == nil && r.SearchLocation == nil && r.CompanyName == nil &&
+		r.CompanyDomain == nil && r.IsActive == nil
 }
 
 func (r *UpdateJobSourceRequest) ToJobSourceModel(
@@ -66,12 +90,20 @@ func (r *UpdateJobSourceRequest) ToJobSourceModel(
 ) *jobModel.JobSource {
 	source := *existing
 
+	if r.SearchQuery != nil {
+		source.SearchQuery = trimmed(r.SearchQuery)
+	}
+
+	if r.SearchLocation != nil {
+		source.SearchLocation = trimmed(r.SearchLocation)
+	}
+
 	if r.CompanyName != nil {
-		source.CompanyName = strings.TrimSpace(*r.CompanyName)
+		source.CompanyName = trimmed(r.CompanyName)
 	}
 
 	if r.CompanyDomain != nil {
-		source.CompanyDomain = strings.ToLower(*r.CompanyDomain)
+		source.CompanyDomain = lowered(r.CompanyDomain)
 	}
 
 	if r.IsActive != nil {
@@ -82,19 +114,52 @@ func (r *UpdateJobSourceRequest) ToJobSourceModel(
 }
 
 func (j BoardJob) ToIngestJobItem(source *jobModel.JobSource) IngestJobItem {
+	jobSource, atsType := config.GetBoardJobKinds(string(source.BoardType))
 	externalID := j.ExternalID
+	companyName, companyDomain := j.CompanyName, j.CompanyDomain
+
+	if companyName == "" && source.CompanyName != nil {
+		companyName = *source.CompanyName
+	}
+
+	if companyDomain == "" && source.CompanyDomain != nil {
+		companyDomain = *source.CompanyDomain
+	}
 
 	return IngestJobItem{
-		Source:         source.ATSType,
-		CompanyName:    source.CompanyName,
-		CompanyDomain:  source.CompanyDomain,
+		Source:         jobSource,
+		CompanyName:    companyName,
+		CompanyDomain:  companyDomain,
 		JobTitle:       j.Title,
 		JobDescription: j.Description,
 		Location:       j.Location,
 		Department:     j.Department,
-		ATSType:        source.ATSType,
+		SalaryMin:      j.SalaryMin,
+		SalaryMax:      j.SalaryMax,
+		SalaryCurrency: j.SalaryCurrency,
+		ATSType:        atsType,
 		ExternalURL:    j.URL,
 		ExternalJobID:  &externalID,
 		PostedAt:       j.PostedAt,
 	}
+}
+
+func trimmed(value *string) *string {
+	if value == nil {
+		return nil
+	}
+
+	text := strings.TrimSpace(*value)
+
+	return &text
+}
+
+func lowered(value *string) *string {
+	if value == nil {
+		return nil
+	}
+
+	text := strings.ToLower(strings.TrimSpace(*value))
+
+	return &text
 }

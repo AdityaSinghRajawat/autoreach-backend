@@ -11,6 +11,7 @@ import (
 )
 
 type Repositories struct {
+	CompanyDomain     *enrichmentRepo.CompanyDomainRepo
 	JobSource         *jobRepo.JobSourceRepo
 	Application       *applicationRepo.ApplicationRepo
 	User              *authRepo.UserRepo
@@ -116,7 +117,13 @@ func (d *Dependencies) initRepositories() error {
 		return err
 	}
 
+	companyDomainRepo, err := enrichmentRepo.NewCompanyDomainRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
 	d.Repositories = Repositories{
+		CompanyDomain:     companyDomainRepo,
 		JobSource:         jobSourceRepo,
 		Application:       applicationRepository,
 		ChannelAccount:    channelAccountRepo,

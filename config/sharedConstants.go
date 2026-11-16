@@ -159,6 +159,11 @@ var validationConstI = validationConstants{
 		"validate_resume_file":      "must be a PDF or DOCX document",
 		"validate_role":             "must be a known role",
 		"validate_api_client_grant": "must be a grant API clients may hold",
+		"validate_board_token":      "must be a valid identifier for boardType",
+		"validate_board_types":      "is not allowed for this boardType",
+		"required_if":               "is required in this case",
+		"required_unless":           "is required in this case",
+		"excluded_if":               "is not allowed in this case",
 	},
 	parameterisedIssues: map[string]string{
 		"min":   "must be at least ",

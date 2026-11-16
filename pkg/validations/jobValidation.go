@@ -4,7 +4,7 @@ import (
 	"net"
 	"net/url"
 	"reflect"
-	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -83,8 +83,22 @@ func isPublicHostname(host string) bool {
 	return true
 }
 
-var boardTokenPatternI = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
-
 func ValidateBoardToken(fieldLevel validator.FieldLevel) bool {
-	return boardTokenPatternI.MatchString(fieldLevel.Field().String())
+	boardType := parentField(fieldLevel, config.GetBoardTypeFieldName()).String()
+	token := fieldLevel.Field().String()
+
+	if boardType == config.GetCareerPageBoardType() {
+		return IsAllowedExternalURL(token, config.GetOtherATSType())
+	}
+
+	pattern, found := config.GetBoardTokenPattern(boardType)
+
+	return found && pattern.MatchString(token)
+}
+
+// ValidateBoardTypes accepts the field only on the board types listed in the tag's parameter.
+func ValidateBoardTypes(fieldLevel validator.FieldLevel) bool {
+	boardType := parentField(fieldLevel, config.GetBoardTypeFieldName()).String()
+
+	return slices.Contains(strings.Fields(fieldLevel.Param()), boardType)
 }

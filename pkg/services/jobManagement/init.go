@@ -19,6 +19,7 @@ type JobServiceDependencies struct {
 	JobSourceRepo      *jobRepo.JobSourceRepo
 	RateLimiter        sharedTypes.Limiter
 	JobBoards          []jobBoards.JobBoard
+	DomainResolver     sharedTypes.CompanyDomainResolver
 }
 
 type JobService struct {
@@ -29,6 +30,7 @@ type JobService struct {
 	jobSourceRepo      *jobRepo.JobSourceRepo
 	rateLimiter        sharedTypes.Limiter
 	jobBoards          []jobBoards.JobBoard
+	domainResolver     sharedTypes.CompanyDomainResolver
 }
 
 func NewJobService(dependencies JobServiceDependencies) (*JobService, error) {
@@ -37,7 +39,8 @@ func NewJobService(dependencies JobServiceDependencies) (*JobService, error) {
 		dependencies.WorkerClient == nil ||
 		dependencies.Embedder == nil ||
 		dependencies.JobSourceRepo == nil ||
-		dependencies.RateLimiter == nil {
+		dependencies.RateLimiter == nil ||
+		dependencies.DomainResolver == nil {
 		return nil, fmt.Errorf("new job service: %w", config.ErrMissingDependency)
 	}
 
@@ -49,5 +52,6 @@ func NewJobService(dependencies JobServiceDependencies) (*JobService, error) {
 		jobSourceRepo:      dependencies.JobSourceRepo,
 		rateLimiter:        dependencies.RateLimiter,
 		jobBoards:          dependencies.JobBoards,
+		domainResolver:     dependencies.DomainResolver,
 	}, nil
 }

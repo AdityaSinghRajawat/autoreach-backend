@@ -48,6 +48,18 @@ func NormalizeDomain(domain string) string {
 	return strings.TrimPrefix(normalized, "www.")
 }
 
+type BoardType string
+
+const (
+	BoardTypeGreenhouse      BoardType = "GREENHOUSE"
+	BoardTypeLever           BoardType = "LEVER"
+	BoardTypeAshby           BoardType = "ASHBY"
+	BoardTypeSmartRecruiters BoardType = "SMARTRECRUITERS"
+	BoardTypeWorkday         BoardType = "WORKDAY"
+	BoardTypeAdzuna          BoardType = "ADZUNA"
+	BoardTypeCareerPage      BoardType = "CAREER_PAGE"
+)
+
 type JobSourceRegion string
 
 const (

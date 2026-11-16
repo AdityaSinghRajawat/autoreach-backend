@@ -24,6 +24,7 @@ type EnrichmentServiceDependencies struct {
 	JobMatchRepo          *matchingRepo.JobMatchRepo
 	CompanyContactRepo    *enrichmentRepo.CompanyContactRepo
 	EnrichmentRequestRepo *enrichmentRepo.EnrichmentRequestRepo
+	CompanyDomainRepo     *enrichmentRepo.CompanyDomainRepo
 	TransactionManager    db.TransactionManager
 	WorkerClient          workerConfigs.IWorkerClient
 	RateLimiter           sharedTypes.Limiter
@@ -37,6 +38,7 @@ type EnrichmentService struct {
 	jobMatchRepo          *matchingRepo.JobMatchRepo
 	companyContactRepo    *enrichmentRepo.CompanyContactRepo
 	enrichmentRequestRepo *enrichmentRepo.EnrichmentRequestRepo
+	companyDomainRepo     *enrichmentRepo.CompanyDomainRepo
 	transactionManager    db.TransactionManager
 	workerClient          workerConfigs.IWorkerClient
 	rateLimiter           sharedTypes.Limiter
@@ -51,6 +53,7 @@ func NewEnrichmentService(dependencies EnrichmentServiceDependencies) (*Enrichme
 		dependencies.JobMatchRepo == nil ||
 		dependencies.CompanyContactRepo == nil ||
 		dependencies.EnrichmentRequestRepo == nil ||
+		dependencies.CompanyDomainRepo == nil ||
 		dependencies.TransactionManager == nil ||
 		dependencies.WorkerClient == nil ||
 		dependencies.RateLimiter == nil ||
@@ -69,6 +72,7 @@ func NewEnrichmentService(dependencies EnrichmentServiceDependencies) (*Enrichme
 		jobMatchRepo:          dependencies.JobMatchRepo,
 		companyContactRepo:    dependencies.CompanyContactRepo,
 		enrichmentRequestRepo: dependencies.EnrichmentRequestRepo,
+		companyDomainRepo:     dependencies.CompanyDomainRepo,
 		transactionManager:    dependencies.TransactionManager,
 		workerClient:          dependencies.WorkerClient,
 		rateLimiter:           dependencies.RateLimiter,

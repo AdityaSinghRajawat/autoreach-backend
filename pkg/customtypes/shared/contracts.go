@@ -42,3 +42,7 @@ type ChatCompleter interface {
 	CreateChatCompletion(ctx context.Context, request ChatCompletionRequest) (string, error)
 	ChatModel() string
 }
+
+type CompanyDomainResolver interface {
+	ResolveCompanyDomains(ctx context.Context, companyNames []string) (map[string]string, error)
+}

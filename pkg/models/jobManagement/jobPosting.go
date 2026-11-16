@@ -16,7 +16,7 @@ import (
 type JobPosting struct {
 	ID              string                 `db:"id"               json:"jobId"          validate:"required,uuid"`
 	JobHash         string                 `db:"job_hash"         json:"-"              validate:"required,len=64,hexadecimal"`
-	Source          string                 `db:"source"           json:"source"         validate:"required,oneof=LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS DIRECT"`
+	Source          string                 `db:"source"           json:"source"         validate:"required,oneof=LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS ADZUNA DIRECT"`
 	CompanyName     string                 `db:"company_name"     json:"companyName"    validate:"required,max=255"`
 	CompanyDomain   string                 `db:"company_domain"   json:"companyDomain"  validate:"required,fqdn,max=255"`
 	JobTitle        string                 `db:"job_title"        json:"jobTitle"       validate:"required,max=255,validate_job_title"`

@@ -2,6 +2,7 @@ package jobBoards
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
@@ -10,18 +11,20 @@ import (
 	greenhouseIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ats/greenhouse"
 	leverIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ats/lever"
 	smartRecruitersIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ats/smartrecruiters"
-	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+	workdayIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ats/workday"
+	adzunaIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/jobSearch/adzuna"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type JobBoard interface {
-	ATSType() string
+	BoardType() string
 	// ListJobs may skip re-reading jobs in knownExternalIDs and return them with DetailsSkipped.
 	ListJobs(
 		ctx context.Context,
 		source *jobModel.JobSource,
 		knownExternalIDs map[string]struct{},
-	) ([]jobTypes.BoardJob, error)
+	) (jobTypes.BoardListing, error)
 }
 
 type RegistryOptions struct {
@@ -30,7 +33,13 @@ type RegistryOptions struct {
 	LeverEUAPIURL         string
 	AshbyAPIURL           string
 	SmartRecruitersAPIURL string
+	WorkdayHostURLFormat  string
+	AdzunaAPIURL          string
+	AdzunaAppID           string
+	AdzunaAppKey          string
 	Timeout               time.Duration
+	// CareerPageTransport replaces the public-internet-only transport; only tests set it.
+	CareerPageTransport http.RoundTripper
 }
 
 func NewJobBoardRegistry(options RegistryOptions) []JobBoard {
@@ -58,12 +67,34 @@ func NewJobBoardRegistry(options RegistryOptions) []JobBoard {
 				options.Timeout,
 			),
 		},
+		&workdayBoard{
+			integration: workdayIntegration.NewWorkdayIntegration(
+				options.WorkdayHostURLFormat,
+				options.Timeout,
+			),
+		},
+		&adzunaBoard{
+			integration: adzunaIntegration.NewAdzunaIntegration(
+				options.AdzunaAPIURL,
+				options.AdzunaAppID,
+				options.AdzunaAppKey,
+				options.Timeout,
+			),
+		},
+		&careerPageBoard{
+			fetcher: utils.NewWebFetcher(
+				options.Timeout,
+				config.GetCareerPageMaxBytes(),
+				config.GetCareerPageUserAgent(),
+				options.CareerPageTransport,
+			),
+		},
 	}
 }
 
-func Find(registry []JobBoard, atsType string) JobBoard {
+func Find(registry []JobBoard, boardType string) JobBoard {
 	for _, board := range registry {
-		if board.ATSType() == atsType {
+		if board.BoardType() == boardType {
 			return board
 		}
 	}
@@ -71,73 +102,17 @@ func Find(registry []JobBoard, atsType string) JobBoard {
 	return nil
 }
 
-type greenhouseBoard struct {
-	integration *greenhouseIntegration.GreenhouseIntegration
-}
-
-func (b *greenhouseBoard) ATSType() string { return string(modelHelpers.ATSTypeGreenhouse) }
-
-func (b *greenhouseBoard) ListJobs(
+// readNewJobs fetches the full record of postings not stored yet, up to the per-poll limit; postings
+// already stored come back marked DetailsSkipped. A posting the board rejects (gone since it was
+// listed) is dropped; other failures end the poll.
+func readNewJobs(
 	ctx context.Context,
-	source *jobModel.JobSource,
-	_ map[string]struct{},
-) ([]jobTypes.BoardJob, error) {
-	return b.integration.ListBoardJobs(ctx, source.BoardToken)
-}
-
-type leverBoard struct {
-	global *leverIntegration.LeverIntegration
-	eu     *leverIntegration.LeverIntegration
-}
-
-func (b *leverBoard) ATSType() string { return string(modelHelpers.ATSTypeLever) }
-
-func (b *leverBoard) ListJobs(
-	ctx context.Context,
-	source *jobModel.JobSource,
-	_ map[string]struct{},
-) ([]jobTypes.BoardJob, error) {
-	if string(source.Region) == config.GetJobSourceRegionEU() {
-		return b.eu.ListPostings(ctx, source.BoardToken)
-	}
-
-	return b.global.ListPostings(ctx, source.BoardToken)
-}
-
-type ashbyBoard struct {
-	integration *ashbyIntegration.AshbyIntegration
-}
-
-func (b *ashbyBoard) ATSType() string { return string(modelHelpers.ATSTypeAshby) }
-
-func (b *ashbyBoard) ListJobs(
-	ctx context.Context,
-	source *jobModel.JobSource,
-	_ map[string]struct{},
-) ([]jobTypes.BoardJob, error) {
-	return b.integration.ListJobs(ctx, source.BoardToken)
-}
-
-type smartRecruitersBoard struct {
-	integration *smartRecruitersIntegration.SmartRecruitersIntegration
-}
-
-func (b *smartRecruitersBoard) ATSType() string { return string(modelHelpers.ATSTypeSmartRecruiters) }
-
-// The listing has no descriptions, so each new posting costs one more request. Known postings are
-// not re-read, and new ones beyond the per-poll limit wait for a later poll.
-func (b *smartRecruitersBoard) ListJobs(
-	ctx context.Context,
-	source *jobModel.JobSource,
+	summaries []jobTypes.BoardJob,
 	knownExternalIDs map[string]struct{},
+	read func(ctx context.Context, summary jobTypes.BoardJob) (*jobTypes.BoardJob, error),
 ) ([]jobTypes.BoardJob, error) {
-	summaries, err := b.integration.ListPostings(ctx, source.BoardToken)
-	if err != nil {
-		return nil, err
-	}
-
 	jobs := make([]jobTypes.BoardJob, 0, len(summaries))
-	detailsLeft := config.GetSmartRecruitersMaxDetailsPerPoll()
+	readsLeft := config.GetJobBoardMaxDetailsPerPoll()
 
 	for _, summary := range summaries {
 		if _, known := knownExternalIDs[summary.ExternalID]; known {
@@ -147,18 +122,24 @@ func (b *smartRecruitersBoard) ListJobs(
 			continue
 		}
 
-		if detailsLeft == 0 {
+		if readsLeft == 0 {
 			continue
 		}
 
-		detailsLeft--
+		readsLeft--
 
-		job, err := b.integration.GetPosting(ctx, source.BoardToken, summary.ExternalID)
+		job, err := read(ctx, summary)
+		if err != nil && utils.ClassifyUpstreamError(err) == config.GetErrCodeUpstreamRejected() {
+			continue
+		}
+
 		if err != nil {
 			return nil, err
 		}
 
-		jobs = append(jobs, job)
+		if job != nil {
+			jobs = append(jobs, *job)
+		}
 	}
 
 	return jobs, nil

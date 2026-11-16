@@ -8,6 +8,7 @@ import (
 
 var (
 	blockTagPatternI    = regexp.MustCompile(`(?i)<\s*(br|/p|/div|/li|/h[1-6]|/tr)\b[^>]*>`)
+	cellTagPatternI     = regexp.MustCompile(`(?i)<\s*/t[dh]\b[^>]*>`)
 	anyTagPatternI      = regexp.MustCompile(`<[^>]*>`)
 	blankLinesI         = regexp.MustCompile(`\n\s*\n+`)
 	inlineSpacePatternI = regexp.MustCompile(`[ \t\f\v\x{00A0}]+`)
@@ -17,7 +18,8 @@ var (
 func HTMLToText(markup string) string {
 	text := html.UnescapeString(markup)
 	text = blockTagPatternI.ReplaceAllString(text, "\n")
-	text = html.UnescapeString(anyTagPatternI.ReplaceAllString(text, " "))
+	text = cellTagPatternI.ReplaceAllString(text, " ")
+	text = html.UnescapeString(anyTagPatternI.ReplaceAllString(text, ""))
 	text = inlineSpacePatternI.ReplaceAllString(text, " ")
 
 	lines := strings.Split(text, "\n")

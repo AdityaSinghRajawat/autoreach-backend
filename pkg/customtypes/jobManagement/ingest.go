@@ -9,7 +9,7 @@ import (
 )
 
 type IngestJobItem struct {
-	Source         string     `json:"source"         validate:"required,oneof=LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS DIRECT"`
+	Source         string     `json:"source"         validate:"required,oneof=LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS ADZUNA DIRECT"`
 	CompanyName    string     `json:"companyName"    validate:"required,max=255"`
 	CompanyDomain  string     `json:"companyDomain"  validate:"required,fqdn,max=255"`
 	JobTitle       string     `json:"jobTitle"       validate:"required,max=255,validate_job_title"`

@@ -12,8 +12,8 @@ import (
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
 )
 
-const jobSourceColumns = `id, ats_type, board_token, region, company_name, company_domain, is_active,
-	last_polled_at, last_job_count, last_error, created_at, updated_at`
+const jobSourceColumns = `id, board_type, board_token, search_query, search_location, region, company_name,
+	company_domain, is_active, last_polled_at, last_job_count, last_error, created_at, updated_at`
 
 type JobSourceRepo struct {
 	postgres         *db.PostgresConn
@@ -39,8 +39,10 @@ func (r *JobSourceRepo) Upsert(
 ) (*jobModel.JobSource, error) {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
 		INSERT INTO `+r.jobSourcesTable+` (`+jobSourceColumns+`)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT (id) DO UPDATE SET
+			search_query = EXCLUDED.search_query,
+			search_location = EXCLUDED.search_location,
 			company_name = EXCLUDED.company_name,
 			company_domain = EXCLUDED.company_domain,
 			is_active = EXCLUDED.is_active,
@@ -49,9 +51,11 @@ func (r *JobSourceRepo) Upsert(
 			last_error = EXCLUDED.last_error,
 			updated_at = EXCLUDED.updated_at
 	`,
-		source.ID, source.ATSType, source.BoardToken, string(source.Region), source.CompanyName,
-		source.CompanyDomain, source.IsActive, source.LastPolledAt, source.LastJobCount,
-		source.LastError, source.CreatedAt, source.UpdatedAt,
+		source.ID, string(source.BoardType), source.BoardToken, source.SearchQuery, source.SearchLocation,
+		string(
+			source.Region,
+		), source.CompanyName, source.CompanyDomain, source.IsActive, source.LastPolledAt,
+		source.LastJobCount, source.LastError, source.CreatedAt, source.UpdatedAt,
 	)
 	if db.IsUniqueViolation(err) {
 		return nil, fmt.Errorf("upsert job source: %w", config.ErrDuplicateRecord)
@@ -76,7 +80,25 @@ func (r *JobSourceRepo) FindByID(
 }
 
 func (r *JobSourceRepo) List(ctx context.Context) ([]*jobModel.JobSource, error) {
-	return r.list(ctx, `ORDER BY company_name, board_token`)
+	rows, err := r.postgres.Executor(ctx).Query(ctx, `
+		SELECT `+jobSourceColumns+` FROM `+r.jobSourcesTable+`
+		ORDER BY board_type, board_token, search_query NULLS FIRST
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list job sources: %w", err)
+	}
+
+	sources, err := pgx.CollectRows(
+		rows,
+		func(row pgx.CollectableRow) (*jobModel.JobSource, error) {
+			return scanJobSource(row)
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list job sources: %w", err)
+	}
+
+	return sources, nil
 }
 
 func (r *JobSourceRepo) ListActiveIDs(ctx context.Context) ([]string, error) {
@@ -103,23 +125,6 @@ func (r *JobSourceRepo) Delete(ctx context.Context, sourceID string) (bool, erro
 	}
 
 	return tag.RowsAffected() == 1, nil
-}
-
-// CloseUnseen closes the source's jobs that the latest poll no longer returned.
-func (r *JobSourceRepo) CloseUnseen(
-	ctx context.Context,
-	sourceID string,
-	pollStartedAt, now time.Time,
-) (int, error) {
-	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
-		UPDATE `+r.jobPostingsTable+` SET status = 'CLOSED', updated_at = $3
-		WHERE job_source_id = $1 AND status = 'ACTIVE' AND last_seen_at < $2
-	`, sourceID, pollStartedAt, now)
-	if err != nil {
-		return 0, fmt.Errorf("close unseen jobs: %w", err)
-	}
-
-	return int(tag.RowsAffected()), nil
 }
 
 func (r *JobSourceRepo) ListActiveExternalIDs(
@@ -168,33 +173,41 @@ func (r *JobSourceRepo) MarkSeen(
 	return int(tag.RowsAffected()), nil
 }
 
-func (r *JobSourceRepo) list(ctx context.Context, suffix string) ([]*jobModel.JobSource, error) {
-	rows, err := r.postgres.Executor(ctx).Query(ctx, `
-		SELECT `+jobSourceColumns+` FROM `+r.jobSourcesTable+` `+suffix)
+// CloseUnseen closes the source's active jobs not seen since closeBefore.
+func (r *JobSourceRepo) CloseUnseen(
+	ctx context.Context,
+	sourceID string,
+	closeBefore, now time.Time,
+) (int, error) {
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.jobPostingsTable+` SET status = 'CLOSED', updated_at = $3
+		WHERE job_source_id = $1 AND status = 'ACTIVE' AND last_seen_at < $2
+	`, sourceID, closeBefore, now)
 	if err != nil {
-		return nil, fmt.Errorf("list job sources: %w", err)
+		return 0, fmt.Errorf("close unseen jobs: %w", err)
 	}
 
-	sources, err := pgx.CollectRows(
-		rows,
-		func(row pgx.CollectableRow) (*jobModel.JobSource, error) {
-			return scanJobSource(row)
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list job sources: %w", err)
-	}
-
-	return sources, nil
+	return int(tag.RowsAffected()), nil
 }
 
 func scanJobSource(row db.RowScanner) (*jobModel.JobSource, error) {
 	source := jobModel.JobSource{}
 
 	err := row.Scan(
-		&source.ID, &source.ATSType, &source.BoardToken, &source.Region, &source.CompanyName,
-		&source.CompanyDomain, &source.IsActive, &source.LastPolledAt, &source.LastJobCount,
-		&source.LastError, &source.CreatedAt, &source.UpdatedAt,
+		&source.ID,
+		&source.BoardType,
+		&source.BoardToken,
+		&source.SearchQuery,
+		&source.SearchLocation,
+		&source.Region,
+		&source.CompanyName,
+		&source.CompanyDomain,
+		&source.IsActive,
+		&source.LastPolledAt,
+		&source.LastJobCount,
+		&source.LastError,
+		&source.CreatedAt,
+		&source.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err

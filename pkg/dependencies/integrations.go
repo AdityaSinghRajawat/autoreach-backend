@@ -36,6 +36,10 @@ func (d *Dependencies) initIntegrations() error {
 			LeverEUAPIURL:         config.GetLeverEUPostingsAPIURL(),
 			AshbyAPIURL:           config.GetAshbyJobBoardAPIURL(),
 			SmartRecruitersAPIURL: config.GetSmartRecruitersAPIURL(),
+			WorkdayHostURLFormat:  config.GetWorkdayHostURLFormat(),
+			AdzunaAPIURL:          config.GetAdzunaAPIURL(),
+			AdzunaAppID:           config.GetAdzunaAppID(),
+			AdzunaAppKey:          config.GetAdzunaAppKey(),
 		})
 	}
 

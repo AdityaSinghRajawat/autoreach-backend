@@ -33,6 +33,11 @@ type ContactFinder interface {
 	) (*enrichmentTypes.ContactDetails, error)
 }
 
+type DomainResolver interface {
+	Provider
+	ResolveCompanyDomain(ctx context.Context, companyName string) (string, error)
+}
+
 type AsyncContactFinder interface {
 	Provider
 	RequestContact(ctx context.Context, person enrichmentTypes.Person) (string, error)

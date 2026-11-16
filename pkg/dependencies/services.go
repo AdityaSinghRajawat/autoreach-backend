@@ -47,19 +47,6 @@ func (d *Dependencies) initServices() error {
 		return err
 	}
 
-	job, err := jobService.NewJobService(jobService.JobServiceDependencies{
-		JobPostingRepo:     d.Repositories.JobPosting,
-		TransactionManager: d.TransactionManager,
-		WorkerClient:       d.WorkerClient,
-		Embedder:           d.Embedder,
-		JobSourceRepo:      d.Repositories.JobSource,
-		RateLimiter:        d.RateLimiter,
-		JobBoards:          d.JobBoards,
-	})
-	if err != nil {
-		return err
-	}
-
 	matching, err := matchingService.NewMatchingService(
 		matchingService.MatchingServiceDependencies{
 			CandidateRepo:      d.Repositories.Candidate,
@@ -80,6 +67,7 @@ func (d *Dependencies) initServices() error {
 			JobMatchRepo:          d.Repositories.JobMatch,
 			CompanyContactRepo:    d.Repositories.CompanyContact,
 			EnrichmentRequestRepo: d.Repositories.EnrichmentRequest,
+			CompanyDomainRepo:     d.Repositories.CompanyDomain,
 			TransactionManager:    d.TransactionManager,
 			WorkerClient:          d.WorkerClient,
 			RateLimiter:           d.RateLimiter,
@@ -88,6 +76,20 @@ func (d *Dependencies) initServices() error {
 			Providers:             d.EnrichmentProviders,
 		},
 	)
+	if err != nil {
+		return err
+	}
+
+	job, err := jobService.NewJobService(jobService.JobServiceDependencies{
+		JobPostingRepo:     d.Repositories.JobPosting,
+		TransactionManager: d.TransactionManager,
+		WorkerClient:       d.WorkerClient,
+		Embedder:           d.Embedder,
+		JobSourceRepo:      d.Repositories.JobSource,
+		RateLimiter:        d.RateLimiter,
+		JobBoards:          d.JobBoards,
+		DomainResolver:     enrichment,
+	})
 	if err != nil {
 		return err
 	}
