@@ -2597,7 +2597,8 @@
               }
             }
           }
-        }
+        },
+        "description": "The job must be one the candidate was matched to; otherwise 404."
       }
     },
     "/api/v1/candidates/{candidateId}/outreach-messages/{outreachId}": {
@@ -2740,7 +2741,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Cancels the message only while it is still pending, paused or awaiting the candidate; once a send has started the answer is 409."
       }
     },
     "/t/o/{token}": {
@@ -4970,7 +4972,7 @@
           "settings": {
             "type": "object",
             "additionalProperties": true,
-            "description": "Replaces the stored settings object."
+            "description": "Merged into the stored settings: each key given replaces that key, a key set to null removes it, and keys not given are kept. applicationProfile is ignored here; use PUT /candidates/{candidateId}/application-profile."
           }
         }
       },

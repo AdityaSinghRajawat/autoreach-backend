@@ -54,9 +54,11 @@ A candidate connects a mailbox (`/candidates/{id}/channel-accounts`): SMTP and I
 - **Sending:** the dispatcher cron claims due messages and queues `task:send_cold_email`. Each email goes out at most once, inside the send window in the candidate timezone, within the mailbox daily cap (30 by default, enforced across workers). Follow-ups are threaded with `In-Reply-To`.
 - **Replies and bounces:** the reply sweeper reads every active inbox over IMAP. A reply marks the message `REPLIED` and pauses the remaining steps to that contact; a bounce marks it `BOUNCED`, cancels the rest and suppresses the address; auto-replies are only recorded.
 - **Unsubscribe:** every email carries `List-Unsubscribe` with a signed one-click link (`List-Unsubscribe-Post`, RFC 8058) when `PUBLIC_BASE_URL` is set, plus a `mailto:` fallback. Opening the link shows a confirmation page and changes nothing; the POST (from the mail client or the page) suppresses the address for that candidate and cancels pending messages. A reply whose subject is "unsubscribe" does the same.
-- **Tracking** of opens and clicks is off unless the candidate sets `settings.emailTracking`, because tracking pixels and rewritten links hurt inbox placement. Click links are signed, so the redirect endpoint cannot be used to send people elsewhere.
+- **Tracking** of opens and clicks is off unless the candidate sets `settings.emailTracking` (`PATCH /candidates/{id}` merges `settings` key by key; `null` removes a key, and the application profile is only changed through its own route), because tracking pixels and rewritten links hurt inbox placement. Click links are signed, so the redirect endpoint cannot be used to send people elsewhere.
 
-Manual messages go through `POST /candidates/{id}/outreach-messages`, one message per requested channel.
+Manual messages go through `POST /candidates/{id}/outreach-messages`, one message per requested channel, only for a job the candidate was matched to (otherwise 404); all messages in one request are created together or not at all. `PATCH .../outreach-messages/{outreachId}` cancels a message while it is pending, paused or awaiting the candidate; once the dispatcher has started sending it the answer is 409.
+
+If the connection drops after the mail server received the whole message, the send is marked failed with "send outcome unknown" and never retried automatically, so a contact is not emailed twice.
 
 ## LinkedIn outreach
 
@@ -97,7 +99,7 @@ Greenhouse and Lever only accept applications through their APIs with the employ
 2. `task:prepare_application` reads the job's form (Greenhouse questions through the public Job Board API; Lever's standard fields) and fills it from the candidate's details and their application profile (`PUT /candidates/{id}/application-profile`: phone, links, work authorisation, sponsorship, salary, notice period, a cover letter, and exact answers keyed by question label). Questions are matched by label keywords; yes/no selects use the option's value.
 3. With an employer key for that board or site (`GREENHOUSE_BOARD_KEYS`, `LEVER_SITE_KEYS`) and every required answer known, it submits through the official API with the active resume (`SUBMITTED`). Otherwise the application is `ACTION_REQUIRED`: the prepared answers, the questions still unanswered and the apply link are shown to the candidate, who submits in the browser and confirms with `PATCH /candidates/{id}/applications/{applicationId}` (`SUBMITTED`, then `INTERVIEWING` or `REJECTED`).
 
-Requests to each application site are rate limited; transient failures are retried and stalled applications are re-queued by the reconciler. Every step is recorded in `executionLogs`.
+Requests to each application site are rate limited; transient failures while reading the form are retried and stalled applications are re-queued by the reconciler. A run first claims the application, so two workers never prepare the same one. A submission that fails without a clear answer from the employer (timeout, 5xx) is never retried: the application moves to `ACTION_REQUIRED` with "submission outcome unknown" so the candidate can check before applying again. Every step is recorded in `executionLogs`.
 
 ## Dashboard and operations
 

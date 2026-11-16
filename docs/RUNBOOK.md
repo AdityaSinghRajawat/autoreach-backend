@@ -15,7 +15,7 @@ Operating the production stack in `docker-compose.yml`: API server, worker, Post
    | `PUBLIC_BASE_URL` | the public address of the API; tracking and unsubscribe links in emails point at it |
    | `OPENAI_API_KEY`, provider keys | from each vendor |
 
-   Compose refuses to start without the variables in the first four rows, and so does the app in production.
+   Compose refuses to start without the variables in the first four rows, and so does the app in production. `APP_ENV` must be `local`, `test` or `production`; any other value stops startup, so a typo cannot switch the production checks off. `OUTREACH_ALLOW_INSECURE_MAIL` and `OUTREACH_ALLOW_PRIVATE_MAIL_HOSTS` are for local test mail servers and are refused in production.
 2. `docker compose up -d --build --wait`. The `migrate` job applies every migration before the server and worker start.
 3. Create the first administrator:
 
