@@ -29,14 +29,7 @@ func (s *AuthService) RefreshSession(
 	}
 
 	if stored.IsRevoked() {
-		if err := s.refreshTokenRepo.MarkFamilyRevoked(ctx, stored.FamilyID, now); err != nil {
-			return nil, config.NewCustomError(
-				fmt.Errorf("refresh session: %w", err),
-				config.GetErrCodeInternalServerError(),
-			)
-		}
-
-		return nil, unauthorizedRefresh(config.ErrRefreshTokenReused)
+		return nil, s.revokeReusedFamily(ctx, stored.FamilyID)
 	}
 
 	if stored.IsExpired(now) {
@@ -72,7 +65,7 @@ func (s *AuthService) RefreshSession(
 		return err
 	})
 	if errors.Is(err, config.ErrRefreshTokenReused) {
-		return nil, unauthorizedRefresh(err)
+		return nil, s.revokeReusedFamily(ctx, stored.FamilyID)
 	}
 
 	if err != nil {
@@ -83,6 +76,23 @@ func (s *AuthService) RefreshSession(
 	}
 
 	return session, nil
+}
+
+// revokeReusedFamily ends every session descended from a token presented twice, whether the reuse
+// came later or raced the first refresh, since either can mean the token was stolen.
+func (s *AuthService) revokeReusedFamily(ctx context.Context, familyID string) *config.CustomError {
+	if err := s.refreshTokenRepo.MarkFamilyRevoked(
+		ctx,
+		familyID,
+		utils.GetCurrTimeStamp(),
+	); err != nil {
+		return config.NewCustomError(
+			fmt.Errorf("refresh session: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
+	}
+
+	return unauthorizedRefresh(config.ErrRefreshTokenReused)
 }
 
 func unauthorizedRefresh(reason error) *config.CustomError {

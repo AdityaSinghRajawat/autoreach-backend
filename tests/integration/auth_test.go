@@ -4,6 +4,7 @@ package integration
 
 import (
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -191,6 +192,33 @@ func TestRefreshRotatesTheTokenAndReuseRevokesTheWholeSession(t *testing.T) {
 		afterReuse.Recorder.Code,
 		"the rotated token must die when its predecessor is replayed",
 	)
+}
+
+func TestConcurrentRefreshesWithOneTokenEndTheWholeSession(t *testing.T) {
+	router := newRouter(t)
+	original := register(t, router, "alex@example.com")
+	issued := make(chan string, 8)
+	waiting := sync.WaitGroup{}
+
+	for range cap(issued) {
+		waiting.Go(func() {
+			refreshed := helpers.Do(t, router, http.MethodPost, refreshPath,
+				authTypes.RefreshRequest{RefreshToken: original.RefreshToken}, nil)
+			if refreshed.Recorder.Code == http.StatusOK {
+				issued <- helpers.DecodeData[authTypes.SessionResponse](t, refreshed).RefreshToken
+			}
+		})
+	}
+
+	waiting.Wait()
+	close(issued)
+
+	for token := range issued {
+		later := helpers.Do(t, router, http.MethodPost, refreshPath,
+			authTypes.RefreshRequest{RefreshToken: token}, nil)
+		assert.Equal(t, http.StatusUnauthorized, later.Recorder.Code,
+			"a token presented twice at once revokes every session issued from it")
+	}
 }
 
 func TestRefreshRejectsAnUnknownToken(t *testing.T) {
