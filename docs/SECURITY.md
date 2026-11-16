@@ -10,6 +10,7 @@ Status of each control in the implementation plan (section 4.7) and the M10 hard
 | Short-lived access tokens, rotating hashed refresh tokens | done | `pkg/services/authManagement` | `tests/integration/auth_test.go` (rotation, reuse, `alg: none` token rejected); `TestAccessTokenIsRejectedWhenExpiredTamperedOrForeign` |
 | Every candidate-scoped route checks the token's candidate; other candidates' data answers 404 | done | `middlewares/authorize.go` | `TestEveryCandidateRouteHidesOtherCandidatesData` walks every registered route, so new routes are covered automatically |
 | Every non-public route requires authentication | done | route groups | `TestEveryNonPublicRouteRequiresAuthentication` |
+| Signup does not reveal whether an address is registered: with email verification on (default in production) it answers 202 either way, emails a link or a notice, never changes an existing account, and sign-in waits for the link | done | `pkg/services/authManagement/register.go`, `AUTH_REQUIRE_EMAIL_VERIFICATION` | `TestSignupAnswersAlikeForNewAndRegisteredAddresses`, `TestSigningUpAgainNeverChangesTheExistingAccount` |
 | Admin routes reject candidates | done | `config/authorizationPolicy.go` grants | `TestEveryAdminRouteRejectsCandidates` |
 | API keys shown once, stored as SHA-256 with a lookup prefix, constant-time compare | done | `pkg/services/authManagement/verifyAPIKey.go` | integration tests |
 | Webhook signatures and shared secrets compared in constant time | done | `pkg/utils/crypto.go`, `middlewares/authenticate.go` | `TestContactWithoutAnEmailIsCompletedLaterByTheSignalHireCallback` (wrong and missing token rejected) |
@@ -24,7 +25,7 @@ Status of each control in the implementation plan (section 4.7) and the M10 hard
 | Contact data deleted on request, and the address suppressed so it cannot return | done | `GET /api/v1/admin/contacts?email=`, `DELETE /api/v1/admin/contacts/{contactId}` | `TestAdminFindsAndErasesAContact` |
 | Contact retention window (configurable, off by default; anonymizes and keeps history) | done | daily `contactRetentionJob`, `CONTACT_RETENTION_PERIOD` | `TestStaleContactsAreAnonymizedButTheirHistoryIsKept` |
 | Suppression honoured before planning and before every send | done | `pkg/services/outreachManagement` | outreach tests; global and per-candidate entries |
-| No secrets in logs; PII kept out where the code controls the message | partial | log calls carry IDs and counts (erasure logs a count, never the address); outbound HTTP errors have their query string removed so API keys passed as parameters never reach a log | `TestTransportErrorsNeverCarryTheQueryString`; open: raw SMTP/IMAP server replies are still logged as warnings and may contain an address |
+| No secrets in logs; email addresses redacted from every log line, including quoted mail server replies | done | log calls carry IDs and counts (erasure logs a count, never the address); outbound HTTP errors have their query string removed so API keys passed as parameters never reach a log | `TestTransportErrorsNeverCarryTheQueryString`, `TestLogsNeverCarryEmailAddresses` |
 | Mailbox failures shown to users as a category only (unreachable, secure connection, login rejected), never the server's reply | done | `utils.MailFailureReason` | `TestMailboxOnAnUnreachablePortReportsOnlyACategory` |
 | Uploaded files kept out of images | done | `.dockerignore` excludes `data/` and every `.env*` except `.env.example` | — |
 
@@ -43,6 +44,9 @@ Status of each control in the implementation plan (section 4.7) and the M10 hard
 | Outbound fetches of career pages cannot reach private networks (checked at connect time, so redirects and DNS tricks fail too) and obey robots.txt | done | `pkg/utils/webFetcher.go`, `pkg/utils/robots.go` | career page tests, robots unit test, `TestWebFetcherRefusesPrivateAddresses` |
 | User-supplied SMTP/IMAP hosts cannot reach private networks (same connect-time check; `OUTREACH_ALLOW_PRIVATE_MAIL_HOSTS` lifts it for local tests and is refused in production) | done | `pkg/utils/email.go` | channel account integration tests |
 | Outbound response bodies capped (64 MiB) before decoding | done | `pkg/utils/httpClient.go` | — |
+| Reserved and translated ranges (CGNAT, test nets, `240.0.0.0/4`, NAT64, 6to4) refused like private ones | done | `config/sharedConstants.go`, `pkg/utils/webFetcher.go` | `TestWebFetcherRefusesPrivateAddresses` |
+| Click tracking follows only http(s) links that are signed and appear in the tracked message | done | `pkg/services/outreachManagement/recordClick.go` | `TestTrackingRecordsOpensAndOnlyFollowsSignedLinks` |
+| Open activity streams capped per candidate across servers | done | `ACTIVITY_STREAMS_PER_CANDIDATE` | `TestACandidateCannotHoldMoreThanTheAllowedNumberOfStreams` |
 | Malformed IDs in the path answer 404 before reaching the database | done | `middlewares.ValidateIDParams`, `config/pathParams.go` | `TestMalformedIDsInThePathAnswerNotFound` walks every route |
 | Unknown `APP_ENV` refuses to start, so production checks cannot be skipped by a typo | done | `config/envConfig.go` (`local`, `test`, `production` only) | — |
 | Ingested job URLs must be public https on the ATS's own host | done | `pkg/validations/jobValidation.go` | ingest validation tests |
@@ -63,5 +67,3 @@ Status of each control in the implementation plan (section 4.7) and the M10 hard
 - TLS is terminated by a reverse proxy in front of the stack; it is not part of this repository.
 - Enrichment provider clients are tested against stubs only and have not been run against the live APIs.
 - Adzuna's response fields are not yet checked against a live response (needs keys).
-- SSE streams have no per-user connection cap.
-- Signup reveals whether an email is already registered.

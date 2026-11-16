@@ -14,6 +14,7 @@ Operating the production stack in `docker-compose.yml`: API server, worker, Post
    | `CHANNEL_CREDENTIAL_KEYS` | `1:$(openssl rand -base64 32)` with `CHANNEL_CREDENTIAL_KEY_VERSION=1` |
    | `PUBLIC_BASE_URL` | the public address of the API; tracking and unsubscribe links in emails point at it |
    | `OPENAI_API_KEY`, provider keys | from each vendor |
+   | `AUTH_EMAIL_VERIFICATION_URL`, `SYSTEM_MAIL_ADDRESS`, `SYSTEM_SMTP_*` | the frontend's verify page and an SMTP relay for account emails; production refuses to start without them while `AUTH_REQUIRE_EMAIL_VERIFICATION` is on (its default) |
 
    Compose refuses to start without the variables in the first four rows, and so does the app in production. `APP_ENV` must be `local`, `test` or `production`; any other value stops startup, so a typo cannot switch the production checks off. `OUTREACH_ALLOW_INSECURE_MAIL` and `OUTREACH_ALLOW_PRIVATE_MAIL_HOSTS` are for local test mail servers and are refused in production.
 2. `docker compose up -d --build --wait`. The `migrate` job applies every migration before the server and worker start.

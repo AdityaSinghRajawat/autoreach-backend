@@ -102,6 +102,12 @@ Greenhouse and Lever only accept applications through their APIs with the employ
 
 Requests to each application site are rate limited; transient failures while reading the form are retried and stalled applications are re-queued by the reconciler. A run first claims the application, so two workers never prepare the same one. A submission that fails without a clear answer from the employer (timeout, 5xx) is never retried: the application moves to `ACTION_REQUIRED` with "submission outcome unknown" so the candidate can check before applying again. Every step is recorded in `executionLogs`.
 
+## Accounts
+
+`POST /auth/register` creates the account and its candidate profile. With `AUTH_REQUIRE_EMAIL_VERIFICATION` on (the default in production) it answers `202` for any address: a new or unverified address is emailed a verification link (valid for `AUTH_EMAIL_VERIFICATION_TTL`), a verified one is emailed a notice that someone tried to sign up, and the existing account is never changed. The link opens the frontend page at `AUTH_EMAIL_VERIFICATION_URL`, which posts its token to `POST /auth/verify-email`; signing in before that answers `403`. Account emails go out from `SYSTEM_MAIL_ADDRESS` through `SYSTEM_SMTP_*`. With verification off, signup returns a session at once (`201`) and an address in use answers `409`.
+
+Expired sessions are deleted `REFRESH_TOKEN_RETENTION` after they expire by the daily retention job, which also anonymizes stale contacts (`CONTACT_RETENTION_PERIOD`) and, when `OUTREACH_EVENT_RETENTION` is set, deletes old opens, clicks and other events.
+
 ## Dashboard and operations
 
 **Candidates** (and admins, for any candidate):
@@ -109,7 +115,7 @@ Requests to each application site are rate limited; transient failures while rea
 - `GET /candidates/{id}/metrics`: jobs scraped (active jobs overall), jobs matched (at or above the candidate's threshold), applications submitted, contacts discovered for matched jobs, cold emails sent, LinkedIn requests sent and accepted, recruiter responses (contacts who replied on any channel), and `responseRatePercentage` = responses / cold emails x 100.
 - `GET /dashboard/funnel`: the same counts as funnel stages, from jobs scraped to interviews.
 - `GET /dashboard/activity?limit=&before=`: matches, application changes and outreach events (sent, opened, clicked, replied, accepted, bounced, unsubscribed), newest first, paged with `nextCursor`.
-- `GET /dashboard/activity/stream`: the same feed live as server-sent events. Each event's `id` is a cursor; reconnecting with `Last-Event-ID` resumes without gaps.
+- `GET /dashboard/activity/stream`: the same feed live as server-sent events. Each event's `id` is a cursor; reconnecting with `Last-Event-ID` resumes without gaps. A candidate can hold `ACTIVITY_STREAMS_PER_CANDIDATE` streams at once (5 by default); another answers 429.
 
 The `/dashboard` routes use the signed-in user's candidate; admins pass `?candidateId=`. The feed is the `activity_events` view (migration 0022) over the tables that already record each step, so nothing has to write it separately.
 
