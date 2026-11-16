@@ -33,3 +33,13 @@ OPENAI_API_KEY=... make calibrate PAIRS=pairs.jsonl
 ```
 
 Use at least 30 pairs of each label. The tool embeds each pair with the configured model, prints the raw cosine similarity distribution per label, and suggests the two settings so that three quarters of the good pairs score 0.80 or more.
+
+## loadtest
+
+Drives a running stack (`make docker-up`, or the production Compose file) and prints results.
+
+- `make loadtest-api CONCURRENCY=16 DURATION=2m`: registers a candidate and sends a mix of profile, matches, applications and dashboard reads; reports requests per second, p50/p95/p99 latency and status codes. Raise `RATE_LIMIT_USER`/`RATE_LIMIT_IP` on the stack first, or the run measures the rate limiter.
+- `make loadtest-apply JOBS=1000`: starts a stub Greenhouse API on `:18090`, seeds that many matched Greenhouse jobs for a new candidate directly in Postgres, queues their applications and reports applications per hour. The worker must point at the stub: `GREENHOUSE_BOARDS_API_URL=http://host.docker.internal:18090/greenhouse`, `GREENHOUSE_BOARD_KEYS=loadtest:loadtest-key` and a high `ATS_RATE_LIMIT`.
+
+Both modes read the stack's database and Redis settings from the environment (`DB_*`, `REDIS_*`, `JWT_SECRET`), as the app does. Watch memory alongside with `docker stats`. Results from 2026-11-16 are in `docs/RUNBOOK.md`.
+
