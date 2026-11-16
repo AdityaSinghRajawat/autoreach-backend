@@ -173,6 +173,38 @@ func (r *ApplicationRepo) ListByCandidate(
 	return applications, total, nil
 }
 
+// Claim gives one worker an application that is queued, or whose previous run stalled before
+// staleBefore; it reports false when another run holds it or it is no longer pending.
+func (r *ApplicationRepo) Claim(
+	ctx context.Context,
+	applicationID string,
+	staleBefore, now time.Time,
+) (bool, error) {
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.applicationsTable+`
+		SET status = 'IN_PROGRESS', attempt_count = attempt_count + 1, updated_at = $3
+		WHERE id = $1 AND (status = 'QUEUED' OR (status = 'IN_PROGRESS' AND updated_at < $2))
+	`, applicationID, staleBefore, now)
+	if err != nil {
+		return false, fmt.Errorf("claim application: %w", err)
+	}
+
+	return tag.RowsAffected() == 1, nil
+}
+
+// Release returns a claimed application to the queue so a retry can claim it again.
+func (r *ApplicationRepo) Release(ctx context.Context, applicationID string, now time.Time) error {
+	_, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.applicationsTable+` SET status = 'QUEUED', updated_at = $2
+		WHERE id = $1 AND status = 'IN_PROGRESS'
+	`, applicationID, now)
+	if err != nil {
+		return fmt.Errorf("release application: %w", err)
+	}
+
+	return nil
+}
+
 func (r *ApplicationRepo) ListStalePendingIDs(
 	ctx context.Context,
 	staleBefore time.Time,

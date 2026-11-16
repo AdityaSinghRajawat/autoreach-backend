@@ -8,6 +8,8 @@ import (
 
 const (
 	applicationIDParam         = "applicationId"
+	applicationStepSubmitting  = "SUBMITTING"
+	applicationStepSubmitted   = "SUBMITTED"
 	applicationProfileKey      = "applicationProfile"
 	atsRateLimitName           = "ats"
 	greenhouseQuestionsQuery   = "?questions=true"
@@ -124,6 +126,8 @@ func parseKeyPairs(envName string) map[string]string {
 }
 
 func GetApplicationIDParam() string             { return applicationIDParam }
+func GetApplicationStepSubmitting() string      { return applicationStepSubmitting }
+func GetApplicationStepSubmitted() string       { return applicationStepSubmitted }
 func GetApplicationProfileKey() string          { return applicationProfileKey }
 func GetGreenhouseQuestionsQuery() string       { return greenhouseQuestionsQuery }
 func GetLeverSiteKeyQuery() string              { return leverSiteKeyQuery }

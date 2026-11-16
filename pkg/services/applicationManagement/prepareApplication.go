@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	applicationTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/applicationManagement"
@@ -13,14 +14,23 @@ import (
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/applicationManagement/appliers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
+	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
 // Submits only through an employer's API key; otherwise the candidate submits the prepared answers.
+// The application is claimed first, so a duplicate task or a reconciler requeue never runs it twice.
 func (s *ApplicationService) PrepareApplication(
 	ctx context.Context,
 	applicationID string,
 ) *config.CustomError {
-	application, err := s.applicationRepo.FindByID(ctx, applicationID)
+	now := utils.GetCurrTimeStamp()
+
+	claimed, err := s.applicationRepo.Claim(
+		ctx,
+		applicationID,
+		now.Add(-claimExpiry()),
+		now,
+	)
 	if err != nil {
 		return config.NewCustomError(
 			fmt.Errorf("prepare application: %w", err),
@@ -28,12 +38,21 @@ func (s *ApplicationService) PrepareApplication(
 		)
 	}
 
-	if application == nil || !application.IsPending() {
+	if !claimed {
 		return nil
 	}
 
-	application.Status = modelHelpers.ApplicationStatusInProgress
-	application.AttemptCount++
+	application, err := s.applicationRepo.FindByID(ctx, applicationID)
+	if err != nil || application == nil {
+		return config.NewCustomError(
+			fmt.Errorf("prepare application: %w", errors.Join(err, config.ErrApplicationNotFound)),
+			config.GetErrCodeInternalServerError(),
+		)
+	}
+
+	if hasUnconfirmedSubmission(application) {
+		return s.markOutcomeUnknown(ctx, application, config.ErrSubmissionOutcomeUnknown)
+	}
 
 	job, err := s.jobPostingRepo.FindByID(ctx, application.JobID)
 	if err != nil {
@@ -73,10 +92,7 @@ func (s *ApplicationService) prepareWith(
 		1,
 	); err == nil &&
 		!decision.Allowed {
-		return config.NewCustomError(
-			fmt.Errorf("prepare application: %w", config.ErrATSRateLimited),
-			config.GetErrCodeServiceUnavailable(),
-		)
+		return s.releaseForRetry(ctx, application, config.ErrATSRateLimited)
 	}
 
 	form, err := applier.FetchForm(ctx, job)
@@ -105,13 +121,23 @@ func (s *ApplicationService) prepareWith(
 		return s.saveApplication(ctx, application, "prepare application")
 	}
 
+	appendLog(application, config.GetApplicationStepSubmitting(), "")
+
+	if customErr := s.saveApplication(ctx, application, "prepare application"); customErr != nil {
+		return customErr
+	}
+
 	confirmation, err := applier.Submit(ctx, job, submission)
 	if err != nil {
-		return s.handleUpstreamError(ctx, application, err, "SUBMISSION_REJECTED")
+		return s.handleSubmitError(ctx, application, err)
 	}
 
 	application.MarkSubmitted(nonEmpty(confirmation))
-	appendLog(application, "SUBMITTED", "submitted through the employer's API")
+	appendLog(
+		application,
+		config.GetApplicationStepSubmitted(),
+		"submitted through the employer's API",
+	)
 
 	return s.saveApplication(ctx, application, "prepare application")
 }
@@ -202,12 +228,8 @@ func (s *ApplicationService) handleUpstreamError(
 	cause error,
 	step string,
 ) *config.CustomError {
-	var apiErr *utils.APIError
-	if !errors.As(cause, &apiErr) || apiErr.IsTransient() {
-		return config.NewCustomError(
-			fmt.Errorf("prepare application: %w", cause),
-			config.GetErrCodeServiceUnavailable(),
-		)
+	if isTransientUpstreamError(cause) {
+		return s.releaseForRetry(ctx, application, cause)
 	}
 
 	reason := cause.Error()
@@ -216,6 +238,85 @@ func (s *ApplicationService) handleUpstreamError(
 	appendLog(application, step, reason)
 
 	return s.saveApplication(ctx, application, "prepare application")
+}
+
+// handleSubmitError retries nothing: after a timeout or a server error the employer may already have
+// the application, so the candidate is asked to check instead of risking a duplicate.
+func (s *ApplicationService) handleSubmitError(
+	ctx context.Context,
+	application *applicationModel.Application,
+	cause error,
+) *config.CustomError {
+	if isTransientUpstreamError(cause) {
+		return s.markOutcomeUnknown(
+			ctx,
+			application,
+			fmt.Errorf("%w: %w", config.ErrSubmissionOutcomeUnknown, cause),
+		)
+	}
+
+	return s.handleUpstreamError(ctx, application, cause, "SUBMISSION_REJECTED")
+}
+
+func (s *ApplicationService) markOutcomeUnknown(
+	ctx context.Context,
+	application *applicationModel.Application,
+	cause error,
+) *config.CustomError {
+	reason := cause.Error()
+	application.Status = modelHelpers.ApplicationStatusActionRequired
+	application.FailureReason = &reason
+	appendLog(application, "SUBMISSION_UNCONFIRMED", reason)
+
+	return s.saveApplication(ctx, application, "prepare application")
+}
+
+// releaseForRetry hands the claim back before a retryable failure, so the retry can claim it.
+func (s *ApplicationService) releaseForRetry(
+	ctx context.Context,
+	application *applicationModel.Application,
+	cause error,
+) *config.CustomError {
+	if err := s.applicationRepo.Release(ctx, application.ID, utils.GetCurrTimeStamp()); err != nil {
+		utils.LogWarn(
+			ctx,
+			"application claim release failed",
+			"application_id",
+			application.ID,
+			"error",
+			err.Error(),
+		)
+	}
+
+	return config.NewCustomError(
+		fmt.Errorf("prepare application: %w", cause),
+		config.GetErrCodeServiceUnavailable(),
+	)
+}
+
+func isTransientUpstreamError(err error) bool {
+	var apiErr *utils.APIError
+
+	return !errors.As(err, &apiErr) || apiErr.IsTransient()
+}
+
+// hasUnconfirmedSubmission reports a submission that was started but never recorded as done.
+func hasUnconfirmedSubmission(application *applicationModel.Application) bool {
+	entries := []applicationTypes.ExecutionLogEntry{}
+	_ = json.Unmarshal(application.ExecutionLogs, &entries)
+
+	submitting := false
+
+	for _, entry := range entries {
+		switch entry.Step {
+		case config.GetApplicationStepSubmitting():
+			submitting = true
+		case config.GetApplicationStepSubmitted():
+			submitting = false
+		}
+	}
+
+	return submitting
 }
 
 func (s *ApplicationService) saveApplication(
@@ -270,4 +371,11 @@ func nonEmpty(value string) *string {
 	}
 
 	return &value
+}
+
+// claimExpiry is how long a claim protects a run: twice the task timeout, after which that run is dead.
+func claimExpiry() time.Duration {
+	taskConfig, _ := workerConfigs.GetTaskConfig(workerConfigs.TaskPrepareApplication)
+
+	return 2 * taskConfig.Timeout
 }

@@ -11,10 +11,12 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	applicationTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/applicationManagement"
 	applicationModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/applicationManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
@@ -30,6 +32,7 @@ type atsStub struct {
 	server      *httptest.Server
 	submissions []map[string][]string
 	resumeNames []string
+	failSubmits bool
 }
 
 func newATSStub(t *testing.T) *atsStub {
@@ -60,6 +63,12 @@ func (s *atsStub) handle(writer http.ResponseWriter, request *http.Request) {
 	case request.Method == http.MethodPost && request.URL.Path == "/greenhouse/boards/acme/jobs/10293":
 		s.record(request)
 
+		if s.failing() {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+
+			return
+		}
+
 		_, _ = io.WriteString(writer, `{}`)
 	case request.Method == http.MethodGet && request.URL.Path == "/lever/postings/acme/abc-123":
 		_, _ = io.WriteString(writer, `{"id":"abc-123","text":"Senior Go Engineer"}`)
@@ -85,6 +94,13 @@ func (s *atsStub) record(request *http.Request) {
 	for _, file := range request.MultipartForm.File["resume"] {
 		s.resumeNames = append(s.resumeNames, file.Filename)
 	}
+}
+
+func (s *atsStub) failing() bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	return s.failSubmits
 }
 
 func (s *atsStub) submissionCount() int {
@@ -379,4 +395,73 @@ func TestUnsupportedFormsAndQueuedMatchesNeedTheCandidate(t *testing.T) {
 	require.Equal(t, http.StatusOK, profile.Recorder.Code)
 	helpers.AssertMatchesSpec(t, profile)
 	assert.True(t, strings.Contains(string(profile.Body), `"data"`))
+}
+
+func TestAnAmbiguousSubmissionFailureIsNeverRetried(t *testing.T) {
+	fixture := newApplicationFixture(t, map[string]string{"acme": "greenhouse-key"}, nil)
+	fixture.saveProfile(
+		t,
+		map[string]string{whyHereQuestion: "Your mission matches my experience."},
+	)
+	fixture.stub.mutex.Lock()
+	fixture.stub.failSubmits = true
+	fixture.stub.mutex.Unlock()
+
+	application := fixture.apply(t, validJob())
+
+	assert.Equal(t, modelHelpers.ApplicationStatusActionRequired, application.Status,
+		"the employer may already have it, so the candidate checks instead of a retry")
+	require.NotNil(t, application.FailureReason)
+	assert.Contains(t, *application.FailureReason, config.ErrSubmissionOutcomeUnknown.Error())
+
+	require.Nil(
+		t,
+		fixture.deps.Services.Application.PrepareApplication(context.Background(), application.ID),
+	)
+	assert.Equal(t, 1, fixture.stub.submissionCount(), "the application reached the employer once")
+}
+
+func TestAnApplicationHeldByAnotherRunIsNotPreparedAgain(t *testing.T) {
+	fixture := newApplicationFixture(t, map[string]string{"acme": "greenhouse-key"}, nil)
+	fixture.saveProfile(
+		t,
+		map[string]string{whyHereQuestion: "Your mission matches my experience."},
+	)
+
+	ctx := context.Background()
+
+	jobID := fixture.ingest(t, validJob()).QueuedTasks[0].JobID
+	created := helpers.Do(
+		t,
+		fixture.router,
+		http.MethodPost,
+		candidatePath(fixture.candidateID)+"/applications",
+		map[string]any{"jobId": jobID},
+		bearer(fixture.userToken),
+	)
+	require.Equal(t, http.StatusCreated, created.Recorder.Code, string(created.Body))
+	applicationID := helpers.DecodeData[applicationModel.Application](t, created).ID
+
+	now := time.Now().UTC()
+	claimed, err := fixture.deps.Repositories.Application.Claim(
+		ctx,
+		applicationID,
+		now.Add(-time.Minute),
+		now,
+	)
+	require.NoError(t, err)
+	require.True(t, claimed)
+
+	require.Nil(t, fixture.deps.Services.Application.PrepareApplication(ctx, applicationID))
+
+	assert.Zero(
+		t,
+		fixture.stub.submissionCount(),
+		"a second run does nothing while the first holds the claim",
+	)
+	assert.Equal(
+		t,
+		modelHelpers.ApplicationStatusInProgress,
+		fixture.application(t, applicationID).Status,
+	)
 }
