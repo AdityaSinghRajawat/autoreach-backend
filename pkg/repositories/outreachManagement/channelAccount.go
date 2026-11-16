@@ -3,6 +3,7 @@ package outreachManagement
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -178,4 +179,24 @@ func scanChannelAccount(row db.RowScanner) (*outreachModel.ChannelAccount, error
 	}
 
 	return &account, nil
+}
+
+// AdvanceCursor records how far the inbox was read. It touches nothing else, and nothing at all once
+// the mailbox was paused or deleted while it was being read.
+func (r *ChannelAccountRepo) AdvanceCursor(
+	ctx context.Context,
+	accountID string,
+	uidValidity, lastUID int64,
+	now time.Time,
+) error {
+	_, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.channelAccountsTable+`
+		SET imap_uid_validity = $2, imap_last_uid = $3, last_verified_at = $4, last_error = NULL, updated_at = $4
+		WHERE id = $1 AND status = 'ACTIVE'
+	`, accountID, uidValidity, lastUID, now)
+	if err != nil {
+		return fmt.Errorf("advance mailbox cursor: %w", err)
+	}
+
+	return nil
 }

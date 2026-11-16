@@ -215,3 +215,17 @@ func scanJobSource(row db.RowScanner) (*jobModel.JobSource, error) {
 
 	return &source, nil
 }
+
+// RecordPoll stores only the outcome of a poll, so changes an admin made while it ran are kept.
+func (r *JobSourceRepo) RecordPoll(ctx context.Context, source *jobModel.JobSource) error {
+	_, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.jobSourcesTable+`
+		SET last_polled_at = $2, last_job_count = $3, last_error = $4, updated_at = $5
+		WHERE id = $1
+	`, source.ID, source.LastPolledAt, source.LastJobCount, source.LastError, source.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("record job source poll: %w", err)
+	}
+
+	return nil
+}

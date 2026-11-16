@@ -364,3 +364,35 @@ func (r *CompanyContactRepo) EmailInUse(
 
 	return inUse, nil
 }
+
+// UpdateExisting saves changes to a contact that still exists and was not anonymized. Unlike Upsert
+// it never inserts, so a contact erased while a refresh was running stays erased.
+func (r *CompanyContactRepo) UpdateExisting(
+	ctx context.Context,
+	contact *enrichmentModel.CompanyContact,
+) (bool, error) {
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.companyContactsTable+` SET
+			company_domain = $2, company_name = $3, full_name = $4, role_type = $5::contact_role, title = $6,
+			work_email = $7, phone_number = $8, linkedin_url = $9, enrichment_provider = $10,
+			provider_person_id = $11, is_email_verified = $12, email_verification_status = $13,
+			enrichment_metadata = $14::jsonb, last_interaction_at = $15, email_confirmed_at = $16,
+			linkedin_confirmed_at = $17, updated_at = $18
+		WHERE id = $1 AND anonymized_at IS NULL
+	`,
+		contact.ID, contact.CompanyDomain, contact.CompanyName, contact.FullName, string(contact.RoleType),
+		contact.Title, contact.WorkEmail, contact.PhoneNumber, contact.LinkedinURL, contact.EnrichmentProvider,
+		contact.ProviderPersonID, contact.IsEmailVerified, string(contact.EmailVerificationStatus),
+		string(contact.EnrichmentMetadata), contact.LastInteractionAt, contact.EmailConfirmedAt,
+		contact.LinkedinConfirmedAt, contact.UpdatedAt,
+	)
+	if db.IsUniqueViolation(err) {
+		return false, fmt.Errorf("update company contact: %w", config.ErrDuplicateRecord)
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("update company contact: %w", err)
+	}
+
+	return tag.RowsAffected() == 1, nil
+}

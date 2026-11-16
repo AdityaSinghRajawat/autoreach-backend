@@ -57,10 +57,13 @@ func (s *OutreachService) SweepMailbox(ctx context.Context, accountID string) *c
 		}
 	}
 
-	account.MarkVerified(cursor)
-	account.UpdateTimestamp()
-
-	if _, err := s.channelAccountRepo.Upsert(ctx, account); err != nil {
+	if err := s.channelAccountRepo.AdvanceCursor(
+		ctx,
+		account.ID,
+		int64(cursor.UIDValidity),
+		int64(cursor.LastUID),
+		utils.GetCurrTimeStamp(),
+	); err != nil {
 		return config.NewCustomError(
 			fmt.Errorf("sweep mailbox: %w", err),
 			config.GetErrCodeInternalServerError(),

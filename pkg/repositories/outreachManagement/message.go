@@ -525,3 +525,21 @@ func scanMessage(row db.RowScanner) (*outreachModel.Message, error) {
 
 	return &message, nil
 }
+
+// Cancel stops a message only while it can still be cancelled, so a send that the dispatcher already
+// claimed is never overwritten; it reports whether the message was cancelled.
+func (r *MessageRepo) Cancel(
+	ctx context.Context,
+	candidateID, messageID string,
+	now time.Time,
+) (bool, error) {
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.messagesTable+` SET status = 'CANCELLED', updated_at = $3
+		WHERE id = $1 AND candidate_id = $2 AND status IN ('PENDING', 'PAUSED', 'ACTION_REQUIRED')
+	`, messageID, candidateID, now)
+	if err != nil {
+		return false, fmt.Errorf("cancel outreach message: %w", err)
+	}
+
+	return tag.RowsAffected() == 1, nil
+}

@@ -51,7 +51,7 @@ func (s *OutreachService) updateContact(
 		return nil
 	}
 
-	_, err = s.companyContactRepo.Upsert(ctx, contact)
+	_, err = s.companyContactRepo.UpdateExisting(ctx, contact)
 
 	return err
 }

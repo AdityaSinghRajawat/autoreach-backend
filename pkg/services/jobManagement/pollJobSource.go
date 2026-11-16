@@ -58,7 +58,7 @@ func (s *JobService) PollJobSource(
 	if err != nil {
 		source.RecordPoll(0, err)
 
-		if customErr := s.saveJobSource(ctx, source, "poll job source"); customErr != nil {
+		if customErr := s.recordPoll(ctx, source); customErr != nil {
 			return nil, customErr
 		}
 
@@ -94,7 +94,7 @@ func (s *JobService) PollJobSource(
 
 	source.RecordPoll(result.Fetched, nil)
 
-	return result, s.saveJobSource(ctx, source, "poll job source")
+	return result, s.recordPoll(ctx, source)
 }
 
 // resolveCompanyDomains fills in the domain of jobs from boards that list many companies; jobs
@@ -198,4 +198,20 @@ func (s *JobService) ScheduleJobSourcePolls(ctx context.Context) (int, *config.C
 	}
 
 	return len(sourceIDs), nil
+}
+
+func (s *JobService) recordPoll(
+	ctx context.Context,
+	source *jobModel.JobSource,
+) *config.CustomError {
+	source.UpdateTimestamp()
+
+	if err := s.jobSourceRepo.RecordPoll(ctx, source); err != nil {
+		return config.NewCustomError(
+			fmt.Errorf("poll job source: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
+	}
+
+	return nil
 }

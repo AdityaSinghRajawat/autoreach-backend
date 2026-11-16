@@ -83,7 +83,7 @@ func (s *EnrichmentService) RefreshContact(
 		return nil
 	}
 
-	if _, err := s.companyContactRepo.Upsert(ctx, contact); err != nil {
+	if _, err := s.companyContactRepo.UpdateExisting(ctx, contact); err != nil {
 		return config.NewCustomError(
 			fmt.Errorf("refresh contact: %w", err),
 			config.GetErrCodeInternalServerError(),
