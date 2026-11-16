@@ -31,7 +31,7 @@ func (r *CreateChannelAccountRequest) ToChannelAccountModel(
 ) *outreachModel.ChannelAccount {
 	account := outreachModel.NewChannelAccount()
 	account.CandidateID = candidateID
-	account.EmailAddress = strings.ToLower(strings.TrimSpace(r.EmailAddress))
+	account.EmailAddress = modelHelpers.NormalizeEmail(r.EmailAddress)
 	account.SMTPHost = strings.ToLower(r.SMTPHost)
 	account.SMTPPort = r.SMTPPort
 	account.SMTPSecurity = modelHelpers.MailSecurity(r.SMTPSecurity)

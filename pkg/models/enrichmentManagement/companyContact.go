@@ -134,7 +134,7 @@ func (c *CompanyContact) AdoptIdentity(existing *CompanyContact, now time.Time) 
 func (c *CompanyContact) RecordReply(address string, at time.Time) {
 	c.LastInteractionAt = &at
 
-	address = strings.ToLower(strings.TrimSpace(address))
+	address = modelHelpers.NormalizeEmail(address)
 	switch {
 	case address == "" || (c.WorkEmail != nil && strings.EqualFold(*c.WorkEmail, address)):
 		c.confirmEmail(at)

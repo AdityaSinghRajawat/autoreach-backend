@@ -35,7 +35,7 @@ func (s *EnrichmentService) RefreshContact(
 		return nil
 	}
 
-	address := utils.NormaliseEmail(details.Email)
+	address := modelHelpers.NormalizeEmail(details.Email)
 	if contact.HasBounced(address) || (contact.WorkEmail != nil && *contact.WorkEmail == address) {
 		return nil
 	}

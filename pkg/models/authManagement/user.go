@@ -2,7 +2,6 @@ package authManagement
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,10 +31,6 @@ func NewUser() *User {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-}
-
-func NormalizeEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
 }
 
 func (u *User) UpdateTimestamp() {

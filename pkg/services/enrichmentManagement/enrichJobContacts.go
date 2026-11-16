@@ -259,7 +259,7 @@ func (s *EnrichmentService) resolveContact(
 	if details != nil && details.Email != "" {
 		emailStatus = s.emailVerifier.Verify(
 			ctx,
-			utils.NormaliseEmail(details.Email),
+			modelHelpers.NormalizeEmail(details.Email),
 			details.EmailVerified,
 		)
 	}

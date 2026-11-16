@@ -51,10 +51,6 @@ func (v *EmailVerifier) Verify(
 	return modelHelpers.EmailStatusVerified
 }
 
-func NormaliseEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
-}
-
 func splitEmail(email string) (localPart, domain string, valid bool) {
 	parsed, err := mail.ParseAddress(email)
 	if err != nil || parsed.Address != email {

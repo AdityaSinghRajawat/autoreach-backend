@@ -1,6 +1,10 @@
 package outreachManagement
 
-import "strings"
+import (
+	"strings"
+
+	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+)
 
 // ContactLookupParams finds the records held about a person, for example before erasing them.
 type ContactLookupParams struct {
@@ -13,7 +17,7 @@ func (p *ContactLookupParams) IsEmpty() bool {
 }
 
 func (p *ContactLookupParams) NormalizedEmail() string {
-	return strings.ToLower(strings.TrimSpace(p.Email))
+	return modelHelpers.NormalizeEmail(p.Email)
 }
 
 func (p *ContactLookupParams) NormalizedLinkedinURL() string {

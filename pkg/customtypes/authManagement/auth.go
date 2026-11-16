@@ -5,6 +5,7 @@ import (
 
 	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
+	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 )
 
 type RegisterRequest struct {
@@ -43,7 +44,7 @@ type SessionResponse struct {
 
 func (r *RegisterRequest) ToUserModel() *authModel.User {
 	user := authModel.NewUser()
-	user.Email = authModel.NormalizeEmail(r.Email)
+	user.Email = modelHelpers.NormalizeEmail(r.Email)
 
 	return user
 }
@@ -58,7 +59,7 @@ func (r *RegisterRequest) ToCandidateModel(user *authModel.User) *candidateModel
 }
 
 func (r *LoginRequest) NormalizedEmail() string {
-	return authModel.NormalizeEmail(r.Email)
+	return modelHelpers.NormalizeEmail(r.Email)
 }
 
 func NewUserResponse(user *authModel.User, candidateID string) UserResponse {

@@ -1,6 +1,9 @@
 package helpers
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type ContactRole string
 
@@ -52,4 +55,8 @@ type ContactChange struct {
 	Current   string              `json:"current,omitempty"`
 	Reason    ContactChangeReason `json:"reason"`
 	ChangedAt time.Time           `json:"changedAt"`
+}
+
+func NormalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }

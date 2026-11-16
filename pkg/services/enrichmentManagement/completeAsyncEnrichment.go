@@ -7,8 +7,8 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	enrichmentTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/enrichmentManagement"
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
+	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
-	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 func (s *EnrichmentService) CompleteAsyncEnrichment(
@@ -60,7 +60,7 @@ func (s *EnrichmentService) CompleteAsyncEnrichment(
 		return s.saveAsyncOutcome(ctx, request, nil)
 	}
 
-	email := utils.NormaliseEmail(details.Email)
+	email := modelHelpers.NormalizeEmail(details.Email)
 	contact.SetEmail(email, s.emailVerifier.Verify(ctx, email, details.EmailVerified))
 	contact.EnrichmentProvider = providerCode
 	contact.ProviderPersonID = nil

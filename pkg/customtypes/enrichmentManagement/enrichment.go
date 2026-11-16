@@ -9,7 +9,6 @@ import (
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
-	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type DiscoveryQuery struct {
@@ -114,7 +113,7 @@ func (p Person) ToCompanyContactModel(
 		contact.ProviderPersonID = &merged.ProviderPersonID
 	}
 
-	if linkedinURL := NormaliseLinkedinURL(merged.LinkedinURL); linkedinURL != "" {
+	if linkedinURL := NormalizeLinkedinURL(merged.LinkedinURL); linkedinURL != "" {
 		contact.LinkedinURL = &linkedinURL
 	}
 
@@ -122,7 +121,7 @@ func (p Person) ToCompanyContactModel(
 		return contact
 	}
 
-	contact.SetEmail(utils.NormaliseEmail(details.Email), emailStatus)
+	contact.SetEmail(modelHelpers.NormalizeEmail(details.Email), emailStatus)
 
 	if details.Phone != "" {
 		contact.PhoneNumber = &details.Phone
@@ -135,7 +134,7 @@ func (p Person) ToCompanyContactModel(
 	return contact
 }
 
-func NormaliseLinkedinURL(linkedinURL string) string {
+func NormalizeLinkedinURL(linkedinURL string) string {
 	trimmed := strings.TrimRight(strings.TrimSpace(linkedinURL), "/")
 	if trimmed == "" {
 		return ""
