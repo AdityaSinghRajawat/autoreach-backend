@@ -72,23 +72,24 @@ func (f *WebFetcher) Fetch(ctx context.Context, rawURL string) ([]byte, error) {
 }
 
 func publicOnlyTransport(timeout time.Duration) *http.Transport {
-	dialer := &net.Dialer{
-		Timeout: timeout,
-		Control: func(_, address string, _ syscall.RawConn) error {
-			host, _, err := net.SplitHostPort(address)
-			if err != nil {
-				return err
-			}
-
-			if ip := net.ParseIP(host); ip == nil || !isPublicIP(ip) {
-				return config.ErrPrivateNetworkAddress
-			}
-
-			return nil
-		},
-	}
+	dialer := &net.Dialer{Timeout: timeout, Control: publicAddressOnly}
 
 	return &http.Transport{DialContext: dialer.DialContext}
+}
+
+// publicAddressOnly runs after DNS resolution, so a hostname that resolves to a private address, or a
+// redirect to one, is refused too.
+func publicAddressOnly(_, address string, _ syscall.RawConn) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return err
+	}
+
+	if ip := net.ParseIP(host); ip == nil || !isPublicIP(ip) {
+		return config.ErrPrivateNetworkAddress
+	}
+
+	return nil
 }
 
 func isPublicIP(ip net.IP) bool {

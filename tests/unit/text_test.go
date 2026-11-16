@@ -1,11 +1,15 @@
 package unit
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
+	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
 )
 
 func TestHTMLToTextKeepsLineBreaksAndUnescapes(t *testing.T) {
@@ -22,5 +26,16 @@ func TestHTMLToTextKeepsLineBreaksAndUnescapes(t *testing.T) {
 
 	for markup, expected := range cases {
 		assert.Equal(t, expected, utils.HTMLToText(markup), markup)
+	}
+}
+
+func TestWebFetcherRefusesPrivateAddresses(t *testing.T) {
+	setup.Config(t)
+
+	fetcher := utils.NewWebFetcher(5*time.Second, 1024, "AutoReachBot/1.0", nil)
+
+	for _, target := range []string{"http://127.0.0.1:1/", "http://169.254.169.254/latest", "http://10.0.0.1/"} {
+		_, err := fetcher.Fetch(context.Background(), target)
+		assert.ErrorIs(t, err, config.ErrPrivateNetworkAddress, target)
 	}
 }

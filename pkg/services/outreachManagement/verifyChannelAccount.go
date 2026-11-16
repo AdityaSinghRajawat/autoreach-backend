@@ -6,6 +6,7 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 func (s *OutreachService) VerifyChannelAccount(
@@ -24,7 +25,15 @@ func (s *OutreachService) VerifyChannelAccount(
 
 	cursor, err := s.emailUtil.VerifyEmailAccount(ctx, emailAccount)
 	if err != nil {
-		account.MarkFailed(err.Error())
+		utils.LogWarn(
+			ctx,
+			"mailbox verification failed",
+			"account_id",
+			account.ID,
+			"error",
+			err.Error(),
+		)
+		account.MarkFailed(utils.MailFailureReason(err))
 	} else {
 		account.MarkVerified(cursor)
 	}

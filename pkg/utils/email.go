@@ -3,9 +3,11 @@ package utils
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/smtp"
+	"net/textproto"
 	"strconv"
 	"time"
 
@@ -96,11 +98,20 @@ func (u *EmailUtil) SendEmail(
 		return fmt.Errorf("smtp data: %w", err)
 	}
 
+	// A reply to the end of DATA is the server's verdict; any other failure there leaves the outcome
+	// unknown, and once the message is accepted a failed QUIT does not matter.
 	if err := writer.Close(); err != nil {
-		return fmt.Errorf("smtp data: %w", err)
+		var reply *textproto.Error
+		if errors.As(err, &reply) {
+			return fmt.Errorf("smtp data: %w", err)
+		}
+
+		return fmt.Errorf("smtp data: %w: %w", config.ErrSendOutcomeUnknown, err)
 	}
 
-	return client.Quit()
+	_ = client.Quit()
+
+	return nil
 }
 
 func (u *EmailUtil) openSMTP(
@@ -111,14 +122,14 @@ func (u *EmailUtil) openSMTP(
 
 	conn, err := u.dialEmailServer(ctx, server)
 	if err != nil {
-		return nil, fmt.Errorf("smtp connect: %w", err)
+		return nil, fmt.Errorf("smtp connect: %w: %w", config.ErrMailServerUnreachable, err)
 	}
 
 	client, err := smtp.NewClient(conn, server.Host)
 	if err != nil {
 		_ = conn.Close()
 
-		return nil, fmt.Errorf("smtp greeting: %w", err)
+		return nil, fmt.Errorf("smtp greeting: %w: %w", config.ErrMailServerUnreachable, err)
 	}
 
 	if err := u.authenticateSMTP(client, account); err != nil {
@@ -132,12 +143,12 @@ func (u *EmailUtil) openSMTP(
 
 func (u *EmailUtil) authenticateSMTP(client *smtp.Client, account sharedTypes.EmailAccount) error {
 	if err := client.Hello(u.heloName); err != nil {
-		return fmt.Errorf("smtp hello: %w", err)
+		return fmt.Errorf("smtp hello: %w: %w", config.ErrMailServerUnreachable, err)
 	}
 
 	if account.SMTP.Security == string(modelHelpers.MailSecurityStartTLS) {
 		if err := client.StartTLS(emailTLSConfig(account.SMTP.Host)); err != nil {
-			return fmt.Errorf("smtp starttls: %w", err)
+			return fmt.Errorf("smtp starttls: %w: %w", config.ErrMailSecureConnection, err)
 		}
 	}
 
@@ -148,7 +159,7 @@ func (u *EmailUtil) authenticateSMTP(client *smtp.Client, account sharedTypes.Em
 	if err := client.Auth(
 		smtp.PlainAuth("", account.Username, account.Password, account.SMTP.Host),
 	); err != nil {
-		return fmt.Errorf("smtp auth: %w", err)
+		return fmt.Errorf("smtp auth: %w: %w", config.ErrMailLoginRejected, err)
 	}
 
 	return nil
@@ -162,7 +173,7 @@ func (u *EmailUtil) openIMAP(
 
 	conn, err := u.dialEmailServer(ctx, server)
 	if err != nil {
-		return nil, fmt.Errorf("imap connect: %w", err)
+		return nil, fmt.Errorf("imap connect: %w: %w", config.ErrMailServerUnreachable, err)
 	}
 
 	var client *imapclient.Client
@@ -175,7 +186,7 @@ func (u *EmailUtil) openIMAP(
 		if err != nil {
 			_ = conn.Close()
 
-			return nil, fmt.Errorf("imap starttls: %w", err)
+			return nil, fmt.Errorf("imap starttls: %w: %w", config.ErrMailSecureConnection, err)
 		}
 	} else {
 		client = imapclient.New(conn, nil)
@@ -184,7 +195,7 @@ func (u *EmailUtil) openIMAP(
 	if err := client.Login(account.Username, account.Password).Wait(); err != nil {
 		_ = client.Close()
 
-		return nil, fmt.Errorf("imap login: %w", err)
+		return nil, fmt.Errorf("imap login: %w: %w", config.ErrMailLoginRejected, err)
 	}
 
 	return client, nil
@@ -201,6 +212,10 @@ func (u *EmailUtil) dialEmailServer(
 	}
 
 	dialer := net.Dialer{Deadline: deadline}
+	if !config.IsPrivateMailHostAllowed() {
+		dialer.Control = publicAddressOnly
+	}
+
 	address := net.JoinHostPort(server.Host, strconv.Itoa(server.Port))
 
 	conn, err := dialer.DialContext(ctx, "tcp", address)
@@ -293,4 +308,21 @@ func (u *EmailUtil) FetchInboxSince(
 	}
 
 	return inbound, latest, client.Logout().Wait()
+}
+
+// MailFailureReason is what a user may see about a mailbox failure: a category, never the server's
+// own reply, which would reveal what is listening at the address they entered.
+func MailFailureReason(err error) string {
+	for _, category := range []error{
+		config.ErrMailAuthUnsupported,
+		config.ErrMailLoginRejected,
+		config.ErrMailSecureConnection,
+		config.ErrMailServerUnreachable,
+	} {
+		if errors.Is(err, category) {
+			return category.Error()
+		}
+	}
+
+	return config.ErrMailboxCheckFailed.Error()
 }

@@ -276,6 +276,10 @@ func (s *OutreachService) finish(
 }
 
 func isTransientSendError(err error) bool {
+	if errors.Is(err, config.ErrSendOutcomeUnknown) {
+		return false
+	}
+
 	var protocolErr *textproto.Error
 	if errors.As(err, &protocolErr) {
 		return protocolErr.Code >= 400 && protocolErr.Code < 500

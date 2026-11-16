@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
@@ -143,7 +144,33 @@ func TestMailboxWithWrongPasswordFailsVerificationWithTheReason(t *testing.T) {
 
 	assert.Equal(t, modelHelpers.ChannelAccountStatusFailed, verified.Status)
 	require.NotNil(t, verified.LastError)
-	assert.Contains(t, *verified.LastError, "smtp auth")
+	assert.Equal(t, config.ErrMailLoginRejected.Error(), *verified.LastError,
+		"users see a category, never the mail server's own reply")
+}
+
+func TestMailboxOnAnUnreachablePortReportsOnlyACategory(t *testing.T) {
+	fixture := newJobFixture(t)
+
+	request := mailAccountRequest(t, senderAddress, senderPassword)
+	request["smtpPort"] = 1
+	created := helpers.Do(
+		t,
+		fixture.router,
+		http.MethodPost,
+		channelAccountsPath(fixture.candidateID),
+		request,
+		bearer(fixture.userToken),
+	)
+	require.Equal(t, http.StatusCreated, created.Recorder.Code, string(created.Body))
+
+	verified := fixture.verifyMailbox(
+		t,
+		helpers.DecodeData[outreachModel.ChannelAccount](t, created).ID,
+	)
+
+	require.NotNil(t, verified.LastError)
+	assert.Equal(t, config.ErrMailServerUnreachable.Error(), *verified.LastError,
+		"the dial error would reveal whether a port is open")
 }
 
 func TestMailboxRejectsInvalidSettings(t *testing.T) {

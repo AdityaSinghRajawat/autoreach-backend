@@ -16,6 +16,7 @@ const (
 
 type emailConfig struct {
 	allowInsecureConnections bool
+	allowPrivateHosts        bool
 	timeout                  time.Duration
 	heloName                 string
 }
@@ -28,8 +29,14 @@ func loadEmailConfig() {
 		log.Fatalf("OUTREACH_ALLOW_INSECURE_MAIL must not be enabled in production")
 	}
 
+	allowPrivateHosts := getEnvBoolWithDefault("OUTREACH_ALLOW_PRIVATE_MAIL_HOSTS", false)
+	if allowPrivateHosts && IsProduction() {
+		log.Fatalf("OUTREACH_ALLOW_PRIVATE_MAIL_HOSTS must not be enabled in production")
+	}
+
 	emailConfigI = emailConfig{
 		allowInsecureConnections: allowInsecure,
+		allowPrivateHosts:        allowPrivateHosts,
 		timeout: getEnvDurationWithDefault(
 			"OUTREACH_MAIL_TIMEOUT",
 			20*time.Second,
@@ -42,6 +49,7 @@ func loadEmailConfig() {
 }
 
 func IsInsecureMailAllowed() bool         { return emailConfigI.allowInsecureConnections }
+func IsPrivateMailHostAllowed() bool      { return emailConfigI.allowPrivateHosts }
 func GetMailTimeout() time.Duration       { return emailConfigI.timeout }
 func GetMailHeloName() string             { return emailConfigI.heloName }
 func GetMailboxInbox() string             { return mailboxInbox }
