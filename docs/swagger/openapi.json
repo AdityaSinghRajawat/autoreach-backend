@@ -163,8 +163,34 @@
           },
           "503": {
             "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "202": {
+            "description": "Check the inbox for a verification link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RegistrationPending"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
-        }
+        },
+        "description": "When email verification is on (AUTH_REQUIRE_EMAIL_VERIFICATION, the default in production) the answer is always 202, whether or not the address already has an account, so signup cannot be used to find out who is registered. A verification link (or, for a verified account, a notice) is emailed and the account can sign in once the link is opened. With verification off, the account is created at once (201) and an address already in use answers 409."
       }
     },
     "/api/v1/auth/login": {
@@ -224,8 +250,12 @@
           },
           "503": {
             "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
-        }
+        },
+        "description": "Answers 403 for a correct password while the email address is not verified yet."
       }
     },
     "/api/v1/auth/refresh": {
@@ -4762,6 +4792,43 @@
           }
         }
       }
+    },
+    "/api/v1/auth/verify-email": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "verifyEmail",
+        "summary": "Confirm an email address from the emailed verification link",
+        "description": "The frontend page at AUTH_EMAIL_VERIFICATION_URL posts the link's token here; the user then signs in. Links expire after AUTH_EMAIL_VERIFICATION_TTL.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Email verified"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7606,6 +7673,33 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "RegistrationPending": {
+        "type": "object",
+        "required": [
+          "verificationRequired"
+        ],
+        "properties": {
+          "verificationRequired": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "VerifyEmailRequest": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "The token parameter from the emailed verification link"
           }
         }
       }

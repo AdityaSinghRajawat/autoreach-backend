@@ -47,3 +47,10 @@ type InboundEmail struct {
 	BouncedMessageIDs    []string
 	BouncedAddresses     []string
 }
+
+// AccountEmail is one of AutoReach's own account emails, rendered as plain text and HTML.
+type AccountEmail struct {
+	Subject string
+	Text    string
+	HTML    string
+}

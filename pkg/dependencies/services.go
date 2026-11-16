@@ -31,6 +31,9 @@ func (d *Dependencies) initServices() error {
 		APIClientRepo:      d.Repositories.APIClient,
 		CandidateRepo:      d.Repositories.Candidate,
 		TransactionManager: d.TransactionManager,
+		SystemMailer:       d.SystemMailer,
+
+		RequireEmailVerification: d.RequireEmailVerification,
 	})
 	if err != nil {
 		return err

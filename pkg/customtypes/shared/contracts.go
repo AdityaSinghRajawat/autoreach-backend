@@ -47,3 +47,8 @@ type ChatCompleter interface {
 type CompanyDomainResolver interface {
 	ResolveCompanyDomains(ctx context.Context, companyNames []string) (map[string]string, error)
 }
+
+// SystemMailer sends AutoReach's own account emails.
+type SystemMailer interface {
+	Send(ctx context.Context, toAddress string, email AccountEmail) error
+}

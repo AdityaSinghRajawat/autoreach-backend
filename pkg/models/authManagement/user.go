@@ -12,13 +12,14 @@ import (
 )
 
 type User struct {
-	ID           string    `db:"id"            json:"userId"    validate:"required,uuid"`
-	Email        string    `db:"email"         json:"email"     validate:"required,email,max=255"`
-	PasswordHash string    `db:"password_hash" json:"-"         validate:"required"`
-	Roles        []string  `db:"roles"         json:"roles"     validate:"required,min=1,unique,dive,validate_role"`
-	IsActive     bool      `db:"is_active"     json:"isActive"`
-	CreatedAt    time.Time `db:"created_at"    json:"createdAt" validate:"required"`
-	UpdatedAt    time.Time `db:"updated_at"    json:"updatedAt" validate:"required"`
+	ID              string     `db:"id"            json:"userId"    validate:"required,uuid"`
+	Email           string     `db:"email"         json:"email"     validate:"required,email,max=255"`
+	PasswordHash    string     `db:"password_hash" json:"-"         validate:"required"`
+	Roles           []string   `db:"roles"         json:"roles"     validate:"required,min=1,unique,dive,validate_role"`
+	IsActive        bool       `db:"is_active"     json:"isActive"`
+	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"-"`
+	CreatedAt       time.Time  `db:"created_at"    json:"createdAt" validate:"required"`
+	UpdatedAt       time.Time  `db:"updated_at"    json:"updatedAt" validate:"required"`
 }
 
 func NewUser() *User {

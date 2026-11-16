@@ -32,5 +32,15 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	if session == nil {
+		utils.BuildAndSendResponse(
+			c,
+			authTypes.RegistrationPendingResponse{VerificationRequired: true},
+			http.StatusAccepted,
+		)
+
+		return
+	}
+
 	utils.BuildAndSendResponse(c, session, http.StatusCreated)
 }

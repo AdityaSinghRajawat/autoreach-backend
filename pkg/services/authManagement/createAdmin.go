@@ -38,6 +38,7 @@ func (s *AuthService) CreateAdmin(
 	user.Email = modelHelpers.NormalizeEmail(email)
 	user.PasswordHash = passwordHash
 	user.Roles = []string{config.RoleAdmin}
+	user.EmailVerifiedAt = &user.CreatedAt
 
 	if err := user.Validate(); err != nil {
 		return nil, config.NewCustomError(

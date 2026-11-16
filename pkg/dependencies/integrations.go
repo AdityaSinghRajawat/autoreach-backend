@@ -66,6 +66,16 @@ func (d *Dependencies) initIntegrations() error {
 		d.EmailUtil = utils.NewEmailUtil()
 	}
 
+	if d.SystemMailer == nil {
+		systemMailer, err := utils.NewSystemMailer(d.EmailUtil)
+		if err != nil {
+			return err
+		}
+
+		d.SystemMailer = systemMailer
+		d.RequireEmailVerification = config.IsEmailVerificationRequired()
+	}
+
 	if d.CredentialCipher == nil && len(config.GetCredentialKeys()) > 0 {
 		credentialCipher, err := utils.NewCredentialCipher(
 			config.GetCredentialKeys(),

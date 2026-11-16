@@ -23,6 +23,14 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refreshToken" validate:"required,max=512"`
 }
 
+type VerifyEmailRequest struct {
+	Token string `json:"token" validate:"required,max=256"`
+}
+
+type RegistrationPendingResponse struct {
+	VerificationRequired bool `json:"verificationRequired"`
+}
+
 type LogoutRequest struct {
 	RefreshToken string `json:"refreshToken" validate:"required,max=512"`
 }

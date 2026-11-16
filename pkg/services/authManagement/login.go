@@ -41,6 +41,13 @@ func (s *AuthService) Login(
 		)
 	}
 
+	if s.requireVerification && user.EmailVerifiedAt == nil {
+		return nil, config.NewCustomError(
+			fmt.Errorf("login: %w", config.ErrEmailNotVerified),
+			config.GetErrCodeForbidden(),
+		)
+	}
+
 	candidateID, err := s.findCandidateID(ctx, user.ID)
 	if err != nil {
 		return nil, config.NewCustomError(

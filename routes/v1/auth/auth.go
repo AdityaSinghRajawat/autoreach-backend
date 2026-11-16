@@ -20,6 +20,7 @@ func LoadAuthRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyLoginAccount),
 		handler.Login,
 	)
+	authGroup.POST("/verify-email", attemptLimit, handler.VerifyEmail)
 	authGroup.POST("/refresh", attemptLimit, handler.Refresh)
 	authGroup.POST("/logout", handler.Logout)
 	authGroup.GET(

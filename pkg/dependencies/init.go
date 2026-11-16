@@ -17,28 +17,30 @@ import (
 )
 
 type Dependencies struct {
-	Logger              *slog.Logger
-	Postgres            *db.PostgresConn
-	Redis               *db.RedisConn
-	TransactionManager  db.TransactionManager
-	RateLimiter         sharedTypes.Limiter
-	RedisUtil           *utils.RedisUtil
-	WorkerStrategy      workerConfigs.IWorkerStrategy
-	WorkerClient        workerConfigs.IWorkerClient
-	WorkerInspector     workerConfigs.IWorkerInspector
-	Embedder            sharedTypes.Embedder
-	ChatCompleter       sharedTypes.ChatCompleter
-	FileStore           sharedTypes.FileStore
-	EnrichmentProviders []enrichmentProviders.Provider
-	EmailVerifier       *utils.EmailVerifier
-	CredentialCipher    *utils.CredentialCipher
-	EmailUtil           *utils.EmailUtil
-	LinkedinProvider    linkedinProviders.Provider
-	Appliers            []appliers.Applier
-	JobBoards           []jobBoards.JobBoard
-	Repositories        Repositories
-	Services            Services
-	Handlers            Handlers
+	Logger                   *slog.Logger
+	Postgres                 *db.PostgresConn
+	Redis                    *db.RedisConn
+	TransactionManager       db.TransactionManager
+	RateLimiter              sharedTypes.Limiter
+	RedisUtil                *utils.RedisUtil
+	WorkerStrategy           workerConfigs.IWorkerStrategy
+	WorkerClient             workerConfigs.IWorkerClient
+	WorkerInspector          workerConfigs.IWorkerInspector
+	Embedder                 sharedTypes.Embedder
+	ChatCompleter            sharedTypes.ChatCompleter
+	FileStore                sharedTypes.FileStore
+	EnrichmentProviders      []enrichmentProviders.Provider
+	EmailVerifier            *utils.EmailVerifier
+	CredentialCipher         *utils.CredentialCipher
+	EmailUtil                *utils.EmailUtil
+	SystemMailer             sharedTypes.SystemMailer
+	RequireEmailVerification bool
+	LinkedinProvider         linkedinProviders.Provider
+	Appliers                 []appliers.Applier
+	JobBoards                []jobBoards.JobBoard
+	Repositories             Repositories
+	Services                 Services
+	Handlers                 Handlers
 }
 
 func NewDependencies(
