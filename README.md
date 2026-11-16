@@ -152,7 +152,7 @@ Real environment variables override `.env`, which is handy for one-off changes s
 | Build the binary into `bin/` | `make build` |
 | Run the whole production stack in Docker | `make docker-up` (needs the production secrets; see [docs/RUNBOOK.md](docs/RUNBOOK.md)) |
 
-New database changes go into a new pair of files in `migrations/` (`NNNN_name.up.sql` and `.down.sql`). New endpoints must be added to `docs/swagger/openapi.json`, or the tests fail. Before you write code, read [docs/CONVENTIONS.md](docs/CONVENTIONS.md): the project follows a strict layout and set of rules.
+Each table has one pair of files in `migrations/` (`NNNN_name.up.sql` and `.down.sql`) holding the table and all its indexes. Until the first production deploy, change a table by editing its file and recreating your local database; after that, every change is a new pair. New endpoints must be added to `docs/swagger/openapi.json`, or the tests fail. Before you write code, read [docs/CONVENTIONS.md](docs/CONVENTIONS.md): the project follows a strict layout and set of rules.
 
 ## Testing and quality
 
