@@ -39,8 +39,14 @@ func (r *JobMatchRepo) UpsertMany(ctx context.Context, matches []*matchingModel.
 		return nil
 	}
 
+	order := db.LockOrder(matches, func(match *matchingModel.JobMatch) string {
+		return match.CandidateID + match.JobID
+	})
+
 	batch := &pgx.Batch{}
-	for _, match := range matches {
+
+	for _, position := range order {
+		match := matches[position]
 		batch.Queue(`
 			INSERT INTO `+r.jobMatchesTable+` (
 				id, candidate_id, job_id, resume_id, raw_similarity, match_score,

@@ -78,8 +78,12 @@ func (r *JobPostingRepo) UpsertMany(
 			updated_at = EXCLUDED.updated_at
 		RETURNING id, (embedding IS NULL) AS needs_embedding`
 
+	order := db.LockOrder(jobs, func(job *jobModel.JobPosting) string { return job.JobHash })
+
 	batch := &pgx.Batch{}
-	for _, job := range jobs {
+
+	for _, position := range order {
+		job := jobs[position]
 		batch.Queue(
 			statement,
 			job.JobHash, job.Source, job.CompanyName, job.CompanyDomain, job.JobTitle,
@@ -92,16 +96,14 @@ func (r *JobPostingRepo) UpsertMany(
 
 	results := r.postgres.Executor(ctx).SendBatch(ctx, batch)
 
-	upserted := make([]jobTypes.UpsertedJob, 0, len(jobs))
-	for range jobs {
-		row := jobTypes.UpsertedJob{}
+	upserted := make([]jobTypes.UpsertedJob, len(jobs))
+	for _, position := range order {
+		row := &upserted[position]
 		if err := results.QueryRow().Scan(&row.ID, &row.NeedsEmbedding); err != nil {
 			_ = results.Close()
 
 			return nil, fmt.Errorf("upsert job postings: %w", err)
 		}
-
-		upserted = append(upserted, row)
 	}
 
 	if err := results.Close(); err != nil {
@@ -195,8 +197,15 @@ func (r *JobPostingRepo) UpdateEmbeddings(
 		return 0, nil
 	}
 
+	order := db.LockOrder(
+		updates,
+		func(update jobTypes.JobEmbeddingUpdate) string { return update.ID },
+	)
+
 	batch := &pgx.Batch{}
-	for _, update := range updates {
+
+	for _, position := range order {
+		update := updates[position]
 		batch.Queue(`
 			UPDATE `+r.jobPostingsTable+`
 			SET embedding = $2::vector, embedding_model = $3, embedded_at = $4, updated_at = $4

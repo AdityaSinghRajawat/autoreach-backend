@@ -76,8 +76,21 @@ func (r *MessageRepo) InsertPlanned(
 	ctx context.Context,
 	messages []*outreachModel.Message,
 ) (int, error) {
+	order := db.LockOrder(messages, func(message *outreachModel.Message) string {
+		return fmt.Sprintf(
+			"%s|%s|%s|%s|%04d",
+			message.CandidateID,
+			message.ContactID,
+			message.JobID,
+			message.Channel,
+			message.StepNumber,
+		)
+	})
+
 	batch := &pgx.Batch{}
-	for _, message := range messages {
+
+	for _, position := range order {
+		message := messages[position]
 		batch.Queue(`
 			INSERT INTO `+r.messagesTable+` (`+messageColumns+`)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
