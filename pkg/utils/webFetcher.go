@@ -6,13 +6,31 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"slices"
 	"syscall"
 	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-var carrierGradeNATI = &net.IPNet{IP: net.IPv4(100, 64, 0, 0), Mask: net.CIDRMask(10, 32)}
+// reservedNetworksI are not reachable on the public internet, or translate to an IPv4 address that
+// may be private (NAT64, 6to4), so outbound connections to them are refused.
+var reservedNetworksI = mustParseNetworks(config.GetReservedNetworks())
+
+func mustParseNetworks(cidrs []string) []*net.IPNet {
+	networks := make([]*net.IPNet, 0, len(cidrs))
+
+	for _, cidr := range cidrs {
+		_, network, err := net.ParseCIDR(cidr)
+		if err != nil {
+			panic(err)
+		}
+
+		networks = append(networks, network)
+	}
+
+	return networks
+}
 
 // WebFetcher reads public web pages. Its default transport refuses to connect to loopback, private
 // and link-local addresses, which also covers redirects and DNS tricks.
@@ -95,5 +113,7 @@ func publicAddressOnly(_, address string, _ syscall.RawConn) error {
 func isPublicIP(ip net.IP) bool {
 	return !ip.IsLoopback() && !ip.IsPrivate() && !ip.IsLinkLocalUnicast() &&
 		!ip.IsLinkLocalMulticast() && !ip.IsInterfaceLocalMulticast() && !ip.IsMulticast() &&
-		!ip.IsUnspecified() && !carrierGradeNATI.Contains(ip)
+		!ip.IsUnspecified() && !slices.ContainsFunc(reservedNetworksI, func(network *net.IPNet) bool {
+		return network.Contains(ip)
+	})
 }
