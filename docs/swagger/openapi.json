@@ -4620,6 +4620,148 @@
           }
         }
       }
+    },
+    "/api/v1/admin/contacts/{contactId}/signals": {
+      "parameters": [
+        {
+          "name": "contactId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "listContactSignals",
+        "summary": "List the bounces, replies and LinkedIn responses candidates reported for a contact",
+        "description": "Signals with appliedAt null have not changed the shared contact yet.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signals, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ContactSignal"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/contacts/{contactId}/signals/{signalId}/apply": {
+      "parameters": [
+        {
+          "name": "contactId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "signalId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "applyContactSignal",
+        "summary": "Apply one candidate's report to the shared contact",
+        "description": "A bounce suppresses the address for every candidate, drops it from the contact and looks for a current one; a reply or LinkedIn response confirms the contact. Applying a signal that was already applied changes nothing.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The applied signal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ContactSignal"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7405,6 +7547,65 @@
             "type": "string",
             "format": "uuid",
             "description": "Limit the entry to one candidate; omit for every candidate"
+          }
+        }
+      },
+      "ContactSignal": {
+        "type": "object",
+        "description": "What one candidate observed about a shared contact. It changes the contact once enough candidates report the same thing (CONTACT_SIGNAL_CONFIRMATIONS) or an admin applies it.",
+        "required": [
+          "signalId",
+          "contactId",
+          "candidateId",
+          "signalType",
+          "address",
+          "occurredAt",
+          "appliedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "signalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signalType": {
+            "type": "string",
+            "enum": [
+              "BOUNCED",
+              "REPLIED",
+              "LINKEDIN_RESPONDED"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "description": "The address that bounced or replied; empty for LinkedIn"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "appliedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "null until the signal has changed the shared contact"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

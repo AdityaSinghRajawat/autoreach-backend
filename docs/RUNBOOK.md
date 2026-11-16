@@ -54,7 +54,11 @@ Test a restore into a scratch stack (`docker compose -p restore-test ...`) at le
 | API keys (ingest clients) | create a new client (`POST /api/v1/admin/api-clients`), switch the feed, revoke the old one | none if done in that order |
 | `DB_PASSWORD`, `REDIS_PASSWORD` | change in the database/Redis and in `.env`, then `up -d` | brief restart |
 
-## 5. Monitoring
+## 5. Scaling out
+
+Server and worker can each run as several replicas against the same Postgres and Redis. Each cron job runs once per interval across all workers (the first to tick claims the interval in Redis), and publishing the same task twice while it is still queued or running is a no-op, so extra workers add throughput without duplicate sends. On shutdown, the worker stops its cron jobs before its queue consumer, and the server ends open activity streams so it does not wait out `HTTP_SHUTDOWN_TIMEOUT`.
+
+## 6. Monitoring
 
 Useful Prometheus expressions:
 
@@ -67,9 +71,9 @@ Useful Prometheus expressions:
 | Queue backlog | `sum by (queue) (autoreach_queue_tasks{state="pending"})` | growing for 15 min |
 | Dead tasks | `sum by (queue) (autoreach_queue_tasks{state="dead"})` | any new |
 
-Container health: `docker compose ps` (both app containers have health checks on `/health`) and `docker stats` (see section 8 for normal memory).
+Container health: `docker compose ps` (both app containers have health checks on `/health`) and `docker stats` (see section 9 for normal memory).
 
-## 6. Routine operations (admin API)
+## 7. Routine operations (admin API)
 
 All under `/api/v1/admin`, with an admin token.
 
@@ -81,7 +85,7 @@ All under `/api/v1/admin`, with an admin token.
 - **Retention (off by default):** with `CONTACT_RETENTION_PERIOD` set (for example `17520h` for EU contacts), the worker daily removes the personal details of contacts not refreshed, messaged or heard from within that period and blanks the text sent to them; the rows stay, so outreach history and metrics are unchanged.
 - **Job sources:** `GET /job-sources` shows each board's last poll, job count and last error.
 
-## 7. Incidents
+## 8. Incidents
 
 | Symptom | Likely cause | Response |
 |---|---|---|
@@ -95,7 +99,7 @@ All under `/api/v1/admin`, with an admin token.
 
 Scaling the worker: run a second worker container with no host port (copy the `worker` service without `ports`) or move to an orchestrator; every cron job takes a Redis lock, so several workers do not double-run them.
 
-## 8. Performance baselines (2026-11-16)
+## 9. Performance baselines (2026-11-16)
 
 Measured on one host (8 CPUs, 4 GB RAM for Docker) with the production Compose stack and `scripts/loadtest`:
 

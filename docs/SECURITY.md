@@ -32,7 +32,11 @@ Status of each control in the implementation plan (section 4.7) and the M10 hard
 
 | Control | Status | Enforced in | Evidence |
 |---|---|---|---|
-| Rate limits per IP, user, auth endpoint and outbound site (GCRA in Redis) | done | `middlewares/rateLimit.go`, `config/rateLimitPolicy.go` | `tests/unit/rateLimit_test.go`, `tests/integration/rateLimit_test.go` |
+| Rate limits per IP, user, auth endpoint, public tracking and unsubscribe link, and outbound site (GCRA in Redis) | done | `middlewares/rateLimit.go`, `config/rateLimitPolicy.go` | `tests/unit/rateLimit_test.go`, `tests/integration/rateLimit_test.go` |
+| Failed logins per account are limited even when attempts arrive at once (the attempt is reserved first and refunded on success) | done | `middlewares/rateLimit.go` | `TestConcurrentWrongPasswordsCannotExceedTheAccountLimit` |
+| A refresh token presented twice, one after the other or at the same moment, revokes its whole token family | done | `pkg/services/authManagement/refreshSession.go` | `TestConcurrentRefreshesWithOneTokenEndTheWholeSession` |
+| One candidate's mailbox cannot change a shared contact or suppress it for everyone; that needs reports from several candidates or an admin | done | `pkg/services/outreachManagement/contactSignals.go`, `CONTACT_SIGNAL_CONFIRMATIONS` | `TestABounceSeenByEnoughCandidatesChangesTheSharedContact`, `TestAnAdminCanApplyASingleCandidatesSignal` |
+| Uploaded PDFs are measured page by page before parsing (50 pages, 32 MiB decompressed) | done | `pkg/utils/document.go` | `TestPDFThatInflatesPastTheLimitIsRefusedBeforeParsing` |
 | Request body size limit | done | `middlewares.BodyLimit` | `TestBindReturnsPayloadTooLargeWhenTheBodyExceedsTheLimit` |
 | CORS allow-list empty by default | done | `CORS_ALLOWED_ORIGINS` | `TestCORSAllowsOnlyListedOrigins` |
 | `/metrics` and Swagger behind the internal secret in production | done | `routes/init.go`, worker ops server | — |
@@ -59,9 +63,5 @@ Status of each control in the implementation plan (section 4.7) and the M10 hard
 - TLS is terminated by a reverse proxy in front of the stack; it is not part of this repository.
 - Enrichment provider clients are tested against stubs only and have not been run against the live APIs.
 - Adzuna's response fields are not yet checked against a live response (needs keys).
-- Bounces and replies update the shared contact record, so a forged bounce from any mailbox can mark a contact's email bad for every candidate. Scoping this per candidate is pending a product decision.
-- Public tracking and unsubscribe routes have no rate limit of their own.
-- Uploaded PDFs are parsed without a cap on decompressed size.
 - SSE streams have no per-user connection cap.
-- A reused refresh token is rejected but does not revoke the rest of its token family.
 - Signup reveals whether an email is already registered.
