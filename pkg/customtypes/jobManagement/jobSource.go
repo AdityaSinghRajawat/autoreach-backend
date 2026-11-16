@@ -9,7 +9,7 @@ import (
 )
 
 type CreateJobSourceRequest struct {
-	ATSType       string  `json:"atsType"       validate:"required,oneof=GREENHOUSE LEVER"`
+	ATSType       string  `json:"atsType"       validate:"required,oneof=GREENHOUSE LEVER ASHBY SMARTRECRUITERS"`
 	BoardToken    string  `json:"boardToken"    validate:"required,max=100"`
 	Region        *string `json:"region"        validate:"omitnil,oneof=GLOBAL EU"`
 	CompanyName   string  `json:"companyName"   validate:"required,max=255"`
@@ -23,11 +23,12 @@ type UpdateJobSourceRequest struct {
 }
 
 type PollJobSourceResult struct {
-	SourceID string `json:"sourceId"`
-	Fetched  int    `json:"fetched"`
-	Ingested int    `json:"ingested"`
-	Skipped  int    `json:"skipped"`
-	Closed   int    `json:"closed"`
+	SourceID  string `json:"sourceId"`
+	Fetched   int    `json:"fetched"`
+	Ingested  int    `json:"ingested"`
+	Skipped   int    `json:"skipped"`
+	Closed    int    `json:"closed"`
+	Unchanged int    `json:"unchanged"`
 }
 
 type BoardJob struct {
@@ -38,6 +39,8 @@ type BoardJob struct {
 	Department  *string
 	URL         string
 	PostedAt    *time.Time
+	// DetailsSkipped marks a job already stored that the board did not re-read.
+	DetailsSkipped bool
 }
 
 func (r *CreateJobSourceRequest) ToJobSourceModel() *jobModel.JobSource {

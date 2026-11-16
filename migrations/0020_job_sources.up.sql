@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS job_sources (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ats_type VARCHAR(20) NOT NULL CHECK (ats_type IN ('GREENHOUSE', 'LEVER')),
+    ats_type VARCHAR(30) NOT NULL CHECK (ats_type IN ('GREENHOUSE', 'LEVER', 'ASHBY', 'SMARTRECRUITERS')),
     board_token VARCHAR(100) NOT NULL,
     region VARCHAR(10) NOT NULL DEFAULT 'GLOBAL' CHECK (region IN ('GLOBAL', 'EU')),
     company_name VARCHAR(255) NOT NULL,

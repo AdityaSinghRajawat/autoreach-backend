@@ -43,9 +43,17 @@ func (s *JobService) PollJobSource(
 		)
 	}
 
+	knownExternalIDs, err := s.jobSourceRepo.ListActiveExternalIDs(ctx, source.ID)
+	if err != nil {
+		return nil, config.NewCustomError(
+			fmt.Errorf("poll job source: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
+	}
+
 	pollStartedAt := utils.GetCurrTimeStamp()
 
-	boardJobs, err := board.ListJobs(ctx, source)
+	boardJobs, err := board.ListJobs(ctx, source, knownExternalIDs)
 	if err != nil {
 		source.RecordPoll(0, err)
 
@@ -88,8 +96,15 @@ func (s *JobService) ingestBoardJobs(
 ) (*jobTypes.PollJobSourceResult, *config.CustomError) {
 	result := &jobTypes.PollJobSourceResult{SourceID: source.ID, Fetched: len(boardJobs)}
 	valid := make([]*jobModel.JobPosting, 0, len(boardJobs))
+	unchangedExternalIDs := []string{}
 
 	for _, boardJob := range boardJobs {
+		if boardJob.DetailsSkipped {
+			unchangedExternalIDs = append(unchangedExternalIDs, boardJob.ExternalID)
+
+			continue
+		}
+
 		item := boardJob.ToIngestJobItem(source)
 		job := item.ToJobPostingModel()
 		job.JobSourceID = &source.ID
@@ -113,6 +128,21 @@ func (s *JobService) ingestBoardJobs(
 
 		result.Ingested += ingested.IngestedCount
 	}
+
+	unchanged, err := s.jobSourceRepo.MarkSeen(
+		ctx,
+		source.ID,
+		unchangedExternalIDs,
+		utils.GetCurrTimeStamp(),
+	)
+	if err != nil {
+		return nil, config.NewCustomError(
+			fmt.Errorf("poll job source: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
+	}
+
+	result.Unchanged = unchanged
 
 	return result, nil
 }

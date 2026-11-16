@@ -16,10 +16,12 @@ const (
 type ATSType string
 
 const (
-	ATSTypeGreenhouse ATSType = "GREENHOUSE"
-	ATSTypeLever      ATSType = "LEVER"
-	ATSTypeWorkday    ATSType = "WORKDAY"
-	ATSTypeOther      ATSType = "OTHER"
+	ATSTypeGreenhouse      ATSType = "GREENHOUSE"
+	ATSTypeLever           ATSType = "LEVER"
+	ATSTypeWorkday         ATSType = "WORKDAY"
+	ATSTypeAshby           ATSType = "ASHBY"
+	ATSTypeSmartRecruiters ATSType = "SMARTRECRUITERS"
+	ATSTypeOther           ATSType = "OTHER"
 )
 
 var (

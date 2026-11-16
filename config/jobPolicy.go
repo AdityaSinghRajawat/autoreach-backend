@@ -1,9 +1,11 @@
 package config
 
 var atsHostSuffixesI = map[string][]string{
-	"GREENHOUSE": {"greenhouse.io"},
-	"LEVER":      {"lever.co"},
-	"WORKDAY":    {"myworkdayjobs.com", "myworkdaysite.com"},
+	"GREENHOUSE":      {"greenhouse.io"},
+	"LEVER":           {"lever.co"},
+	"WORKDAY":         {"myworkdayjobs.com", "myworkdaysite.com"},
+	"ASHBY":           {"ashbyhq.com"},
+	"SMARTRECRUITERS": {"smartrecruiters.com"},
 }
 
 var retryableErrCodesI = map[CustomErrorCode]struct{}{

@@ -31,9 +31,11 @@ func (d *Dependencies) initIntegrations() error {
 
 	if d.JobBoards == nil {
 		d.JobBoards = jobBoards.NewJobBoardRegistry(jobBoards.RegistryOptions{
-			GreenhouseAPIURL: config.GetGreenhouseBoardsAPIURL(),
-			LeverAPIURL:      config.GetLeverPostingsAPIURL(),
-			LeverEUAPIURL:    config.GetLeverEUPostingsAPIURL(),
+			GreenhouseAPIURL:      config.GetGreenhouseBoardsAPIURL(),
+			LeverAPIURL:           config.GetLeverPostingsAPIURL(),
+			LeverEUAPIURL:         config.GetLeverEUPostingsAPIURL(),
+			AshbyAPIURL:           config.GetAshbyJobBoardAPIURL(),
+			SmartRecruitersAPIURL: config.GetSmartRecruitersAPIURL(),
 		})
 	}
 

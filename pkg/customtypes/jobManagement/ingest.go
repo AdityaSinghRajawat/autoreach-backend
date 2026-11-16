@@ -9,7 +9,7 @@ import (
 )
 
 type IngestJobItem struct {
-	Source         string     `json:"source"         validate:"required,oneof=LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY DIRECT"`
+	Source         string     `json:"source"         validate:"required,oneof=LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS DIRECT"`
 	CompanyName    string     `json:"companyName"    validate:"required,max=255"`
 	CompanyDomain  string     `json:"companyDomain"  validate:"required,fqdn,max=255"`
 	JobTitle       string     `json:"jobTitle"       validate:"required,max=255,validate_job_title"`
@@ -19,7 +19,7 @@ type IngestJobItem struct {
 	SalaryMin      *float64   `json:"salaryMin"      validate:"omitnil,gte=0"`
 	SalaryMax      *float64   `json:"salaryMax"      validate:"omitnil,gte=0,validate_salary_range"`
 	SalaryCurrency *string    `json:"salaryCurrency" validate:"omitnil,iso4217"`
-	ATSType        string     `json:"atsType"        validate:"required,oneof=GREENHOUSE LEVER WORKDAY OTHER"`
+	ATSType        string     `json:"atsType"        validate:"required,oneof=GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS OTHER"`
 	ExternalURL    string     `json:"externalUrl"    validate:"required,url,max=1000,validate_external_url"`
 	ExternalJobID  *string    `json:"externalJobId"  validate:"omitnil,max=255"`
 	PostedAt       *time.Time `json:"postedAt"`

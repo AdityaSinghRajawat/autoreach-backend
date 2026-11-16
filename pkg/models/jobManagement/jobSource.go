@@ -14,7 +14,7 @@ import (
 
 type JobSource struct {
 	ID            string                       `db:"id"             json:"sourceId"      validate:"required,uuid"`
-	ATSType       string                       `db:"ats_type"       json:"atsType"       validate:"required,oneof=GREENHOUSE LEVER"`
+	ATSType       string                       `db:"ats_type"       json:"atsType"       validate:"required,oneof=GREENHOUSE LEVER ASHBY SMARTRECRUITERS"`
 	BoardToken    string                       `db:"board_token"    json:"boardToken"    validate:"required,max=100,validate_board_token"`
 	Region        modelHelpers.JobSourceRegion `db:"region"         json:"region"        validate:"required,oneof=GLOBAL EU"`
 	CompanyName   string                       `db:"company_name"   json:"companyName"   validate:"required,max=255"`

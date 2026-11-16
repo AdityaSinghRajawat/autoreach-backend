@@ -19,7 +19,7 @@ type Application struct {
 	ResumeID             *string                        `db:"resume_id"             json:"resumeId"             validate:"omitnil,uuid"`
 	MatchScore           float64                        `db:"match_score"           json:"matchScore"           validate:"gte=0,lte=1"`
 	Status               modelHelpers.ApplicationStatus `db:"status"                json:"status"               validate:"required,oneof=QUEUED IN_PROGRESS SUBMITTED ACTION_REQUIRED FAILED INTERVIEWING REJECTED"`
-	ATSType              string                         `db:"ats_type"              json:"atsType"              validate:"required,oneof=GREENHOUSE LEVER WORKDAY OTHER"`
+	ATSType              string                         `db:"ats_type"              json:"atsType"              validate:"required,oneof=GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS OTHER"`
 	ApplyURL             string                         `db:"apply_url"             json:"applyUrl"             validate:"required,max=1000"`
 	PreparedAnswers      json.RawMessage                `db:"prepared_answers"      json:"preparedAnswers"      validate:"required"`
 	MissingAnswers       json.RawMessage                `db:"missing_answers"       json:"missingAnswers"       validate:"required"`

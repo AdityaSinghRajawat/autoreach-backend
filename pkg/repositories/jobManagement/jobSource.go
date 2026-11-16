@@ -122,6 +122,52 @@ func (r *JobSourceRepo) CloseUnseen(
 	return int(tag.RowsAffected()), nil
 }
 
+func (r *JobSourceRepo) ListActiveExternalIDs(
+	ctx context.Context,
+	sourceID string,
+) (map[string]struct{}, error) {
+	rows, err := r.postgres.Executor(ctx).Query(ctx, `
+		SELECT external_job_id FROM `+r.jobPostingsTable+`
+		WHERE job_source_id = $1 AND status = 'ACTIVE' AND external_job_id IS NOT NULL
+	`, sourceID)
+	if err != nil {
+		return nil, fmt.Errorf("list known board jobs: %w", err)
+	}
+
+	externalIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("list known board jobs: %w", err)
+	}
+
+	known := make(map[string]struct{}, len(externalIDs))
+	for _, externalID := range externalIDs {
+		known[externalID] = struct{}{}
+	}
+
+	return known, nil
+}
+
+func (r *JobSourceRepo) MarkSeen(
+	ctx context.Context,
+	sourceID string,
+	externalIDs []string,
+	now time.Time,
+) (int, error) {
+	if len(externalIDs) == 0 {
+		return 0, nil
+	}
+
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.jobPostingsTable+` SET last_seen_at = $3
+		WHERE job_source_id = $1 AND status = 'ACTIVE' AND external_job_id = ANY($2)
+	`, sourceID, externalIDs, now)
+	if err != nil {
+		return 0, fmt.Errorf("mark board jobs seen: %w", err)
+	}
+
+	return int(tag.RowsAffected()), nil
+}
+
 func (r *JobSourceRepo) list(ctx context.Context, suffix string) ([]*jobModel.JobSource, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
 		SELECT `+jobSourceColumns+` FROM `+r.jobSourcesTable+` `+suffix)
