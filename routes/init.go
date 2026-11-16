@@ -54,10 +54,12 @@ func NewRoutes(deps *dependencies.Dependencies) http.Handler {
 	)
 	router.GET(
 		config.GetUnsubscribePath()+":"+config.GetMessageIDParam(),
+		middlewares.ValidateIDParams(),
 		deps.Handlers.Outreach.ShowUnsubscribePage,
 	)
 	router.POST(
 		config.GetUnsubscribePath()+":"+config.GetMessageIDParam(),
+		middlewares.ValidateIDParams(),
 		deps.Handlers.Outreach.Unsubscribe,
 	)
 	loadOperatorRoutes(router)
@@ -80,7 +82,8 @@ func loadAPIRoutes(router *gin.Engine, deps *dependencies.Dependencies) {
 	api := router.Group(config.GetAPIBasePath(), middlewares.RateLimit(
 		deps.RateLimiter,
 		config.RateLimitPolicyIP,
-	))
+	), middlewares.ValidateIDParams())
+
 	authRoutes.LoadAuthRoutes(api, deps)
 	candidateRoutes.LoadCandidateRoutes(api, deps)
 	dashboardRoutes.LoadDashboardRoutes(api, deps)

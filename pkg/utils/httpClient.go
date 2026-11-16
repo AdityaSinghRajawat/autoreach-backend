@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"strings"
 	"time"
 
@@ -163,7 +164,7 @@ func (c *HttpClient) send(
 
 	response, err := c.client.Do(request)
 	if err != nil {
-		return fmt.Errorf("send request: %w", err)
+		return fmt.Errorf("send request: %w", withoutQuery(err))
 	}
 	defer func() { _ = response.Body.Close() }()
 
@@ -177,11 +178,29 @@ func (c *HttpClient) send(
 		return nil
 	}
 
-	if err := json.NewDecoder(response.Body).Decode(result); err != nil {
+	limited := io.LimitReader(response.Body, config.GetMaxResponseBodyBytes()+1)
+	if err := json.NewDecoder(limited).Decode(result); err != nil {
 		return fmt.Errorf("decode response body: %w", err)
 	}
 
 	return nil
+}
+
+// withoutQuery drops the query string from a transport error, because some APIs take their key as a
+// query parameter and the error would otherwise carry it into logs and task records.
+func withoutQuery(err error) error {
+	var urlErr *url.Error
+	if !errors.As(err, &urlErr) {
+		return err
+	}
+
+	redacted := *urlErr
+	if parsed, parseErr := url.Parse(urlErr.URL); parseErr == nil {
+		parsed.RawQuery = ""
+		redacted.URL = parsed.String()
+	}
+
+	return &redacted
 }
 
 func ClassifyUpstreamError(err error) config.CustomErrorCode {

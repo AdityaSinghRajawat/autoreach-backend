@@ -17,6 +17,7 @@ type sharedConstants struct {
 	foreignKeyViolationCode string
 	argonEncodingFormat     string
 	maxErrorBodyBytes       int64
+	maxResponseBodyBytes    int64
 	dailyCounterTTL         time.Duration
 	storageDirectoryMode    fs.FileMode
 	storageFileMode         fs.FileMode
@@ -95,6 +96,7 @@ var sharedConstI = sharedConstants{
 	foreignKeyViolationCode: "23503",
 	argonEncodingFormat:     "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
 	maxErrorBodyBytes:       2048,
+	maxResponseBodyBytes:    64 << 20,
 	dailyCounterTTL:         48 * time.Hour,
 	storageDirectoryMode:    0o750,
 	storageFileMode:         0o600,
@@ -204,6 +206,7 @@ func GetForeignKeyViolationCode() string {
 }
 func GetArgonEncodingFormat() string       { return sharedConstI.argonEncodingFormat }
 func GetMaxErrorBodyBytes() int64          { return sharedConstI.maxErrorBodyBytes }
+func GetMaxResponseBodyBytes() int64       { return sharedConstI.maxResponseBodyBytes }
 func GetDailyCounterTTL() time.Duration    { return sharedConstI.dailyCounterTTL }
 func GetStorageDirectoryMode() fs.FileMode { return sharedConstI.storageDirectoryMode }
 func GetStorageFileMode() fs.FileMode      { return sharedConstI.storageFileMode }

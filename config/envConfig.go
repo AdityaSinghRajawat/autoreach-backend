@@ -254,6 +254,11 @@ func loadEnvConfig() envConfig {
 }
 
 func enforceProductionRequirements() {
+	if env := envConfigI.app.env; env != constI.app.envLocal && env != constI.app.envTest &&
+		env != constI.app.envProd {
+		log.Fatalf("APP_ENV must be local, test or production, not %q", env)
+	}
+
 	if len(envConfigI.secret.jwtSecret) < minJWTSecretLength {
 		log.Fatalf("JWT_SECRET must be at least %d characters", minJWTSecretLength)
 	}
@@ -346,7 +351,6 @@ func getEnvListWithDefault(key string, fallback []string) []string {
 	return values
 }
 
-func GetAppEnv() string   { return envConfigI.app.env }
 func IsProduction() bool  { return envConfigI.app.env == constI.app.envProd }
 func IsLocal() bool       { return envConfigI.app.env == constI.app.envLocal }
 func GetPort() string     { return envConfigI.app.port }

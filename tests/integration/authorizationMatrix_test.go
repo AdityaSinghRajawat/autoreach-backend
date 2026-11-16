@@ -4,6 +4,7 @@ package integration
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -177,4 +178,57 @@ func TestEveryAdminRouteRejectsCandidates(t *testing.T) {
 	}
 
 	assert.Greater(t, checked, 10)
+}
+
+func TestMalformedIDsInThePathAnswerNotFound(t *testing.T) {
+	fixture := newJobFixture(t)
+	token := loginAdmin(t, fixture.router)
+	uuidParams := config.GetUUIDPathParams()
+	checked := 0
+
+	for _, route := range apiRoutes(t, fixture.router) {
+		segments := strings.Split(route.path, "/")
+		malformed := false
+
+		for index, segment := range segments {
+			name, isParam := strings.CutPrefix(segment, ":")
+			if !isParam {
+				continue
+			}
+
+			if !slices.Contains(uuidParams, name) {
+				segments[index] = "embedding_queue"
+
+				continue
+			}
+
+			segments[index] = "not-a-uuid"
+			malformed = true
+		}
+
+		if !malformed {
+			continue
+		}
+
+		exchange := helpers.Do(
+			t,
+			fixture.router,
+			route.method,
+			strings.Join(segments, "/"),
+			map[string]any{},
+			bearer(token),
+		)
+		assert.Equal(
+			t,
+			http.StatusNotFound,
+			exchange.Recorder.Code,
+			"%s %s",
+			route.method,
+			route.path,
+		)
+
+		checked++
+	}
+
+	assert.Greater(t, checked, 30)
 }

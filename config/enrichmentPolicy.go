@@ -141,7 +141,6 @@ func GetSignalHireWebhookSecret() string   { return enrichmentConfigI.signalHire
 func GetSignalHireWebhookPath() string     { return signalHireWebhookPath }
 func GetWebhookTokenParam() string         { return webhookTokenParam }
 func GetSignalHireRequestIDHeader() string { return signalHireRequestIDHeader }
-func GetEnrichmentRateNamespace() string   { return enrichmentRateNamespace }
 func GetEnrichmentCreditNamespace() string { return enrichmentCreditNamespace }
 func GetCreditCostPerLookup() int          { return creditCostPerLookup }
 

@@ -47,10 +47,6 @@ var disposableDomainsI = map[string]struct{}{
 	"yopmail.com": {}, "trashmail.com": {}, "sharklasers.com": {}, "getnada.com": {},
 }
 
-func GetRoleTitleKeywords(role string) []string {
-	return append([]string(nil), roleTitleKeywordsI[role]...)
-}
-
 func GetSearchTitles(roles []string) []string {
 	titles := make([]string, 0, len(roles)*8)
 	for _, role := range roles {

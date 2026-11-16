@@ -9,6 +9,7 @@ type appConstants struct {
 	envFile      string
 	envProd      string
 	envLocal     string
+	envTest      string
 	metricsSpace string
 }
 
@@ -122,6 +123,7 @@ var constI = constants{
 		envFile:      ".env",
 		envProd:      "production",
 		envLocal:     "local",
+		envTest:      "test",
 		metricsSpace: "autoreach",
 	},
 	http: httpConstants{
@@ -186,7 +188,6 @@ func GetDBConnectTimeout() time.Duration           { return constI.db.connectTim
 func GetDBMaxConnLifetime() time.Duration          { return constI.db.maxConnLifetime }
 func GetDBHealthCheckPeriod() time.Duration        { return constI.db.healthCheckPeriod }
 func GetDBIdleInTransactionTimeout() time.Duration { return constI.db.idleInTransactionTimeout }
-func GetDBExtensionSchema() string                 { return constI.db.extensionSchema }
 
 func GetRedisConnectTimeout() time.Duration { return constI.redis.connectTimeout }
 func GetKeyDelimiter() string               { return constI.redis.keyDelimiter }
