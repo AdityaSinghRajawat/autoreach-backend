@@ -23,13 +23,13 @@ type (
 )
 
 type ContactOutIntegration struct {
-	httpClient *utils.HttpClient
+	httpClient *utils.HTTPClient
 	apiKey     string
 }
 
 func NewContactOutIntegration(policy config.ProviderPolicy) *ContactOutIntegration {
 	return &ContactOutIntegration{
-		httpClient: utils.NewHttpClient(policy.BaseURL, policy.Timeout),
+		httpClient: utils.NewHTTPClient(policy.BaseURL, policy.Timeout),
 		apiKey:     policy.APIKey,
 	}
 }

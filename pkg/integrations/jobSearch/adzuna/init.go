@@ -33,14 +33,14 @@ type (
 )
 
 type AdzunaIntegration struct {
-	httpClient *utils.HttpClient
+	httpClient *utils.HTTPClient
 	appID      string
 	appKey     string
 }
 
 func NewAdzunaIntegration(baseURL, appID, appKey string, timeout time.Duration) *AdzunaIntegration {
 	return &AdzunaIntegration{
-		httpClient: utils.NewHttpClient(baseURL, timeout),
+		httpClient: utils.NewHTTPClient(baseURL, timeout),
 		appID:      appID,
 		appKey:     appKey,
 	}

@@ -15,7 +15,7 @@ import (
 func TestTransportErrorsNeverCarryTheQueryString(t *testing.T) {
 	setup.Config(t)
 
-	client := utils.NewHttpClient("http://127.0.0.1:1", 2*time.Second)
+	client := utils.NewHTTPClient("http://127.0.0.1:1", 2*time.Second)
 	result := map[string]any{}
 
 	err := client.Get(

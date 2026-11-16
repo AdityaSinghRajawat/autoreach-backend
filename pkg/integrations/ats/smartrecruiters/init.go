@@ -44,14 +44,14 @@ type (
 )
 
 type SmartRecruitersIntegration struct {
-	httpClient *utils.HttpClient
+	httpClient *utils.HTTPClient
 }
 
 func NewSmartRecruitersIntegration(
 	baseURL string,
 	timeout time.Duration,
 ) *SmartRecruitersIntegration {
-	return &SmartRecruitersIntegration{httpClient: utils.NewHttpClient(baseURL, timeout)}
+	return &SmartRecruitersIntegration{httpClient: utils.NewHTTPClient(baseURL, timeout)}
 }
 
 func (p posting) toBoardJob() jobTypes.BoardJob {

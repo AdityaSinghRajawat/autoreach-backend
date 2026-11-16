@@ -38,11 +38,11 @@ type (
 )
 
 type LeverIntegration struct {
-	httpClient *utils.HttpClient
+	httpClient *utils.HTTPClient
 }
 
 func NewLeverIntegration(baseURL string, timeout time.Duration) *LeverIntegration {
-	return &LeverIntegration{httpClient: utils.NewHttpClient(baseURL, timeout)}
+	return &LeverIntegration{httpClient: utils.NewHTTPClient(baseURL, timeout)}
 }
 
 func postingPath(site, postingID string) string {

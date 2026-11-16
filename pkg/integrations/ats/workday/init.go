@@ -53,6 +53,6 @@ func NewWorkdayIntegration(hostURLFormat string, timeout time.Duration) *Workday
 	return &WorkdayIntegration{hostURLFormat: hostURLFormat, timeout: timeout}
 }
 
-func (i *WorkdayIntegration) client(site Site) *utils.HttpClient {
-	return utils.NewHttpClient(fmt.Sprintf(i.hostURLFormat, site.Tenant, site.Instance), i.timeout)
+func (i *WorkdayIntegration) client(site Site) *utils.HTTPClient {
+	return utils.NewHTTPClient(fmt.Sprintf(i.hostURLFormat, site.Tenant, site.Instance), i.timeout)
 }

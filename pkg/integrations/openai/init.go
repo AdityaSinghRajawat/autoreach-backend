@@ -57,7 +57,7 @@ type (
 )
 
 type OpenAIIntegration struct {
-	httpClient *utils.HttpClient
+	httpClient *utils.HTTPClient
 	apiKey     string
 	model      string
 	dimensions int
@@ -66,7 +66,7 @@ type OpenAIIntegration struct {
 
 func NewOpenAIIntegration(baseURL string) *OpenAIIntegration {
 	return &OpenAIIntegration{
-		httpClient: utils.NewHttpClient(baseURL, config.GetOpenAITimeout()),
+		httpClient: utils.NewHTTPClient(baseURL, config.GetOpenAITimeout()),
 		apiKey:     config.GetOpenAIAPIKey(),
 		model:      config.GetOpenAIEmbeddingModel(),
 		dimensions: config.GetOpenAIEmbeddingDimensions(),

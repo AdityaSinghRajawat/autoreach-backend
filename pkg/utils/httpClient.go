@@ -32,19 +32,19 @@ func (e *APIError) IsTransient() bool {
 		e.StatusCode >= http.StatusInternalServerError
 }
 
-type HttpClient struct {
+type HTTPClient struct {
 	client  *http.Client
 	baseURL string
 }
 
-func NewHttpClient(baseURL string, timeout time.Duration) *HttpClient {
-	return &HttpClient{
+func NewHTTPClient(baseURL string, timeout time.Duration) *HTTPClient {
+	return &HTTPClient{
 		client:  &http.Client{Timeout: timeout},
 		baseURL: strings.TrimRight(baseURL, "/"),
 	}
 }
 
-func (c *HttpClient) Get(
+func (c *HTTPClient) Get(
 	ctx context.Context,
 	endpoint string,
 	headers map[string]string,
@@ -53,7 +53,7 @@ func (c *HttpClient) Get(
 	return c.do(ctx, http.MethodGet, endpoint, headers, nil, result)
 }
 
-func (c *HttpClient) Post(
+func (c *HTTPClient) Post(
 	ctx context.Context,
 	endpoint string,
 	headers map[string]string,
@@ -62,7 +62,7 @@ func (c *HttpClient) Post(
 	return c.do(ctx, http.MethodPost, endpoint, headers, payload, result)
 }
 
-func (c *HttpClient) PostMultipart(
+func (c *HTTPClient) PostMultipart(
 	ctx context.Context,
 	endpoint string,
 	headers map[string]string,
@@ -113,7 +113,7 @@ func (c *HttpClient) PostMultipart(
 	)
 }
 
-func (c *HttpClient) do(
+func (c *HTTPClient) do(
 	ctx context.Context,
 	method, endpoint string,
 	headers map[string]string,
@@ -139,7 +139,7 @@ func (c *HttpClient) do(
 	)
 }
 
-func (c *HttpClient) send(
+func (c *HTTPClient) send(
 	ctx context.Context,
 	method, endpoint string,
 	headers map[string]string,

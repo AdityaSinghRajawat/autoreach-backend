@@ -38,13 +38,13 @@ type (
 )
 
 type SignalHireIntegration struct {
-	httpClient *utils.HttpClient
+	httpClient *utils.HTTPClient
 	apiKey     string
 }
 
 func NewSignalHireIntegration(policy config.ProviderPolicy) *SignalHireIntegration {
 	return &SignalHireIntegration{
-		httpClient: utils.NewHttpClient(policy.BaseURL, policy.Timeout),
+		httpClient: utils.NewHTTPClient(policy.BaseURL, policy.Timeout),
 		apiKey:     policy.APIKey,
 	}
 }

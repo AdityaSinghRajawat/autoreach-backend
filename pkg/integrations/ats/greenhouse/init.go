@@ -52,11 +52,11 @@ type (
 )
 
 type GreenhouseIntegration struct {
-	httpClient *utils.HttpClient
+	httpClient *utils.HTTPClient
 }
 
 func NewGreenhouseIntegration(baseURL string, timeout time.Duration) *GreenhouseIntegration {
-	return &GreenhouseIntegration{httpClient: utils.NewHttpClient(baseURL, timeout)}
+	return &GreenhouseIntegration{httpClient: utils.NewHTTPClient(baseURL, timeout)}
 }
 
 func jobPath(boardToken, jobID string) string {

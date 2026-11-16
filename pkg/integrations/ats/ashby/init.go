@@ -26,9 +26,9 @@ type (
 )
 
 type AshbyIntegration struct {
-	httpClient *utils.HttpClient
+	httpClient *utils.HTTPClient
 }
 
 func NewAshbyIntegration(baseURL string, timeout time.Duration) *AshbyIntegration {
-	return &AshbyIntegration{httpClient: utils.NewHttpClient(baseURL, timeout)}
+	return &AshbyIntegration{httpClient: utils.NewHTTPClient(baseURL, timeout)}
 }
