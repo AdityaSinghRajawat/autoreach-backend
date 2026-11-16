@@ -15,3 +15,6 @@ coverage.html
 .idea/
 .vscode/
 .DS_Store
+
+# Crash dumps written by Git Bash tools
+*.stackdump
