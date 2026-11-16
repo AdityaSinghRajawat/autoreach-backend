@@ -4128,6 +4128,8 @@
               "GREENHOUSE",
               "LEVER",
               "WORKDAY",
+              "ASHBY",
+              "SMARTRECRUITERS",
               "DIRECT"
             ]
           },
@@ -4175,6 +4177,8 @@
               "GREENHOUSE",
               "LEVER",
               "WORKDAY",
+              "ASHBY",
+              "SMARTRECRUITERS",
               "OTHER"
             ]
           },
@@ -4295,6 +4299,8 @@
               "GREENHOUSE",
               "LEVER",
               "WORKDAY",
+              "ASHBY",
+              "SMARTRECRUITERS",
               "DIRECT"
             ]
           },
@@ -4336,6 +4342,8 @@
               "GREENHOUSE",
               "LEVER",
               "WORKDAY",
+              "ASHBY",
+              "SMARTRECRUITERS",
               "OTHER"
             ]
           },
@@ -4650,6 +4658,8 @@
               "GREENHOUSE",
               "LEVER",
               "WORKDAY",
+              "ASHBY",
+              "SMARTRECRUITERS",
               "OTHER"
             ]
           },
@@ -5672,6 +5682,8 @@
               "GREENHOUSE",
               "LEVER",
               "WORKDAY",
+              "ASHBY",
+              "SMARTRECRUITERS",
               "OTHER"
             ]
           },
@@ -5839,7 +5851,9 @@
             "type": "string",
             "enum": [
               "GREENHOUSE",
-              "LEVER"
+              "LEVER",
+              "ASHBY",
+              "SMARTRECRUITERS"
             ]
           },
           "boardToken": {
@@ -5898,13 +5912,15 @@
             "type": "string",
             "enum": [
               "GREENHOUSE",
-              "LEVER"
+              "LEVER",
+              "ASHBY",
+              "SMARTRECRUITERS"
             ]
           },
           "boardToken": {
             "type": "string",
             "maxLength": 100,
-            "description": "Greenhouse board token or Lever site name"
+            "description": "Greenhouse board token, Lever site, Ashby job board name or SmartRecruiters company identifier"
           },
           "region": {
             "type": "string",
@@ -5949,7 +5965,8 @@
           "fetched",
           "ingested",
           "skipped",
-          "closed"
+          "closed",
+          "unchanged"
         ],
         "properties": {
           "sourceId": {
@@ -5969,6 +5986,10 @@
           "closed": {
             "type": "integer",
             "description": "Jobs the board no longer lists"
+          },
+          "unchanged": {
+            "type": "integer",
+            "description": "Jobs still listed that were not re-read (SmartRecruiters)"
           }
         }
       }

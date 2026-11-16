@@ -94,7 +94,7 @@ LinkedIn has no public API for invites or messages, so the default provider is *
 
 Jobs reach AutoReach in two ways:
 
-- **Board polling.** Admins add company job boards with `POST /api/v1/admin/job-sources` (`GREENHOUSE` board token or `LEVER` site name, `EU` region for Lever's EU instance). Every `JOB_SOURCE_POLL_INTERVAL` (and right after a board is added, or on `POST /admin/job-sources/{id}/poll`), `task:poll_job_source` reads the board's public API, converts descriptions to plain text and feeds the jobs through the normal ingest path (deduplication, embedding, matching). Jobs the board no longer lists are closed; a failed fetch is recorded on the source and closes nothing. Boards can be paused (`PATCH`, `isActive: false`) or removed.
+- **Board polling.** Admins add company job boards with `POST /api/v1/admin/job-sources` (`GREENHOUSE` board token, `LEVER` site name with `EU` region for Lever's EU instance, `ASHBY` job board name, or `SMARTRECRUITERS` company identifier). Every `JOB_SOURCE_POLL_INTERVAL` (and right after a board is added, or on `POST /admin/job-sources/{id}/poll`), `task:poll_job_source` reads the board's public API, converts descriptions to plain text and feeds the jobs through the normal ingest path (deduplication, embedding, matching). Jobs the board no longer lists are closed; a failed fetch is recorded on the source and closes nothing. Boards can be paused (`PATCH`, `isActive: false`) or removed. Greenhouse jobs always link to `job-boards.greenhouse.io`, because some companies report their own careers page as the job URL. SmartRecruiters lists postings without descriptions, so only new postings are read in full (up to `SMARTRECRUITERS_MAX_DETAILS_PER_POLL` per poll); known ones just stay open.
 - **Ingest API.** External feeds push jobs to `POST /api/v1/jobs/ingest` with an API key. Accepted sources: LinkedIn, Indeed, Glassdoor, ZipRecruiter, Naukri, Wellfound, Greenhouse, Lever, Workday and direct career pages. AutoReach does not scrape the job sites itself.
 
 ## Job applications
@@ -117,6 +117,7 @@ Requests to each application site are rate limited; transient failures are retri
 make test-unit                  # no infrastructure
 make test-up                    # throwaway postgres :55432, redis :56379, S3 mock :59090, mail :53025/:53143
 make test-integration           # real database, real queue; -p 1
+make test-live                  # reads real public job boards (LIVE_JOB_BOARDS=ATS:token,...)
 make test-down
 make tools                      # install the pinned golangci-lint
 make fmt                        # format, wrap at 100 columns, fix blank-line rules
@@ -180,4 +181,4 @@ tests              unit, integration, setup, helpers, mocks
 
 ## Status
 
-Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, assisted job applications for Greenhouse and Lever, and Greenhouse and Lever job board polling. The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
+Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, assisted job applications for Greenhouse and Lever, and job board polling for Greenhouse, Lever, Ashby and SmartRecruiters (checked against live boards with `make test-live`). The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
