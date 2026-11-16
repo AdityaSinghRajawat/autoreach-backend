@@ -26,6 +26,7 @@ type EnrichmentStub struct {
 	People             []map[string]any
 	Matches            map[string]map[string]any
 	Profiles           map[string]map[string]any
+	Organizations      map[string][]map[string]any
 	calls              map[string]int
 	signalHireItems    []string
 	signalHireRequests int
@@ -35,14 +36,16 @@ func NewEnrichmentStub(t *testing.T) *EnrichmentStub {
 	t.Helper()
 
 	stub := &EnrichmentStub{
-		Matches:  map[string]map[string]any{},
-		Profiles: map[string]map[string]any{},
-		calls:    map[string]int{},
+		Matches:       map[string]map[string]any{},
+		Profiles:      map[string]map[string]any{},
+		Organizations: map[string][]map[string]any{},
+		calls:         map[string]int{},
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /apollo/mixed_people/api_search", stub.handleSearch)
 	mux.HandleFunc("POST /apollo/people/match", stub.handleMatch)
+	mux.HandleFunc("POST /apollo/mixed_companies/search", stub.handleOrganizations)
 	mux.HandleFunc("GET /contactout/linkedin/enrich", stub.handleContactOut)
 	mux.HandleFunc("POST /signalhire/candidate/search", stub.handleSignalHire)
 
@@ -113,6 +116,25 @@ func (s *EnrichmentStub) handleSearch(writer http.ResponseWriter, request *http.
 	}
 
 	writeJSON(writer, status, map[string]any{"people": s.People})
+}
+
+func (s *EnrichmentStub) handleOrganizations(writer http.ResponseWriter, request *http.Request) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	body := struct {
+		Name string `json:"q_organization_name"`
+	}{}
+	_ = json.NewDecoder(request.Body).Decode(&body)
+
+	status := s.record("apollo.organizations", 0)
+	organizations := s.Organizations[body.Name]
+
+	if organizations == nil {
+		organizations = []map[string]any{}
+	}
+
+	writeJSON(writer, status, map[string]any{"organizations": organizations, "accounts": []any{}})
 }
 
 func (s *EnrichmentStub) handleMatch(writer http.ResponseWriter, request *http.Request) {

@@ -277,7 +277,7 @@ func TestIngestRejectsTheWholeRequestAndNamesEveryInvalidField(t *testing.T) {
 	assert.ElementsMatch(t, []config.ErrorDetail{
 		{
 			Field: "jobs[1].source",
-			Issue: "must be one of: LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS DIRECT",
+			Issue: "must be one of: LINKEDIN INDEED GLASSDOOR ZIPRECRUITER NAUKRI WELLFOUND GREENHOUSE LEVER WORKDAY ASHBY SMARTRECRUITERS ADZUNA DIRECT",
 		},
 		{Field: "jobs[1].companyDomain", Issue: "must be a valid domain name"},
 		{Field: "jobs[1].jobTitle", Issue: "is required"},
@@ -539,6 +539,7 @@ func TestIngestSurvivesAQueueOutageAndTheReconcilerRequeuesLater(t *testing.T) {
 		Embedder:           setup.Embedder(t),
 		JobSourceRepo:      deps.Repositories.JobSource,
 		RateLimiter:        deps.RateLimiter,
+		DomainResolver:     deps.Services.Enrichment,
 	})
 	require.NoError(t, err)
 

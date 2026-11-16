@@ -12,17 +12,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement/jobBoards"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
 )
 
-const defaultLiveBoards = "GREENHOUSE:stripe,LEVER:palantir,ASHBY:openai,SMARTRECRUITERS:servicenow"
+const defaultLiveBoards = "GREENHOUSE:stripe,LEVER:palantir,ASHBY:openai,SMARTRECRUITERS:servicenow," +
+	"WORKDAY:nvidia.wd5/nvidiaexternalcareersite"
+
+var exampleDomain = "example.com"
 
 // Reads real public job boards (LIVE_JOB_BOARDS, as ATS:token pairs) and checks that every job maps
 // to a valid posting. Run with: go test -tags=live ./tests/live/...
 func TestLiveJobBoardsMapToValidPostings(t *testing.T) {
-	t.Setenv("SMARTRECRUITERS_MAX_DETAILS_PER_POLL", "5")
+	t.Setenv("JOB_BOARD_MAX_DETAILS_PER_POLL", "5")
 	setup.Config(t)
 
 	boards := os.Getenv("LIVE_JOB_BOARDS")
@@ -36,6 +40,10 @@ func TestLiveJobBoardsMapToValidPostings(t *testing.T) {
 		LeverEUAPIURL:         config.GetLeverEUPostingsAPIURL(),
 		AshbyAPIURL:           config.GetAshbyJobBoardAPIURL(),
 		SmartRecruitersAPIURL: config.GetSmartRecruitersAPIURL(),
+		WorkdayHostURLFormat:  config.GetWorkdayHostURLFormat(),
+		AdzunaAPIURL:          config.GetAdzunaAPIURL(),
+		AdzunaAppID:           config.GetAdzunaAppID(),
+		AdzunaAppKey:          config.GetAdzunaAppKey(),
 	})
 
 	for _, pair := range strings.Split(boards, ",") {
@@ -47,12 +55,13 @@ func TestLiveJobBoardsMapToValidPostings(t *testing.T) {
 			require.NotNil(t, board, "unknown ATS %s", atsType)
 
 			source := jobModel.NewJobSource()
-			source.ATSType = atsType
+			source.BoardType = modelHelpers.BoardType(atsType)
 			source.BoardToken = strings.ToLower(token)
-			source.CompanyName = token
-			source.CompanyDomain = "example.com"
+			source.CompanyName = &token
+			source.CompanyDomain = &exampleDomain
 
-			jobs, err := board.ListJobs(context.Background(), source, nil)
+			listing, err := board.ListJobs(context.Background(), source, nil)
+			jobs := listing.Jobs
 			require.NoError(t, err)
 			require.NotEmpty(t, jobs)
 

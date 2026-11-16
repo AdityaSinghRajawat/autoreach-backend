@@ -14,7 +14,9 @@ func TestHTMLToTextKeepsLineBreaksAndUnescapes(t *testing.T) {
 		"&lt;p&gt;Fish &amp;amp; chips&lt;/p&gt;":     "Fish & chips",
 		"<ul><li>Go</li><li>SQL</li></ul>":            "Go\nSQL",
 		"Line one<br/>Line two<br><br><br>Line three": "Line one\nLine two\n\nLine three",
-		"plain text": "plain text",
+		"plain text":                                      "plain text",
+		"Design <b>APIs</b>. <em>Now</em>":                "Design APIs. Now",
+		"<table><tr><td>Go</td><td>SQL</td></tr></table>": "Go SQL",
 		"<div>  spaced   out  </div>\n\n\n<div>end</div>": "spaced out\n\nend",
 	}
 

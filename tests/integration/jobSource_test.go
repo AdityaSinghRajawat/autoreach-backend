@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path"
 	"strings"
 	"sync/atomic"
@@ -16,8 +17,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	jobTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/jobManagement"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement/jobBoards"
 	"github.com/AdityaSinghRajawat/autoreach-backend/routes"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
@@ -67,11 +70,59 @@ const smartRecruitersPosting = `{"id":"%s","name":"%s","postingUrl":"https://job
 	"qualifications":{"title":"Qualifications","text":"<ul><li>SQL</li></ul>"},
 	"additionalInformation":{"title":"Additional Information","text":""}}}}`
 
+const workdayJobs = `{"total":2,"jobPostings":[
+	{"title":"Platform Engineer","externalPath":"/job/Austin/Platform-Engineer_R1","locationsText":"Austin, TX"},
+	{"title":"Data Engineer","externalPath":"/job/Remote/Data-Engineer_R2","locationsText":"Remote"}]}`
+
+const workdayJob = `{"jobPostingInfo":{"title":"%s","jobDescription":"<p>Work on %s.</p>","location":"%s",
+	"startDate":"2026-11-10","externalUrl":"https://initech.wd1.myworkdayjobs.com/careers%s"}}`
+
+const adzunaResults = `{"count":2,"results":[
+	{"id":"az-1","title":"<strong>Go</strong> Developer","description":"Build services in Go for payments.",
+	 "redirect_url":"https://www.adzuna.in/land/ad/1","created":"2026-11-12T10:00:00Z",
+	 "salary_min":1500000,"salary_max":2500000,"salary_is_predicted":"0",
+	 "company":{"display_name":"Initrode Ltd"},"location":{"display_name":"Pune, Maharashtra"},
+	 "category":{"label":"IT Jobs"}},
+	{"id":"az-2","title":"Go Engineer","description":"Mystery company role.",
+	 "redirect_url":"https://www.adzuna.in/land/ad/2","company":{"display_name":"Mystery Co"},
+	 "location":{"display_name":"Remote"}}]}`
+
+const careerRobots = "User-agent: *\nDisallow: /private/\n"
+
+const careerSitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<sitemap><loc>https://careers.initech.com/sitemap-jobs.xml</loc></sitemap>
+</sitemapindex>`
+
+const careerSitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<url><loc>https://careers.initech.com/jobs/1</loc></url>
+	<url><loc>https://careers.initech.com/jobs/2</loc></url>
+	<url><loc>https://careers.initech.com/private/jobs/3</loc></url>
+	<url><loc>https://careers.initech.com/about</loc></url>
+</urlset>`
+
+const careerJobOne = `<html><head><script type="application/ld+json">
+{"@context":"https://schema.org","@type":"JobPosting","title":"Backend Engineer",
+ "description":"&lt;p&gt;Design &lt;b&gt;APIs&lt;/b&gt;.&lt;/p&gt;","datePosted":"2026-11-01",
+ "url":"https://careers.initech.com/jobs/1","identifier":{"@type":"PropertyValue","value":"BE-1"},
+ "jobLocation":{"@type":"Place","address":{"addressLocality":"Austin","addressRegion":"TX","addressCountry":"US"}},
+ "baseSalary":{"@type":"MonetaryAmount","currency":"USD","value":{"minValue":150000,"maxValue":190000}}}
+</script></head><body>Backend Engineer</body></html>`
+
+const careerJobTwo = `<html><head><script type='application/ld+json'>
+{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"Initech"},
+ {"@type":["JobPosting"],"title":"Support Engineer","description":"Help customers.",
+  "url":"/jobs/2","jobLocationType":"TELECOMMUTE"}]}
+</script></head></html>`
+
 type boardsStub struct {
 	server                 *httptest.Server
 	jobRemoved             atomic.Bool
 	boardFailing           atomic.Bool
 	smartRecruitersDetails atomic.Int32
+	careerServer           *httptest.Server
+	careerPageReads        atomic.Int32
 }
 
 func newBoardsStub(t *testing.T) *boardsStub {
@@ -111,12 +162,60 @@ func newBoardsStub(t *testing.T) *boardsStub {
 				postingID := path.Base(request.URL.Path)
 				name := map[string]string{"sr-1": "Data Engineer", "sr-2": "ML Engineer"}[postingID]
 				_, _ = fmt.Fprintf(writer, smartRecruitersPosting, postingID, name, postingID)
+			case request.Method == http.MethodPost &&
+				request.URL.Path == "/workday/initech/wd1/wday/cxs/initech/careers/jobs":
+				_, _ = io.WriteString(writer, workdayJobs)
+			case strings.HasPrefix(request.URL.Path, "/workday/initech/wd1/wday/cxs/initech/careers/job/"):
+				externalPath := strings.TrimPrefix(
+					request.URL.Path,
+					"/workday/initech/wd1/wday/cxs/initech/careers",
+				)
+				title, location := "Platform Engineer", "Austin, TX"
+
+				if strings.Contains(externalPath, "Data-Engineer") {
+					title, location = "Data Engineer", "Remote"
+				}
+
+				_, _ = fmt.Fprintf(writer, workdayJob, title, title, location, externalPath)
+			case request.URL.Path == "/adzuna/jobs/in/search/1" &&
+				request.URL.Query().Get("app_key") == "adzuna-key" &&
+				request.URL.Query().Get("what") == "golang":
+				_, _ = io.WriteString(writer, adzunaResults)
 			default:
 				writer.WriteHeader(http.StatusNotFound)
 			}
 		}),
 	)
 	t.Cleanup(stub.server.Close)
+
+	stub.careerServer = httptest.NewTLSServer(
+		http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			pages := map[string]string{
+				"/robots.txt":       careerRobots,
+				"/sitemap.xml":      careerSitemapIndex,
+				"/sitemap-jobs.xml": careerSitemap,
+				"/jobs/1":           careerJobOne,
+				"/jobs/2":           careerJobTwo,
+				"/about":            "<html>About us</html>",
+				"/private/jobs/3":   careerJobOne,
+			}
+
+			page, found := pages[request.URL.Path]
+			if !found {
+				writer.WriteHeader(http.StatusNotFound)
+
+				return
+			}
+
+			if strings.HasPrefix(request.URL.Path, "/jobs/") ||
+				strings.HasPrefix(request.URL.Path, "/private/") {
+				stub.careerPageReads.Add(1)
+			}
+
+			_, _ = io.WriteString(writer, page)
+		}),
+	)
+	t.Cleanup(stub.careerServer.Close)
 
 	return stub
 }
@@ -139,6 +238,11 @@ func newJobSourceFixture(t *testing.T) jobSourceFixture {
 		LeverEUAPIURL:         stub.server.URL + "/lever-eu",
 		AshbyAPIURL:           stub.server.URL + "/ashby",
 		SmartRecruitersAPIURL: stub.server.URL + "/smartrecruiters",
+		WorkdayHostURLFormat:  stub.server.URL + "/workday/%s/%s",
+		AdzunaAPIURL:          stub.server.URL + "/adzuna",
+		AdzunaAppID:           "adzuna-id",
+		AdzunaAppKey:          "adzuna-key",
+		CareerPageTransport:   stub.careerTransport(),
 	})
 	require.NoError(t, fixture.deps.Wire())
 	fixture.router = routes.NewRoutes(fixture.deps)
@@ -222,7 +326,7 @@ func (f jobSourceFixture) sourceJobs(t *testing.T, sourceID string) map[string]j
 func TestGreenhouseBoardPollIngestsJobsAndClosesRemovedOnes(t *testing.T) {
 	fixture := newJobSourceFixture(t)
 	source := fixture.createSource(t, map[string]any{
-		"atsType":       "GREENHOUSE",
+		"boardType":     "GREENHOUSE",
 		"boardToken":    "Acme",
 		"companyName":   "Acme Corp",
 		"companyDomain": "acme.com",
@@ -230,7 +334,7 @@ func TestGreenhouseBoardPollIngestsJobsAndClosesRemovedOnes(t *testing.T) {
 	assert.Equal(t, "acme", source.BoardToken)
 
 	duplicate := helpers.Do(t, fixture.router, http.MethodPost, jobSourcesPath, map[string]any{
-		"atsType":       "GREENHOUSE",
+		"boardType":     "GREENHOUSE",
 		"boardToken":    "acme",
 		"companyName":   "Acme",
 		"companyDomain": "acme.com",
@@ -290,7 +394,7 @@ func TestGreenhouseBoardPollIngestsJobsAndClosesRemovedOnes(t *testing.T) {
 func TestLeverEUBoardPollMapsPostings(t *testing.T) {
 	fixture := newJobSourceFixture(t)
 	source := fixture.createSource(t, map[string]any{
-		"atsType":       "LEVER",
+		"boardType":     "LEVER",
 		"boardToken":    "globex",
 		"region":        "EU",
 		"companyName":   "Globex",
@@ -314,7 +418,7 @@ func TestLeverEUBoardPollMapsPostings(t *testing.T) {
 func TestJobSourcesCanBePausedAndDeleted(t *testing.T) {
 	fixture := newJobSourceFixture(t)
 	source := fixture.createSource(t, map[string]any{
-		"atsType":       "GREENHOUSE",
+		"boardType":     "GREENHOUSE",
 		"boardToken":    "acme",
 		"companyName":   "Acme",
 		"companyDomain": "acme.com",
@@ -408,7 +512,7 @@ func TestNaukriAndWellfoundJobsCanBeIngested(t *testing.T) {
 func TestAshbyBoardPollSkipsUnlistedJobs(t *testing.T) {
 	fixture := newJobSourceFixture(t)
 	source := fixture.createSource(t, map[string]any{
-		"atsType":       "ASHBY",
+		"boardType":     "ASHBY",
 		"boardToken":    "initech",
 		"companyName":   "Initech",
 		"companyDomain": "initech.com",
@@ -427,7 +531,7 @@ func TestAshbyBoardPollSkipsUnlistedJobs(t *testing.T) {
 func TestSmartRecruitersBoardPollReadsOnlyNewPostings(t *testing.T) {
 	fixture := newJobSourceFixture(t)
 	source := fixture.createSource(t, map[string]any{
-		"atsType":       "SMARTRECRUITERS",
+		"boardType":     "SMARTRECRUITERS",
 		"boardToken":    "Hooli",
 		"companyName":   "Hooli",
 		"companyDomain": "hooli.com",
@@ -456,4 +560,195 @@ func TestSmartRecruitersBoardPollReadsOnlyNewPostings(t *testing.T) {
 	assert.Zero(t, secondResult.Closed, "postings kept but not re-read must stay active")
 	assert.Equal(t, int32(2), fixture.stub.smartRecruitersDetails.Load(),
 		"known postings are not fetched again")
+}
+
+// careerTransport sends every career-site request to the TLS stub, whatever host it names.
+func (s *boardsStub) careerTransport() http.RoundTripper {
+	stubURL, _ := url.Parse(s.careerServer.URL)
+	inner := s.careerServer.Client().Transport
+
+	return roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		redirected := request.Clone(request.Context())
+		redirected.URL.Host = stubURL.Host
+
+		return inner.RoundTrip(redirected)
+	})
+}
+
+type roundTripFunc func(request *http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(
+	request *http.Request,
+) (*http.Response, error) {
+	return f(request)
+}
+
+func (f jobSourceFixture) sourceJobColumn(
+	t *testing.T,
+	sourceID, externalID, column string,
+) string {
+	t.Helper()
+
+	var value string
+	require.NoError(t, f.deps.Postgres.GetPool().QueryRow(context.Background(),
+		`SELECT COALESCE(`+column+`::text, '') FROM job_postings WHERE job_source_id = $1 AND external_job_id = $2`,
+		sourceID, externalID,
+	).
+		Scan(&value))
+
+	return value
+}
+
+func TestJobSourceRequestsAreValidatedPerBoardType(t *testing.T) {
+	fixture := newJobSourceFixture(t)
+
+	for name, body := range map[string]map[string]any{
+		"company board without a company": {"boardType": "GREENHOUSE", "boardToken": "acme"},
+		"search without a query":          {"boardType": "ADZUNA", "boardToken": "in"},
+		"search with a company": {
+			"boardType": "ADZUNA", "boardToken": "in", "searchQuery": "golang",
+			"companyName": "Acme", "companyDomain": "acme.com",
+		},
+		"unsupported search country": {"boardType": "ADZUNA", "boardToken": "xx", "searchQuery": "golang"},
+		"query on a company board": {
+			"boardType": "LEVER", "boardToken": "acme", "searchQuery": "go",
+			"companyName": "Acme", "companyDomain": "acme.com",
+		},
+		"malformed workday site": {
+			"boardType": "WORKDAY", "boardToken": "initech", "companyName": "Initech", "companyDomain": "initech.com",
+		},
+		"career page on a private host": {
+			"boardType": "CAREER_PAGE", "boardToken": "https://localhost/jobs",
+			"companyName": "Initech", "companyDomain": "initech.com",
+		},
+	} {
+		rejected := helpers.Do(
+			t,
+			fixture.router,
+			http.MethodPost,
+			jobSourcesPath,
+			body,
+			bearer(fixture.adminToken),
+		)
+		assert.Equal(
+			t,
+			http.StatusBadRequest,
+			rejected.Recorder.Code,
+			"%s: %s",
+			name,
+			string(rejected.Body),
+		)
+	}
+}
+
+func TestWorkdayBoardPollReadsEachNewPosting(t *testing.T) {
+	fixture := newJobSourceFixture(t)
+	source := fixture.createSource(t, map[string]any{
+		"boardType":     "WORKDAY",
+		"boardToken":    "Initech.wd1/Careers",
+		"companyName":   "Initech",
+		"companyDomain": "initech.com",
+	})
+	assert.Equal(t, "initech.wd1/careers", source.BoardToken)
+
+	polled := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, polled.Recorder.Code, string(polled.Body))
+	assert.Equal(t, 2, helpers.DecodeData[jobTypes.PollJobSourceResult](t, polled).Ingested)
+
+	jobs := fixture.sourceJobs(t, source.ID)
+	job := jobs["/job/Austin/Platform-Engineer_R1"]
+	assert.Equal(t, "Work on Platform Engineer.", job.JobDescription)
+	assert.Equal(
+		t,
+		"https://initech.wd1.myworkdayjobs.com/careers/job/Austin/Platform-Engineer_R1",
+		job.ExternalURL,
+	)
+	assert.Equal(t, "WORKDAY", job.Source)
+
+	again := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, again.Recorder.Code, string(again.Body))
+	assert.Equal(t, 2, helpers.DecodeData[jobTypes.PollJobSourceResult](t, again).Unchanged)
+}
+
+func TestAdzunaSearchPollResolvesCompanyDomainsOnce(t *testing.T) {
+	fixture := newJobSourceFixture(t)
+	enrichment := helpers.NewEnrichmentStub(t)
+	enrichment.Set(func(stub *helpers.EnrichmentStub) {
+		stub.Organizations["Initrode Ltd"] = []map[string]any{
+			{"name": "Initrode Labs", "primary_domain": "initrode-labs.com"},
+			{"name": "Initrode Limited", "primary_domain": "initrode.com"},
+		}
+	})
+
+	fixture.deps.EnrichmentProviders = providers.NewProviderRegistry(
+		enrichment.Policies(),
+		config.GetSignalHireCallbackURL(),
+	)
+	require.NoError(t, fixture.deps.Wire())
+	fixture.router = routes.NewRoutes(fixture.deps)
+
+	t.Cleanup(func() {
+		fixture.deps.EnrichmentProviders = []providers.Provider{}
+		require.NoError(t, fixture.deps.Wire())
+	})
+
+	source := fixture.createSource(t, map[string]any{
+		"boardType":   "ADZUNA",
+		"boardToken":  "IN",
+		"searchQuery": "golang",
+	})
+
+	first := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, first.Recorder.Code, string(first.Body))
+	firstResult := helpers.DecodeData[jobTypes.PollJobSourceResult](t, first)
+	assert.Equal(t, 1, firstResult.Ingested)
+	assert.Equal(t, 1, firstResult.Skipped, "a company whose domain is unknown cannot be ingested")
+
+	assert.Equal(t, "initrode.com", fixture.sourceJobColumn(t, source.ID, "az-1", "company_domain"))
+	assert.Equal(t, "Go Developer", fixture.sourceJobColumn(t, source.ID, "az-1", "job_title"))
+	assert.Equal(t, "INR", fixture.sourceJobColumn(t, source.ID, "az-1", "salary_currency"))
+	assert.Equal(t, "ADZUNA", fixture.sourceJobColumn(t, source.ID, "az-1", "source"))
+	assert.Equal(t, 2, enrichment.Calls("apollo.organizations"))
+
+	second := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, second.Recorder.Code, string(second.Body))
+	assert.Equal(t, 2, enrichment.Calls("apollo.organizations"),
+		"resolved and unresolvable companies are both cached")
+	assert.Zero(t, helpers.DecodeData[jobTypes.PollJobSourceResult](t, second).Closed)
+}
+
+func TestCareerPageSitemapPollReadsJobPostingDataAndRespectsRobots(t *testing.T) {
+	fixture := newJobSourceFixture(t)
+	source := fixture.createSource(t, map[string]any{
+		"boardType":     "CAREER_PAGE",
+		"boardToken":    "https://careers.initech.com/sitemap.xml",
+		"searchQuery":   "/jobs/",
+		"companyName":   "Initech",
+		"companyDomain": "initech.com",
+	})
+
+	polled := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, polled.Recorder.Code, string(polled.Body))
+	assert.Equal(t, 2, helpers.DecodeData[jobTypes.PollJobSourceResult](t, polled).Ingested)
+	assert.Equal(t, int32(2), fixture.stub.careerPageReads.Load(),
+		"pages outside the filter or disallowed by robots.txt are not read")
+
+	jobs := fixture.sourceJobs(t, source.ID)
+	require.Len(t, jobs, 2)
+
+	backend := jobs["https://careers.initech.com/jobs/1"]
+	assert.Equal(t, "Backend Engineer", backend.JobTitle)
+	assert.Equal(t, "Design APIs.", backend.JobDescription)
+	assert.Equal(t, "Austin, TX, US", *backend.Location)
+	assert.Equal(t, "DIRECT", backend.Source)
+	assert.Equal(t, "190000.00",
+		fixture.sourceJobColumn(t, source.ID, "https://careers.initech.com/jobs/1", "salary_max"))
+
+	support := jobs["https://careers.initech.com/jobs/2"]
+	assert.Equal(t, "Remote", *support.Location)
+	assert.Equal(t, "https://careers.initech.com/jobs/2", support.ExternalURL)
+
+	again := fixture.poll(t, source.ID)
+	require.Equal(t, http.StatusOK, again.Recorder.Code, string(again.Body))
+	assert.Equal(t, int32(2), fixture.stub.careerPageReads.Load(), "known pages are not read again")
 }
