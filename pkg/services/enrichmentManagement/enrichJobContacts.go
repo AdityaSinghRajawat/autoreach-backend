@@ -21,18 +21,10 @@ func (s *EnrichmentService) EnrichJobContacts(
 	targetRoles []string,
 ) (*enrichmentTypes.EnrichJobContactsResult, *config.CustomError) {
 	job, err := s.jobPostingRepo.FindByID(ctx, jobID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("enrich job contacts: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if job == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("enrich job contacts: %w", config.ErrJobNotFound),
-			config.GetErrCodeNotFound(),
-		)
+	job, customErr := config.RequireFound("enrich job contacts", job, err, config.ErrJobNotFound)
+	if customErr != nil {
+		return nil, customErr
 	}
 
 	result := &enrichmentTypes.EnrichJobContactsResult{JobID: jobID}

@@ -2,7 +2,6 @@ package outreachManagement
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	outreachTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/outreachManagement"
@@ -31,19 +30,6 @@ func (s *OutreachService) findCampaign(
 	candidateID, campaignID string,
 ) (*outreachModel.Campaign, *config.CustomError) {
 	campaign, err := s.campaignRepo.FindByCandidate(ctx, candidateID, campaignID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("get campaign: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if campaign == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("get campaign: %w", config.ErrCampaignNotFound),
-			config.GetErrCodeNotFound(),
-		)
-	}
-
-	return campaign, nil
+	return config.RequireFound("get campaign", campaign, err, config.ErrCampaignNotFound)
 }

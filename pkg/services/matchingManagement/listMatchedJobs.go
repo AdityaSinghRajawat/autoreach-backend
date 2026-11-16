@@ -72,18 +72,12 @@ func (s *MatchingService) resolveMinScore(
 	}
 
 	candidate, err := s.candidateRepo.FindByID(ctx, candidateID)
-	if err != nil {
-		return 0, config.NewCustomError(
-			fmt.Errorf("list matched jobs: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if candidate == nil {
-		return 0, config.NewCustomError(
-			fmt.Errorf("list matched jobs: %w", config.ErrCandidateNotFound),
-			config.GetErrCodeNotFound(),
-		)
+	candidate, customErr := config.RequireFound(
+		"list matched jobs", candidate, err, config.ErrCandidateNotFound,
+	)
+	if customErr != nil {
+		return 0, customErr
 	}
 
 	return candidate.MinMatchScore, nil

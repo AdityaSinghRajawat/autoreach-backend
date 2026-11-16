@@ -2,7 +2,6 @@ package candidateManagement
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
@@ -17,18 +16,13 @@ func (s *CandidateService) DeleteResume(
 	}
 
 	deleted, err := s.resumeRepo.Delete(ctx, candidateID, resumeID)
-	if err != nil {
-		return config.NewCustomError(
-			fmt.Errorf("delete resume: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
-
-	if !deleted {
-		return config.NewCustomError(
-			fmt.Errorf("delete resume: %w", config.ErrResumeNotFound),
-			config.GetErrCodeNotFound(),
-		)
+	if customErr := config.RequireAffected(
+		"delete resume",
+		deleted,
+		err,
+		config.ErrResumeNotFound,
+	); customErr != nil {
+		return customErr
 	}
 
 	s.deleteStoredFile(ctx, resume.StorageKey)

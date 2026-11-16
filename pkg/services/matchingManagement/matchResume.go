@@ -14,18 +14,15 @@ func (s *MatchingService) MatchResume(
 	resumeID string,
 ) (*matchingTypes.MatchResult, *config.CustomError) {
 	embedding, err := s.resumeRepo.FindEmbedding(ctx, resumeID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("match resume: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if embedding == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("match resume: %w", config.ErrResumeNotReady),
-			config.GetErrCodeNotFound(),
-		)
+	embedding, customErr := config.RequireFound(
+		"match resume",
+		embedding,
+		err,
+		config.ErrResumeNotReady,
+	)
+	if customErr != nil {
+		return nil, customErr
 	}
 
 	if !embedding.IsActive {
@@ -33,18 +30,15 @@ func (s *MatchingService) MatchResume(
 	}
 
 	candidate, err := s.candidateRepo.FindByID(ctx, embedding.CandidateID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("match resume: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if candidate == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("match resume: %w", config.ErrCandidateNotFound),
-			config.GetErrCodeNotFound(),
-		)
+	candidate, customErr = config.RequireFound(
+		"match resume",
+		candidate,
+		err,
+		config.ErrCandidateNotFound,
+	)
+	if customErr != nil {
+		return nil, customErr
 	}
 
 	var similarities []matchingTypes.JobSimilarity

@@ -2,7 +2,6 @@ package applicationManagement
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	applicationTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/applicationManagement"
@@ -31,19 +30,6 @@ func (s *ApplicationService) findApplication(
 	candidateID, applicationID string,
 ) (*applicationModel.Application, *config.CustomError) {
 	application, err := s.applicationRepo.FindByCandidate(ctx, candidateID, applicationID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("get application: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if application == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("get application: %w", config.ErrApplicationNotFound),
-			config.GetErrCodeNotFound(),
-		)
-	}
-
-	return application, nil
+	return config.RequireFound("get application", application, err, config.ErrApplicationNotFound)
 }

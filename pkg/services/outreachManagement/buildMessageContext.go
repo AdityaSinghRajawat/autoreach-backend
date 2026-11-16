@@ -17,22 +17,19 @@ func (s *OutreachService) messageContext(
 	contact *enrichmentModel.CompanyContact,
 ) (outreachTypes.MessageContext, *config.CustomError) {
 	candidate, err := s.candidateRepo.FindByID(ctx, candidateID)
-	if err != nil || candidate == nil {
-		return outreachTypes.MessageContext{}, config.NewCustomError(
-			fmt.Errorf(
-				"load message context: candidate: %w",
-				errOrNotFound(err, config.ErrCandidateNotFound),
-			),
-			config.GetErrCodeNotFound(),
-		)
+
+	candidate, customErr := config.RequireFound(
+		"load message context", candidate, err, config.ErrCandidateNotFound,
+	)
+	if customErr != nil {
+		return outreachTypes.MessageContext{}, customErr
 	}
 
 	job, err := s.jobPostingRepo.FindByID(ctx, jobID)
-	if err != nil || job == nil {
-		return outreachTypes.MessageContext{}, config.NewCustomError(
-			fmt.Errorf("load message context: job: %w", errOrNotFound(err, config.ErrJobNotFound)),
-			config.GetErrCodeNotFound(),
-		)
+
+	job, customErr = config.RequireFound("load message context", job, err, config.ErrJobNotFound)
+	if customErr != nil {
+		return outreachTypes.MessageContext{}, customErr
 	}
 
 	skills, err := s.activeResumeSkills(ctx, candidateID)

@@ -16,21 +16,13 @@ func (s *OutreachService) getChannelAccount(
 	candidateID, accountID string,
 ) (*outreachModel.ChannelAccount, *config.CustomError) {
 	account, err := s.channelAccountRepo.FindByCandidate(ctx, candidateID, accountID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("get channel account: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if account == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("get channel account: %w", config.ErrChannelAccountNotFound),
-			config.GetErrCodeNotFound(),
-		)
-	}
-
-	return account, nil
+	return config.RequireFound(
+		"get channel account",
+		account,
+		err,
+		config.ErrChannelAccountNotFound,
+	)
 }
 
 func (s *OutreachService) toEmailAccount(

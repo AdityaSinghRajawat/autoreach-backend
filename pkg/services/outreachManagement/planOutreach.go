@@ -238,11 +238,3 @@ func (s *OutreachService) isContactSuppressed(
 
 	return s.suppressionRepo.IsSuppressed(ctx, candidateID, *contact.WorkEmail)
 }
-
-func errOrNotFound(err, notFound error) error {
-	if err != nil {
-		return err
-	}
-
-	return notFound
-}

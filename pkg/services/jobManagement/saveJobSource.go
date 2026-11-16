@@ -49,21 +49,8 @@ func (s *JobService) findJobSource(
 	sourceID string,
 ) (*jobModel.JobSource, *config.CustomError) {
 	source, err := s.jobSourceRepo.FindByID(ctx, sourceID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("find job source: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if source == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("find job source: %w", config.ErrJobSourceNotFound),
-			config.GetErrCodeNotFound(),
-		)
-	}
-
-	return source, nil
+	return config.RequireFound("find job source", source, err, config.ErrJobSourceNotFound)
 }
 
 func (s *JobService) publishPollJobSource(ctx context.Context, sourceID string) {

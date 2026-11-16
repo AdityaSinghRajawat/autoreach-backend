@@ -16,18 +16,10 @@ func (s *ApplicationService) CreateApplication(
 	request applicationTypes.CreateApplicationRequest,
 ) (*applicationModel.Application, *config.CustomError) {
 	job, err := s.jobPostingRepo.FindByID(ctx, request.JobID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("create application: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if job == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("create application: %w", config.ErrJobNotFound),
-			config.GetErrCodeNotFound(),
-		)
+	job, customErr := config.RequireFound("create application", job, err, config.ErrJobNotFound)
+	if customErr != nil {
+		return nil, customErr
 	}
 
 	score, err := s.applicationRepo.MatchScore(ctx, candidateID, job.ID)

@@ -1,6 +1,9 @@
 package config
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrMissingDependency     = errors.New("missing dependency")
@@ -143,6 +146,35 @@ type CustomError struct {
 
 func NewCustomError(err error, errCode CustomErrorCode) *CustomError {
 	return &CustomError{Err: err, ErrCode: errCode}
+}
+
+// RequireFound turns a lookup into 500 when it failed and 404 when it found nothing.
+func RequireFound[T any](operation string, entity *T, err, notFound error) (*T, *CustomError) {
+	if err != nil {
+		return nil, NewCustomError(
+			fmt.Errorf("%s: %w", operation, err),
+			GetErrCodeInternalServerError(),
+		)
+	}
+
+	if entity == nil {
+		return nil, NewCustomError(fmt.Errorf("%s: %w", operation, notFound), GetErrCodeNotFound())
+	}
+
+	return entity, nil
+}
+
+// RequireAffected is RequireFound for writes that report whether a row matched.
+func RequireAffected(operation string, affected bool, err, notFound error) *CustomError {
+	if err != nil {
+		return NewCustomError(fmt.Errorf("%s: %w", operation, err), GetErrCodeInternalServerError())
+	}
+
+	if !affected {
+		return NewCustomError(fmt.Errorf("%s: %w", operation, notFound), GetErrCodeNotFound())
+	}
+
+	return nil
 }
 
 func NewValidationError(err error, details []ErrorDetail) *CustomError {

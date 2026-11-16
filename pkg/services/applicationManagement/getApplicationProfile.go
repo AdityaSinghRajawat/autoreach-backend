@@ -35,21 +35,8 @@ func (s *ApplicationService) findCandidate(
 	candidateID string,
 ) (*candidateModel.Candidate, *config.CustomError) {
 	candidate, err := s.candidateRepo.FindByID(ctx, candidateID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("find candidate: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if candidate == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("find candidate: %w", config.ErrCandidateNotFound),
-			config.GetErrCodeNotFound(),
-		)
-	}
-
-	return candidate, nil
+	return config.RequireFound("find candidate", candidate, err, config.ErrCandidateNotFound)
 }
 
 func applicationProfileOf(

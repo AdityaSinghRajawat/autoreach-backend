@@ -66,21 +66,8 @@ func (s *OutreachService) unsubscribeTarget(
 	}
 
 	message, err := s.messageRepo.FindByID(ctx, messageID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("unsubscribe: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if message == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("unsubscribe: %w", config.ErrMessageNotFound),
-			config.GetErrCodeNotFound(),
-		)
-	}
-
-	return message, nil
+	return config.RequireFound("unsubscribe", message, err, config.ErrMessageNotFound)
 }
 
 func unsubscribeHeader(message *outreachModel.Message, senderAddress string) (string, bool) {

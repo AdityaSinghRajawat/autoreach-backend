@@ -160,18 +160,13 @@ func (s *OutreachService) reachableContact(
 	messages []*outreachModel.Message,
 ) (*enrichmentModel.CompanyContact, *config.CustomError) {
 	matched, err := s.jobMatchRepo.Exists(ctx, candidateID, request.JobID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("find outreach contact: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
-
-	if !matched {
-		return nil, config.NewCustomError(
-			fmt.Errorf("find outreach contact: %w", config.ErrJobNotMatched),
-			config.GetErrCodeNotFound(),
-		)
+	if customErr := config.RequireAffected(
+		"find outreach contact",
+		matched,
+		err,
+		config.ErrJobNotMatched,
+	); customErr != nil {
+		return nil, customErr
 	}
 
 	contacts, err := s.companyContactRepo.ListByJob(ctx, request.JobID)

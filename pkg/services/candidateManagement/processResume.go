@@ -19,18 +19,15 @@ func (s *CandidateService) ProcessResume(
 	resumeID string,
 ) (*candidateTypes.ProcessResumeResult, *config.CustomError) {
 	resume, err := s.resumeRepo.FindByID(ctx, resumeID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("process resume: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if resume == nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("process resume: %w", config.ErrResumeNotFound),
-			config.GetErrCodeNotFound(),
-		)
+	resume, customErr := config.RequireFound(
+		"process resume",
+		resume,
+		err,
+		config.ErrResumeNotFound,
+	)
+	if customErr != nil {
+		return nil, customErr
 	}
 
 	if resume.IsEmbedded() {

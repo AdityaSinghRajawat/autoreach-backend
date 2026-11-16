@@ -17,18 +17,8 @@ func (s *DashboardService) countCandidate(
 	}
 
 	counts, err := s.metricsRepo.CountForCandidate(ctx, candidateID)
-	if err != nil {
-		return nil, config.NewCustomError(
-			fmt.Errorf("count candidate metrics: %w", err),
-			config.GetErrCodeInternalServerError(),
-		)
-	}
 
-	if counts == nil {
-		return nil, candidateNotFound()
-	}
-
-	return counts, nil
+	return config.RequireFound("count candidate metrics", counts, err, config.ErrCandidateNotFound)
 }
 
 func candidateNotFound() *config.CustomError {
