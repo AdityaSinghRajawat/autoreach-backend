@@ -232,3 +232,11 @@ func TestLocalStorageIsTheDefaultDriver(t *testing.T) {
 		"the SDK needs a region even for S3-compatible services",
 	)
 }
+
+func TestPDFThatInflatesPastTheLimitIsRefusedBeforeParsing(t *testing.T) {
+	bomb := helpers.BuildPDFBomb(t, int(config.GetPDFMaxDecodedBytes())+1)
+	require.Less(t, len(bomb), 1<<20, "the file itself is small")
+
+	_, err := utils.ExtractPDFText(bomb, 10_000)
+	require.ErrorIs(t, err, config.ErrDocumentTooLarge)
+}

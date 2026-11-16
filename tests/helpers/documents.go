@@ -3,6 +3,7 @@ package helpers
 import (
 	"archive/zip"
 	"bytes"
+	"compress/zlib"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -26,12 +27,36 @@ func BuildPDF(t *testing.T, lines ...string) []byte {
 
 	stream.WriteString("ET\n")
 
+	return assemblePDF(
+		fmt.Sprintf("<< /Length %d >>\nstream\n%sendstream", stream.Len(), stream.String()),
+	)
+}
+
+// BuildPDFBomb is a small PDF whose page content inflates to decodedBytes.
+func BuildPDFBomb(t *testing.T, decodedBytes int) []byte {
+	t.Helper()
+
+	compressed := bytes.Buffer{}
+	writer := zlib.NewWriter(&compressed)
+
+	_, err := writer.Write(make([]byte, decodedBytes))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	return assemblePDF(fmt.Sprintf(
+		"<< /Length %d /Filter /FlateDecode >>\nstream\n%s\nendstream",
+		compressed.Len(),
+		compressed.String(),
+	))
+}
+
+func assemblePDF(contents string) []byte {
 	objects := []string{
 		"<< /Type /Catalog /Pages 2 0 R >>",
 		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
 		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R " +
 			"/Resources << /Font << /F1 5 0 R >> >> >>",
-		fmt.Sprintf("<< /Length %d >>\nstream\n%sendstream", stream.Len(), stream.String()),
+		contents,
 		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
 	}
 
