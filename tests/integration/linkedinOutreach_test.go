@@ -243,12 +243,9 @@ func TestLinkedinInviteWaitsForTheCandidateAndTheMessageWaitsForAcceptance(t *te
 		fixture.confirm(t, messages[0].ID, "ACCEPTED", http.StatusOK).Status)
 
 	accepted := fixture.storedContact(t, fixture.contactID)
-	assert.NotNil(
-		t,
-		accepted.LinkedinConfirmedAt,
-		"an accepted invite confirms the LinkedIn profile",
-	)
-	assert.NotNil(t, accepted.LastInteractionAt)
+	assert.Nil(t, accepted.LinkedinConfirmedAt,
+		"one candidate's confirmation does not change the contact everyone shares")
+	assert.Len(t, fixture.contactSignals(t, fixture.contactID), 1)
 
 	_, err := fixture.deps.Postgres.GetPool().Exec(ctx,
 		"UPDATE outreach_messages SET scheduled_at = NOW() - INTERVAL '1 minute' WHERE id = $1", messages[1].ID)

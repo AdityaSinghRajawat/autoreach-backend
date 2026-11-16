@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
-	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -41,19 +40,15 @@ func (s *OutreachService) recordReply(
 				return err
 			}
 
-			return s.updateContact(
-				ctx,
-				message.ContactID,
-				func(contact *enrichmentModel.CompanyContact) {
-					if message.IsLinkedin() {
-						contact.RecordLinkedinResponse(now)
+			signalType, address := modelHelpers.ContactSignalReplied, replyAddress
+			if message.IsLinkedin() {
+				signalType, address = modelHelpers.ContactSignalLinkedinResponded, ""
+			}
 
-						return
-					}
+			_, err := s.reportContactSignal(ctx, message.CandidateID, message.ContactID,
+				signalType, address, now)
 
-					contact.RecordReply(replyAddress, now)
-				},
-			)
+			return err
 		},
 	)
 }

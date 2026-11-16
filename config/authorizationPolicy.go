@@ -77,6 +77,7 @@ const (
 	PermissionSuppressionCreate      Permission = "suppression:create"
 	PermissionSuppressionDelete      Permission = "suppression:delete"
 	PermissionContactErase           Permission = "contact:erase"
+	PermissionContactUpdate          Permission = "contact:update"
 )
 
 var permissionCatalogueI = []Permission{
@@ -123,6 +124,7 @@ var permissionCatalogueI = []Permission{
 	PermissionSuppressionCreate,
 	PermissionSuppressionDelete,
 	PermissionContactErase,
+	PermissionContactUpdate,
 }
 
 var accessScopesI = []AccessScope{ScopeOwn, ScopeAny}

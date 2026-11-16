@@ -29,6 +29,7 @@ const (
 	TableApplications          Table = "applications"
 	TableJobSources            Table = "job_sources"
 	TableCompanyDomains        Table = "company_domains"
+	TableContactSignals        Table = "contact_signals"
 	TableActivityEvents        Table = "activity_events"
 )
 
@@ -53,6 +54,7 @@ var declaredTables = []Table{
 	TableApplications,
 	TableJobSources,
 	TableCompanyDomains,
+	TableContactSignals,
 }
 
 // declaredViews are read-only views; their names can be overridden like tables, but they hold no rows.

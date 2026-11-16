@@ -16,5 +16,6 @@ func GetUUIDPathParams() []string {
 		GetJobSourceIDParam(),
 		GetSuppressionIDParam(),
 		GetContactIDParam(),
+		GetContactSignalIDParam(),
 	}
 }

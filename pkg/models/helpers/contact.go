@@ -57,6 +57,14 @@ type ContactChange struct {
 	ChangedAt time.Time           `json:"changedAt"`
 }
 
+type ContactSignalType string
+
+const (
+	ContactSignalBounced           ContactSignalType = "BOUNCED"
+	ContactSignalReplied           ContactSignalType = "REPLIED"
+	ContactSignalLinkedinResponded ContactSignalType = "LINKEDIN_RESPONDED"
+)
+
 func NormalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }

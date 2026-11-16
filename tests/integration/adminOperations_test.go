@@ -17,6 +17,8 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	adminTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/adminManagement"
+	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
+	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
@@ -368,6 +370,18 @@ func TestStaleContactsAreAnonymizedButTheirHistoryIsKept(t *testing.T) {
 		WHERE contact_id = (SELECT id FROM company_contacts WHERE work_email = 'riley@acme.com')`)
 	require.NoError(t, err)
 
+	var staleContactID string
+
+	require.NoError(t, pool.QueryRow(
+		ctx,
+		`SELECT id FROM company_contacts WHERE work_email = 'riley@acme.com'`,
+	).Scan(&staleContactID))
+	fixture.seedSignalFromAnotherCandidate(t, enrichmentModel.ContactSignal{
+		ContactID:  staleContactID,
+		SignalType: modelHelpers.ContactSignalBounced,
+		Address:    "riley@acme.com",
+	})
+
 	untouched, customErr := fixture.deps.Services.Outreach.AnonymizeStaleContacts(ctx, 0)
 	require.Nil(t, customErr)
 	assert.Zero(t, untouched, "retention is off unless a period is set")
@@ -393,6 +407,8 @@ func TestStaleContactsAreAnonymizedButTheirHistoryIsKept(t *testing.T) {
 	assert.Equal(t, 1, named, "a contact messaged recently keeps their details")
 	assert.Equal(t, 3, contacts, "rows are kept")
 	assert.Equal(t, 2, blankMessages, "the text sent to anonymized contacts is removed")
+	assert.Empty(t, fixture.contactSignals(t, staleContactID),
+		"signals naming an anonymized contact's address are deleted")
 
 	assert.Equal(t, before, fixture.metricsFor(t), "dashboard history is unchanged")
 }

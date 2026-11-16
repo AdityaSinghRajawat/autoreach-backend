@@ -25,6 +25,7 @@ type Repositories struct {
 	JobPosting        *jobRepo.JobPostingRepo
 	JobMatch          *matchingRepo.JobMatchRepo
 	CompanyContact    *enrichmentRepo.CompanyContactRepo
+	ContactSignal     *enrichmentRepo.ContactSignalRepo
 	EnrichmentRequest *enrichmentRepo.EnrichmentRequestRepo
 	ChannelAccount    *outreachRepo.ChannelAccountRepo
 	Template          *outreachRepo.TemplateRepo
@@ -71,6 +72,11 @@ func (d *Dependencies) initRepositories() error {
 	}
 
 	companyContactRepo, err := enrichmentRepo.NewCompanyContactRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
+	contactSignalRepo, err := enrichmentRepo.NewContactSignalRepo(d.Postgres)
 	if err != nil {
 		return err
 	}
@@ -148,6 +154,7 @@ func (d *Dependencies) initRepositories() error {
 		OutreachEvent:     eventRepo,
 		Suppression:       suppressionRepo,
 		CompanyContact:    companyContactRepo,
+		ContactSignal:     contactSignalRepo,
 		EnrichmentRequest: enrichmentRequestRepo,
 		User:              userRepo,
 		RefreshToken:      refreshTokenRepo,

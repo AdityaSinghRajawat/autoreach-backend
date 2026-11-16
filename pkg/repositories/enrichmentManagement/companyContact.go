@@ -33,6 +33,7 @@ type CompanyContactRepo struct {
 	jobContactsTable      string
 	jobMatchesTable       string
 	outreachMessagesTable string
+	contactSignalsTable   string
 }
 
 func NewCompanyContactRepo(postgres *db.PostgresConn) (*CompanyContactRepo, error) {
@@ -46,6 +47,7 @@ func NewCompanyContactRepo(postgres *db.PostgresConn) (*CompanyContactRepo, erro
 		jobContactsTable:      config.GetTableName(config.TableJobContacts),
 		jobMatchesTable:       config.GetTableName(config.TableJobMatches),
 		outreachMessagesTable: config.GetTableName(config.TableOutreachMessages),
+		contactSignalsTable:   config.GetTableName(config.TableContactSignals),
 	}, nil
 }
 
@@ -333,6 +335,9 @@ func (r *CompanyContactRepo) AnonymizeStale(
 		redacted_messages AS (
 			UPDATE `+r.outreachMessagesTable+` SET subject = NULL, body_content = '', linkedin_note = NULL
 			WHERE contact_id IN (SELECT id FROM stale)
+		),
+		forgotten_signals AS (
+			DELETE FROM `+r.contactSignalsTable+` WHERE contact_id IN (SELECT id FROM stale)
 		)
 		UPDATE `+r.companyContactsTable+` SET
 			full_name = $3, work_email = NULL, phone_number = NULL, linkedin_url = NULL,

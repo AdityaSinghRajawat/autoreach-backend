@@ -108,4 +108,14 @@ func LoadAdminRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 		middlewares.Authorize(config.PermissionContactErase),
 		outreachHandler.EraseContact,
 	)
+	adminGroup.GET(
+		"/contacts/:"+config.GetContactIDParam()+"/signals",
+		middlewares.Authorize(config.PermissionContactRead),
+		outreachHandler.ListContactSignals,
+	)
+	adminGroup.POST(
+		"/contacts/:"+config.GetContactIDParam()+"/signals/:"+config.GetContactSignalIDParam()+"/apply",
+		middlewares.Authorize(config.PermissionContactUpdate),
+		outreachHandler.ApplyContactSignal,
+	)
 }

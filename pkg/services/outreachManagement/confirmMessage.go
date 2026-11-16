@@ -6,7 +6,6 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	outreachTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/outreachManagement"
-	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -51,13 +50,10 @@ func (s *OutreachService) ConfirmMessage(
 
 		return message, s.closeConversation(ctx, message, modelHelpers.OutreachEventAccepted,
 			func(ctx context.Context) error {
-				return s.updateContact(
-					ctx,
-					message.ContactID,
-					func(contact *enrichmentModel.CompanyContact) {
-						contact.RecordLinkedinResponse(now)
-					},
-				)
+				_, err := s.reportContactSignal(ctx, message.CandidateID, message.ContactID,
+					modelHelpers.ContactSignalLinkedinResponded, "", now)
+
+				return err
 			})
 	default:
 		message.MarkSent()

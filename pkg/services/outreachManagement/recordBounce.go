@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
-	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -25,6 +24,8 @@ func (s *OutreachService) recordBounce(
 	message.Close(modelHelpers.OutreachStatusBounced, config.GetBounceReason())
 	message.UpdateTimestamp()
 
+	promoted := false
+
 	customErr := s.closeConversation(ctx, message, modelHelpers.OutreachEventBounced,
 		func(ctx context.Context) error {
 			if err := s.messageRepo.CancelForContact(
@@ -36,28 +37,32 @@ func (s *OutreachService) recordBounce(
 				return err
 			}
 
-			if err := s.suppressContact(
+			contact, err := s.companyContactRepo.FindByID(ctx, message.ContactID)
+			if err != nil || contact == nil || contact.WorkEmail == nil {
+				return err
+			}
+
+			if err := s.suppressAddress(
 				ctx,
-				nil,
-				message.ContactID,
+				&message.CandidateID,
+				*contact.WorkEmail,
 				modelHelpers.SuppressionReasonBounced,
 			); err != nil {
 				return err
 			}
 
-			return s.updateContact(
-				ctx,
-				message.ContactID,
-				func(contact *enrichmentModel.CompanyContact) {
-					contact.RecordBounce(now)
-				},
-			)
+			promoted, err = s.reportContactSignal(ctx, message.CandidateID, message.ContactID,
+				modelHelpers.ContactSignalBounced, *contact.WorkEmail, now)
+
+			return err
 		})
 	if customErr != nil {
 		return customErr
 	}
 
-	s.publishContactRefresh(ctx, message.ContactID)
+	if promoted {
+		s.publishContactRefresh(ctx, message.ContactID)
+	}
 
 	return nil
 }

@@ -25,6 +25,7 @@ type OutreachServiceDependencies struct {
 	CandidateRepo      *candidateRepo.CandidateRepo
 	ResumeRepo         *candidateRepo.ResumeRepo
 	CompanyContactRepo *enrichmentRepo.CompanyContactRepo
+	ContactSignalRepo  *enrichmentRepo.ContactSignalRepo
 	JobPostingRepo     *jobRepo.JobPostingRepo
 	JobMatchRepo       *matchingRepo.JobMatchRepo
 	TransactionManager db.TransactionManager
@@ -44,6 +45,7 @@ type OutreachService struct {
 	candidateRepo      *candidateRepo.CandidateRepo
 	resumeRepo         *candidateRepo.ResumeRepo
 	companyContactRepo *enrichmentRepo.CompanyContactRepo
+	contactSignalRepo  *enrichmentRepo.ContactSignalRepo
 	jobPostingRepo     *jobRepo.JobPostingRepo
 	jobMatchRepo       *matchingRepo.JobMatchRepo
 	transactionManager db.TransactionManager
@@ -63,6 +65,7 @@ func NewOutreachService(dependencies OutreachServiceDependencies) (*OutreachServ
 		dependencies.CandidateRepo == nil ||
 		dependencies.ResumeRepo == nil ||
 		dependencies.CompanyContactRepo == nil ||
+		dependencies.ContactSignalRepo == nil ||
 		dependencies.JobPostingRepo == nil ||
 		dependencies.JobMatchRepo == nil ||
 		dependencies.TransactionManager == nil ||
@@ -82,6 +85,7 @@ func NewOutreachService(dependencies OutreachServiceDependencies) (*OutreachServ
 		candidateRepo:      dependencies.CandidateRepo,
 		resumeRepo:         dependencies.ResumeRepo,
 		companyContactRepo: dependencies.CompanyContactRepo,
+		contactSignalRepo:  dependencies.ContactSignalRepo,
 		jobPostingRepo:     dependencies.JobPostingRepo,
 		jobMatchRepo:       dependencies.JobMatchRepo,
 		transactionManager: dependencies.TransactionManager,

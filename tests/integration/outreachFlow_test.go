@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -212,8 +213,9 @@ func TestCampaignEmailIsSentAndAReplyPausesTheFollowUps(t *testing.T) {
 	assert.NotNil(t, messages[0].RepliedAt)
 
 	replied := fixture.storedContact(t, fixture.contactID)
-	assert.NotNil(t, replied.EmailConfirmedAt, "a reply confirms the address works")
-	assert.NotNil(t, replied.LastInteractionAt)
+	assert.Nil(t, replied.EmailConfirmedAt,
+		"one candidate's reply does not change the contact everyone shares")
+	assert.Len(t, fixture.contactSignals(t, fixture.contactID), 1, "the reply is kept as a signal")
 	assert.Equal(
 		t,
 		modelHelpers.OutreachStatusPaused,
@@ -296,14 +298,10 @@ func TestBounceEndsTheConversationAndSuppressesTheAddress(t *testing.T) {
 	assert.Equal(t, modelHelpers.OutreachStatusCancelled, messages[1].Status)
 
 	bounced := fixture.storedContact(t, fixture.contactID)
-	assert.Nil(t, bounced.WorkEmail, "the bounced address is dropped from the contact")
-	assert.Equal(t, modelHelpers.EmailStatusInvalid, bounced.EmailVerificationStatus)
-	assert.True(t, bounced.HasBounced(contactAddress))
-	assert.True(
-		t,
-		fixture.refreshQueuedFor(t, fixture.contactID),
-		"a refresh looks for a current address",
-	)
+	assert.Equal(t, contactAddress, *bounced.WorkEmail,
+		"one candidate's bounce does not change the contact everyone shares")
+	assert.False(t, fixture.refreshQueuedFor(t, fixture.contactID))
+	assert.False(t, fixture.globallySuppressed(t, contactAddress))
 
 	retry := helpers.Do(t, fixture.router, http.MethodPost,
 		candidatePath(fixture.candidateID)+"/outreach-messages", map[string]any{
@@ -746,6 +744,127 @@ func (f jobFixture) refreshQueuedFor(t *testing.T, contactID string) bool {
 	}
 
 	return false
+}
+
+func TestABounceSeenByEnoughCandidatesChangesTheSharedContact(t *testing.T) {
+	fixture := newOutreachFixture(t)
+	fixture.startCampaign(t)
+	fixture.seedSignalFromAnotherCandidate(t, enrichmentModel.ContactSignal{
+		ContactID:  fixture.contactID,
+		SignalType: modelHelpers.ContactSignalBounced,
+		Address:    contactAddress,
+	})
+
+	ctx := context.Background()
+
+	_, customErr := fixture.deps.Services.Outreach.PlanOutreach(
+		ctx,
+		fixture.candidateID,
+		fixture.jobID,
+	)
+	require.Nil(t, customErr)
+	fixture.dispatchAndSend(t)
+
+	var providerMessageID string
+
+	require.NoError(t, fixture.deps.Postgres.GetPool().QueryRow(ctx,
+		"SELECT provider_message_id FROM outreach_messages WHERE step_number = 1",
+	).Scan(&providerMessageID))
+
+	sendRaw(t, contactAddress, contactPassword, "mailer-daemon@example.com", senderAddress,
+		deliveryStatusNotification(senderAddress, contactAddress, providerMessageID))
+	require.Nil(t, fixture.deps.Services.Outreach.SweepMailbox(ctx, fixture.accountID))
+
+	bounced := fixture.storedContact(t, fixture.contactID)
+	assert.Nil(t, bounced.WorkEmail, "the bounced address is dropped from the contact")
+	assert.Equal(t, modelHelpers.EmailStatusInvalid, bounced.EmailVerificationStatus)
+	assert.True(t, bounced.HasBounced(contactAddress))
+	assert.True(t, fixture.refreshQueuedFor(t, fixture.contactID),
+		"a refresh looks for a current address")
+	assert.True(t, fixture.globallySuppressed(t, contactAddress))
+
+	for _, signal := range fixture.contactSignals(t, fixture.contactID) {
+		assert.NotNil(t, signal.AppliedAt, "every report of the bounce is marked applied")
+	}
+}
+
+func TestAnAdminCanApplyASingleCandidatesSignal(t *testing.T) {
+	fixture := newOutreachFixture(t)
+	token := loginAdmin(t, fixture.router)
+	signalID := fixture.seedSignalFromAnotherCandidate(t, enrichmentModel.ContactSignal{
+		ContactID:  fixture.contactID,
+		SignalType: modelHelpers.ContactSignalBounced,
+		Address:    contactAddress,
+	})
+	signalsPath := adminBasePath + "/contacts/" + fixture.contactID + "/signals"
+
+	listed := helpers.Do(t, fixture.router, http.MethodGet, signalsPath, nil, bearer(token))
+	require.Equal(t, http.StatusOK, listed.Recorder.Code, string(listed.Body))
+	helpers.AssertMatchesSpec(t, listed)
+
+	signals := helpers.DecodeData[[]enrichmentModel.ContactSignal](t, listed)
+	require.Len(t, signals, 1)
+	assert.Nil(t, signals[0].AppliedAt)
+	assert.Equal(t, contactAddress, *fixture.storedContact(t, fixture.contactID).WorkEmail)
+
+	for range 2 {
+		applied := helpers.Do(t, fixture.router, http.MethodPost,
+			signalsPath+"/"+signalID+"/apply", nil, bearer(token))
+		require.Equal(t, http.StatusOK, applied.Recorder.Code, string(applied.Body))
+		helpers.AssertMatchesSpec(t, applied)
+		assert.NotNil(t, helpers.DecodeData[enrichmentModel.ContactSignal](t, applied).AppliedAt)
+	}
+
+	assert.Nil(t, fixture.storedContact(t, fixture.contactID).WorkEmail)
+	assert.True(t, fixture.globallySuppressed(t, contactAddress))
+
+	missing := helpers.Do(t, fixture.router, http.MethodPost,
+		signalsPath+"/"+uuid.NewString()+"/apply", nil, bearer(token))
+	assert.Equal(t, http.StatusNotFound, missing.Recorder.Code)
+}
+
+// seedSignalFromAnotherCandidate records that a second candidate reported the signal earlier.
+func (f jobFixture) seedSignalFromAnotherCandidate(
+	t *testing.T,
+	signal enrichmentModel.ContactSignal,
+) string {
+	t.Helper()
+
+	other := register(t, f.router, "another-"+uuid.NewString()[:8]+"@example.com")
+	seeded := enrichmentModel.NewContactSignal()
+	seeded.ContactID = signal.ContactID
+	seeded.CandidateID = *other.User.CandidateID
+	seeded.SignalType = signal.SignalType
+	seeded.Address = signal.Address
+
+	_, err := f.deps.Repositories.ContactSignal.Upsert(context.Background(), seeded)
+	require.NoError(t, err)
+
+	return seeded.ID
+}
+
+func (f jobFixture) contactSignals(
+	t *testing.T,
+	contactID string,
+) []*enrichmentModel.ContactSignal {
+	t.Helper()
+
+	signals, err := f.deps.Repositories.ContactSignal.ListByContact(context.Background(), contactID)
+	require.NoError(t, err)
+
+	return signals
+}
+
+func (f jobFixture) globallySuppressed(t *testing.T, address string) bool {
+	t.Helper()
+
+	var suppressed bool
+
+	require.NoError(t, f.deps.Postgres.GetPool().QueryRow(context.Background(), `
+		SELECT EXISTS (SELECT 1 FROM suppression_entries WHERE candidate_id IS NULL AND value = $1)
+	`, address).Scan(&suppressed))
+
+	return suppressed
 }
 
 func TestRefreshAfterABounceAdoptsTheCurrentAddress(t *testing.T) {

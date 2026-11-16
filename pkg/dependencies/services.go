@@ -109,6 +109,7 @@ func (d *Dependencies) initServices() error {
 		CandidateRepo:      d.Repositories.Candidate,
 		ResumeRepo:         d.Repositories.Resume,
 		CompanyContactRepo: d.Repositories.CompanyContact,
+		ContactSignalRepo:  d.Repositories.ContactSignal,
 		JobPostingRepo:     d.Repositories.JobPosting,
 		TransactionManager: d.TransactionManager,
 		WorkerClient:       d.WorkerClient,

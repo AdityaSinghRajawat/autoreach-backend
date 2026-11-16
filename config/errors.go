@@ -49,6 +49,7 @@ var (
 		"calibration pair needs resume, job and a good or bad label",
 	)
 	ErrContactNotFound         = errors.New("contact not found")
+	ErrContactSignalNotFound   = errors.New("contact signal not found")
 	ErrJobNotMatched           = errors.New("job is not matched to the candidate")
 	ErrProviderUnavailable     = errors.New("enrichment provider circuit is open")
 	ErrProviderRateLimited     = errors.New("enrichment provider rate limit reached")

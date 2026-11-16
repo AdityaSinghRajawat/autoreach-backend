@@ -19,10 +19,20 @@ func (s *OutreachService) suppressContact(
 		return err
 	}
 
+	return s.suppressAddress(ctx, candidateID, *contact.WorkEmail, reason)
+}
+
+// suppressAddress blocks an address for one candidate, or for everyone when candidateID is nil.
+func (s *OutreachService) suppressAddress(
+	ctx context.Context,
+	candidateID *string,
+	address string,
+	reason modelHelpers.SuppressionReason,
+) error {
 	entry := outreachModel.NewSuppressionEntry()
 	entry.CandidateID = candidateID
 	entry.EntryType = modelHelpers.SuppressionTypeEmail
-	entry.Value = strings.ToLower(*contact.WorkEmail)
+	entry.Value = strings.ToLower(address)
 	entry.Reason = reason
 
 	if err := entry.Validate(); err != nil {
