@@ -5,9 +5,12 @@ package integration
 import (
 	"context"
 	"net/http"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -100,4 +103,60 @@ func TestFailedLoginsAreLimitedPerAccountEvenWithTheRightPassword(t *testing.T) 
 	bystander := helpers.Do(t, router, http.MethodPost, loginPath,
 		authTypes.LoginRequest{Email: "bystander@example.com", Password: testPassword}, nil)
 	assert.Equal(t, http.StatusOK, bystander.Recorder.Code, "other accounts are unaffected")
+}
+
+func TestTrackingAndUnsubscribeLinksAreRateLimitedPerIP(t *testing.T) {
+	router := newRouter(t)
+
+	for _, path := range []string{
+		config.GetTrackingOpenPath() + "unknown-token",
+		config.GetUnsubscribePath() + uuid.NewString(),
+	} {
+		exchange := helpers.Do(t, router, http.MethodGet, path, nil, nil)
+		assert.Contains(
+			t,
+			exchange.Recorder.Header().Get(config.GetRateLimitPolicyHeader()),
+			string(config.RateLimitPolicyPublicLink),
+			path,
+		)
+	}
+}
+
+func TestConcurrentWrongPasswordsCannotExceedTheAccountLimit(t *testing.T) {
+	router := newRouter(t)
+	register(t, router, "target@example.com")
+
+	burst := config.GetRateLimitPolicy(config.RateLimitPolicyLoginAccount).Burst
+	attempts := burst * 4
+	rejected := atomic.Int32{}
+	waiting := sync.WaitGroup{}
+
+	for range attempts {
+		waiting.Go(func() {
+			attempt := helpers.Do(t, router, http.MethodPost, loginPath, authTypes.LoginRequest{
+				Email:    "target@example.com",
+				Password: "wrong-password-here",
+			}, nil)
+			if attempt.Recorder.Code == http.StatusUnauthorized {
+				rejected.Add(1)
+			}
+		})
+	}
+
+	waiting.Wait()
+
+	assert.LessOrEqual(t, int(rejected.Load()), burst,
+		"only the burst may reach the password check, however many arrive at once")
+}
+
+func TestSuccessfulLoginsDoNotSpendTheFailedLoginLimit(t *testing.T) {
+	router := newRouter(t)
+	register(t, router, "target@example.com")
+
+	burst := config.GetRateLimitPolicy(config.RateLimitPolicyLoginAccount).Burst
+	for range burst + 2 {
+		login := helpers.Do(t, router, http.MethodPost, loginPath,
+			authTypes.LoginRequest{Email: "target@example.com", Password: testPassword}, nil)
+		require.Equal(t, http.StatusOK, login.Recorder.Code, string(login.Body))
+	}
 }

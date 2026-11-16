@@ -24,22 +24,19 @@ func RateLimit(limiter sharedTypes.Limiter, name config.RateLimitPolicyName) gin
 
 	countsOutcome := policy.CountOnlyStatus != 0
 
-	cost := 1
-	if countsOutcome {
-		cost = 0
-	}
-
+	// Outcome-counted policies reserve the unit first, so concurrent attempts cannot all pass the
+	// check, and refund it when the outcome does not count.
 	return func(c *gin.Context) {
 		subject := rateLimitSubject(c, policy.Key)
-		if !admit(c, limiter, policy, subject, cost) {
+		if !admit(c, limiter, policy, subject, 1) {
 			return
 		}
 
 		c.Next()
 
-		if countsOutcome && responseStatus(c) == policy.CountOnlyStatus {
-			if _, err := limiter.Allow(c.Request.Context(), policy, subject, 1); err != nil {
-				utils.LogWarn(c.Request.Context(), "rate limiter unavailable, outcome not counted",
+		if countsOutcome && responseStatus(c) != policy.CountOnlyStatus {
+			if err := limiter.Refund(c.Request.Context(), policy, subject, 1); err != nil {
+				utils.LogWarn(c.Request.Context(), "rate limiter unavailable, unit not refunded",
 					"policy", string(policy.Name), "error", err.Error())
 			}
 		}

@@ -155,6 +155,7 @@ func TestOutcomeCountedPoliciesPublishOnlyRetryAfter(t *testing.T) {
 		"another account's failures must not be readable")
 	assert.Empty(t, exchange.Recorder.Header().Values(config.GetRateLimitPolicyHeader()))
 	assert.Equal(t, []mocks.LimiterCall{
-		{Policy: config.RateLimitPolicyLoginAccount, Subject: testClientIP, Cost: 0},
-	}, blocking.Calls, "checked without spending; only a failed outcome spends")
+		{Policy: config.RateLimitPolicyLoginAccount, Subject: testClientIP, Cost: 1},
+	}, blocking.Calls, "the attempt is reserved before the handler runs")
+	assert.Empty(t, blocking.Refunds, "a rejected attempt spent nothing, so nothing is refunded")
 }

@@ -13,6 +13,7 @@ type Limiter struct {
 	Decision sharedTypes.RateLimitDecision
 	Err      error
 	Calls    []LimiterCall
+	Refunds  []LimiterCall
 }
 
 type LimiterCall struct {
@@ -39,4 +40,18 @@ func (l *Limiter) Allow(
 	l.Calls = append(l.Calls, LimiterCall{Policy: policy.Name, Subject: subject, Cost: cost})
 
 	return l.Decision, l.Err
+}
+
+func (l *Limiter) Refund(
+	_ context.Context,
+	policy config.RateLimitPolicy,
+	subject string,
+	cost int,
+) error {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	l.Refunds = append(l.Refunds, LimiterCall{Policy: policy.Name, Subject: subject, Cost: cost})
+
+	return l.Err
 }

@@ -36,6 +36,7 @@ type Limiter interface {
 		subject string,
 		cost int,
 	) (RateLimitDecision, error)
+	Refund(ctx context.Context, policy config.RateLimitPolicy, subject string, cost int) error
 }
 
 type ChatCompleter interface {

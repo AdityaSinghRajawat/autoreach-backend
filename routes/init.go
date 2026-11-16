@@ -44,20 +44,24 @@ func NewRoutes(deps *dependencies.Dependencies) http.Handler {
 	router.NoMethod(middlewares.MethodNotAllowed())
 
 	router.GET("/health", handlers.Health)
-	router.GET(
+	publicLinks := router.Group(
+		"",
+		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyPublicLink),
+	)
+	publicLinks.GET(
 		config.GetTrackingOpenPath()+":"+config.GetTrackingTokenParam(),
 		deps.Handlers.Outreach.TrackOpen,
 	)
-	router.GET(
+	publicLinks.GET(
 		config.GetTrackingClickPath()+":"+config.GetTrackingTokenParam(),
 		deps.Handlers.Outreach.TrackClick,
 	)
-	router.GET(
+	publicLinks.GET(
 		config.GetUnsubscribePath()+":"+config.GetMessageIDParam(),
 		middlewares.ValidateIDParams(),
 		deps.Handlers.Outreach.ShowUnsubscribePage,
 	)
-	router.POST(
+	publicLinks.POST(
 		config.GetUnsubscribePath()+":"+config.GetMessageIDParam(),
 		middlewares.ValidateIDParams(),
 		deps.Handlers.Outreach.Unsubscribe,

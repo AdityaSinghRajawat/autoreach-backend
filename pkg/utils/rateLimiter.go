@@ -50,6 +50,29 @@ end
 return {1, math.floor((now - tat + burst_offset) / interval), math.ceil(next_unit)}
 `)
 
+var refundScriptI = redis.NewScript(`
+local limit = tonumber(ARGV[1])
+local period = tonumber(ARGV[2])
+local cost = tonumber(ARGV[3])
+
+local tat = tonumber(redis.call("GET", KEYS[1]))
+if not tat then
+	return 0
+end
+
+local clock = redis.call("TIME")
+local now = tonumber(clock[1]) * 1000 + tonumber(clock[2]) / 1000
+
+tat = tat - (period / limit) * cost
+if tat <= now then
+	redis.call("DEL", KEYS[1])
+else
+	redis.call("SET", KEYS[1], string.format("%.3f", tat), "PX", math.ceil(tat - now))
+end
+
+return 1
+`)
+
 type RateLimiter struct {
 	client *redis.Client
 }
@@ -99,4 +122,30 @@ func (r *RateLimiter) Allow(
 		Remaining:  int(values[1]),
 		NextUnitIn: time.Duration(values[2]) * time.Millisecond,
 	}, nil
+}
+
+// Refund returns units spent by Allow, for policies that reserve a unit before knowing whether the
+// outcome counts.
+func (r *RateLimiter) Refund(
+	ctx context.Context,
+	policy config.RateLimitPolicy,
+	subject string,
+	cost int,
+) error {
+	if !policy.IsEnabled() || cost <= 0 {
+		return nil
+	}
+
+	if err := refundScriptI.Run(
+		ctx,
+		r.client,
+		[]string{BuildKey(config.GetRateLimitNamespace(), string(policy.Name), subject)},
+		policy.Limit,
+		policy.Period.Milliseconds(),
+		cost,
+	).Err(); err != nil {
+		return fmt.Errorf("run rate limit refund script: %w", err)
+	}
+
+	return nil
 }

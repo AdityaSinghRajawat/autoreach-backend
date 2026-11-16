@@ -38,6 +38,7 @@ const (
 	RateLimitPolicyMailboxVerify     RateLimitPolicyName = "mailbox_verify"
 	RateLimitPolicyOutreachCreate    RateLimitPolicyName = "outreach_create"
 	RateLimitPolicyApplicationCreate RateLimitPolicyName = "application_create"
+	RateLimitPolicyPublicLink        RateLimitPolicyName = "public_link"
 
 	rateLimitEnvPrefix = "RATE_LIMIT_"
 	day                = 24 * time.Hour
@@ -45,6 +46,14 @@ const (
 
 var rateLimitDefaultsI = []RateLimitPolicy{
 	{Name: RateLimitPolicyIP, Limit: 1200, Period: time.Minute, Burst: 200, Key: RateLimitKeyIP},
+	// Generous because mail providers fetch tracking pixels for many recipients from shared IPs.
+	{
+		Name:   RateLimitPolicyPublicLink,
+		Limit:  600,
+		Period: time.Minute,
+		Burst:  200,
+		Key:    RateLimitKeyIP,
+	},
 	{
 		Name:       RateLimitPolicyAuth,
 		Limit:      10,
