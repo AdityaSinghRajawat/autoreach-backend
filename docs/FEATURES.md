@@ -1,0 +1,128 @@
+# AutoReach features
+
+How each part of the backend behaves, for developers working on it. Setup is in the [README](../README.md); operating a deployment is in the [runbook](RUNBOOK.md).
+
+- [Authorisation](#authorisation)
+- [Rate limiting](#rate-limiting)
+- [Email outreach](#email-outreach)
+- [LinkedIn outreach](#linkedin-outreach)
+- [Job sources](#job-sources)
+- [Job applications](#job-applications)
+- [Dashboard and operations](#dashboard-and-operations)
+- [File storage](#file-storage)
+
+## Authorisation
+
+Roles are defined in code, in `config/authorizationPolicy.go`; there is no role enum in the database.
+
+- **Permissions** are `resource:action` strings in one catalogue, for example `resume:update`.
+- **Grants** give a permission at a scope, for example `resume:update:own`. `own` means the resource belongs to the caller's candidate; `any` means every resource. The scope is where attributes of the resource decide access (ABAC).
+- **Roles** are named lists of grants. A user can hold several roles, stored in the `users.roles` array, and gets the union of their grants. Access tokens carry role names only.
+- **API clients** hold grants from a separate allow-list (`job:ingest:any` today), checked by the same middleware.
+
+Routes declare what they need with `middlewares.Authorize(config.PermissionXxx)`. A missing permission is `403`; another candidate's data is `404`. Using an `any` grant on a candidate's data is logged.
+
+To add a role, add an entry to `rolePoliciesI`. To add a permission, add it to the catalogue and grant it to roles. A typo in either stops the server at startup. A new kind of access (for example "candidates assigned to me") is a new scope plus one case in `scopeAllows` in `middlewares/authorize.go`.
+
+## Rate limiting
+
+Limits use GCRA (the generic cell rate algorithm) in Redis: one key per subject and one atomic script per check, so every API and worker replica shares the same limits. Each policy allows a burst, then spaces requests evenly over its period, so there is no extra burst at window edges.
+
+Policies are named in `config/rateLimitPolicy.go` and tuned with `RATE_LIMIT_<NAME>`, `_PERIOD` and `_BURST`:
+
+| Policy | Applies to | Keyed by | If Redis is down |
+|---|---|---|---|
+| `ip` | every `/api/v1` request | client IP | allow |
+| `auth` | register, login, refresh | client IP | refuse (503) |
+| `login_account` | failed logins | account (email digest) | refuse (503) |
+| `user` | authenticated requests | user | allow |
+| `api_client` | API-key requests | API client | allow |
+| `resume_upload` | resume uploads | user | refuse (503) |
+| `contact_enrich` | enrichment requests | user | refuse (503) |
+
+Routes add a policy with `middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyXxx)`. Responses follow draft-ietf-httpapi-ratelimit-headers: `RateLimit-Policy: "user";q=600;w=60` describes each policy and `RateLimit: "user";r=42;t=1` gives the remaining allowance and the seconds until one more request is available (omitted when the allowance is full). A `429` also carries `Retry-After`. `login_account` counts only failed logins and publishes no `RateLimit` fields, so they cannot reveal another account's failures. CORS exposes these headers to browsers. Enrichment providers use the same limiter with their own `<PROVIDER>_RATE_LIMIT`, `_RATE_WINDOW` and `_RATE_BURST`.
+
+The client IP is the TCP peer unless `TRUSTED_PROXIES` lists the proxy in front of the API, or `TRUSTED_PLATFORM` names the edge header (such as `CF-Connecting-IP`). Without this, `X-Forwarded-For` would let any caller choose its own IP and get past the limits.
+
+## Email outreach
+
+A candidate connects a mailbox (`/candidates/{id}/channel-accounts`): SMTP and IMAP settings plus a password or app password, stored encrypted with AES-256-GCM. `POST .../{accountId}/verify` logs in to both servers and records the inbox position, so mail that arrived earlier is never treated as a reply.
+
+- **Templates** use a closed set of placeholders (`{{contactFirstName}}`, `{{jobTitle}}`, `{{companyName}}`, `{{matchingSkills}}`, and a few more) and must be `APPROVED` before automatic outreach uses them. Rewording an approved template sends it back to `DRAFT`.
+- **Campaigns** are ordered steps (template plus a delay in days). A candidate has at most one `ACTIVE` campaign. Pausing it pauses its unsent steps; resuming restores them, except for contacts who replied or bounced.
+- **Planning:** when enrichment finds contacts for a job the candidate was matched to (with automatic outreach on), `task:plan_outreach` creates one message per step for each new, reachable, unsuppressed contact. Planning twice changes nothing, and a contact is never approached twice.
+- **Sending:** the dispatcher cron claims due messages and queues `task:send_cold_email`. Each email goes out at most once, inside the send window in the candidate timezone, within the mailbox daily cap (30 by default, enforced across workers). Follow-ups are threaded with `In-Reply-To`.
+- **Replies and bounces:** the reply sweeper reads every active inbox over IMAP. A reply marks the message `REPLIED` and pauses the remaining steps to that contact; a bounce marks it `BOUNCED`, cancels the rest and suppresses the address; auto-replies are only recorded.
+- **Unsubscribe:** every email carries `List-Unsubscribe` with a signed one-click link (`List-Unsubscribe-Post`, RFC 8058) when `PUBLIC_BASE_URL` is set, plus a `mailto:` fallback. Opening the link shows a confirmation page and changes nothing; the POST (from the mail client or the page) suppresses the address for that candidate and cancels pending messages. A reply whose subject is "unsubscribe" does the same.
+- **Tracking** of opens and clicks is off unless the candidate sets `settings.emailTracking`, because tracking pixels and rewritten links hurt inbox placement. Click links are signed, so the redirect endpoint cannot be used to send people elsewhere.
+
+Manual messages go through `POST /candidates/{id}/outreach-messages`, one message per requested channel.
+
+## LinkedIn outreach
+
+LinkedIn has no public API for invites or messages, so the default provider is **assisted**: the dispatcher prepares each item and moves it to `ACTION_REQUIRED`; the dashboard shows the note and the contact's profile, the candidate sends it in LinkedIn and confirms it with `POST /candidates/{id}/outreach-messages/{outreachId}/confirm` (`SENT`, `ACCEPTED` for a connection request, or `REPLIED`, which pauses the remaining steps like an email reply).
+
+- Campaigns may mix `EMAIL`, `LINKEDIN_CONNECT` and `LINKEDIN_DM` steps; each contact only gets the steps it can be reached on (an email address, a LinkedIn profile, or both).
+- Connection notes are limited to 300 characters: templates are checked when saved, rendered notes when planned (a longer one is stored as `FAILED` with the reason) and manual notes when submitted.
+- At most 20 connection requests per candidate per rolling day (`LINKEDIN_DAILY_INVITE_LIMIT`), counting invites still waiting for the candidate, enforced across workers with an advisory lock.
+- A LinkedIn message to a contact who was sent an invite waits until the invite is confirmed accepted, and is cancelled after `LINKEDIN_ACCEPTANCE_WAIT`.
+- Automation providers implement `linkedinProviders.Provider` (`SendInvite`, `SendMessage`) and are chosen with `LINKEDIN_PROVIDER`; the caps and note limit apply to every provider.
+
+## Job sources
+
+Jobs reach AutoReach in two ways:
+
+- **Polled sources.** Admins add sources with `POST /api/v1/admin/job-sources`:
+
+  | `boardType` | `boardToken` | Notes |
+  |---|---|---|
+  | `GREENHOUSE` | board token | Public Job Board API. Jobs link to `job-boards.greenhouse.io`, because some companies report their own site as the job URL. |
+  | `LEVER` | site name | Public Postings API; `region: EU` for Lever's EU instance. |
+  | `ASHBY` | job board name | Public Job Posting API; unlisted jobs are skipped. |
+  | `SMARTRECRUITERS` | company identifier | Public Posting API; one extra request per new posting. |
+  | `WORKDAY` | `{tenant}.{instance}/{site}`, e.g. `nvidia.wd5/nvidiaexternalcareersite` | Workday has no official job API; this reads the JSON its public career sites use. One extra request per new posting; at most 2000 postings are listed. |
+  | `ADZUNA` | country code (`in`, `gb`, `us`, ...) | Job search across many employers. Needs `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` and a `searchQuery` (optional `searchLocation`). Descriptions are short snippets. Company domains are looked up with Apollo (see below). |
+  | `CAREER_PAGE` | https URL of a careers page or sitemap | Reads schema.org `JobPosting` structured data (the format sites publish for Google's job search). For a sitemap, each page whose URL contains `searchQuery` is read. robots.txt is obeyed, and private network addresses are refused. |
+
+  Every board type except `ADZUNA` needs `companyName` and `companyDomain`; Adzuna jobs name their own company. Every `JOB_SOURCE_POLL_INTERVAL` (and right after a source is added, or on `POST /admin/job-sources/{id}/poll`), `task:poll_job_source` reads the source, converts descriptions to plain text and feeds the jobs through the normal ingest path (deduplication, embedding, matching). Sources that list every open job close the jobs they no longer list; Adzuna searches and Workday sites at the 2000-posting cap close a job only after `JOB_SOURCE_STALE_AFTER` without seeing it. A failed fetch is recorded on the source and closes nothing. Where each job needs its own request (SmartRecruiters, Workday, career-page sitemaps), only new jobs are read, up to `JOB_BOARD_MAX_DETAILS_PER_POLL` per poll; known ones just stay open. Sources can be paused (`PATCH`, `isActive: false`) or removed.
+
+  **Company domains for Adzuna.** Every job needs its company's domain (deduplication and contact enrichment use it). Adzuna gives only the name, so the domain is looked up with Apollo's organization search, accepting only an exact name match, and cached in `company_domains`. Each lookup costs one Apollo credit from its daily budget, at most `COMPANY_DOMAIN_LOOKUPS_PER_POLL` per poll; jobs whose company cannot be resolved are skipped, and failed lookups are retried after `COMPANY_DOMAIN_RETRY_AFTER`.
+- **Ingest API.** External feeds push jobs to `POST /api/v1/jobs/ingest` with an API key. Accepted sources: LinkedIn, Indeed, Glassdoor, ZipRecruiter, Naukri, Wellfound, Greenhouse, Lever, Workday, Ashby, SmartRecruiters, Adzuna and direct career pages. LinkedIn, Indeed, Glassdoor and Naukri have no API that allows reading their jobs, so their jobs come only from a licensed data provider pushing to this API; AutoReach does not scrape them.
+
+## Job applications
+
+Greenhouse and Lever only accept applications through their APIs with the employer's own key, and their hosted forms are protected by reCAPTCHA, so AutoReach does **assisted apply**:
+
+1. A match at or above the candidate's threshold (with automatic applying on), or `POST /candidates/{id}/applications`, creates a `QUEUED` application. Each job is applied to once.
+2. `task:prepare_application` reads the job's form (Greenhouse questions through the public Job Board API; Lever's standard fields) and fills it from the candidate's details and their application profile (`PUT /candidates/{id}/application-profile`: phone, links, work authorisation, sponsorship, salary, notice period, a cover letter, and exact answers keyed by question label). Questions are matched by label keywords; yes/no selects use the option's value.
+3. With an employer key for that board or site (`GREENHOUSE_BOARD_KEYS`, `LEVER_SITE_KEYS`) and every required answer known, it submits through the official API with the active resume (`SUBMITTED`). Otherwise the application is `ACTION_REQUIRED`: the prepared answers, the questions still unanswered and the apply link are shown to the candidate, who submits in the browser and confirms with `PATCH /candidates/{id}/applications/{applicationId}` (`SUBMITTED`, then `INTERVIEWING` or `REJECTED`).
+
+Requests to each application site are rate limited; transient failures are retried and stalled applications are re-queued by the reconciler. Every step is recorded in `executionLogs`.
+
+## Dashboard and operations
+
+**Candidates** (and admins, for any candidate):
+
+- `GET /candidates/{id}/metrics`: jobs scraped (active jobs overall), jobs matched (at or above the candidate's threshold), applications submitted, contacts discovered for matched jobs, cold emails sent, LinkedIn requests sent and accepted, recruiter responses (contacts who replied on any channel), and `responseRatePercentage` = responses / cold emails x 100.
+- `GET /dashboard/funnel`: the same counts as funnel stages, from jobs scraped to interviews.
+- `GET /dashboard/activity?limit=&before=`: matches, application changes and outreach events (sent, opened, clicked, replied, accepted, bounced, unsubscribed), newest first, paged with `nextCursor`.
+- `GET /dashboard/activity/stream`: the same feed live as server-sent events. Each event's `id` is a cursor; reconnecting with `Last-Event-ID` resumes without gaps.
+
+The `/dashboard` routes use the signed-in user's candidate; admins pass `?candidateId=`. The feed is the `activity_events` view (migration 0022) over the tables that already record each step, so nothing has to write it separately.
+
+**Admins:**
+
+- `GET /admin/queues`: depth of each queue by state, and today's processed and failed counts.
+- `GET /admin/queues/{queue}/dead`: tasks that used up their retries or failed permanently, with payload and last error. `POST /admin/queues/{queue}/dead/{taskId}/retry` runs one again.
+- `GET /admin/providers`: each enrichment provider's configuration, rate limit and credits used today, and cold-email deliverability over the last 7 days.
+- `GET/POST /admin/suppressions`, `DELETE /admin/suppressions/{id}`: addresses and domains outreach must never contact, for every candidate or one.
+
+**Prometheus** (`GET /metrics` on the API and the worker's ops port; behind the internal secret in production):
+
+- `autoreach_http_requests_total` and `autoreach_http_request_duration_seconds`, by method, route template and status.
+- `autoreach_worker_tasks_total` (`outcome` = success, retry or failed) and `autoreach_worker_task_duration_seconds`, by pipeline `stage` (INGESTION, EMBEDDING, RESUME, MATCHING, ENRICHMENT, OUTREACH, APPLICATION) and task.
+- `autoreach_queue_tasks`: tasks per queue and state (pending, active, scheduled, retry, dead), from the worker.
+
+## File storage
+
+`STORAGE_DRIVER` chooses where uploaded files go: `local` (the default, under `STORAGE_LOCAL_DIR`) or `s3` (configured by the `S3_*` settings). `S3_ENDPOINT` and `S3_USE_PATH_STYLE` cover S3-compatible services such as Cloudflare R2 or MinIO. Startup fails if `s3` is chosen and the bucket is missing or unreachable, or if the driver name is unknown. Files already on local disk are not copied across automatically.

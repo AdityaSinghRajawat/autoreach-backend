@@ -1,230 +1,246 @@
 # AutoReach Backend
 
-Go service for AutoReach. One binary, two process modes:
+AutoReach automates a job search for candidates. It collects job postings, matches them against a candidate's resume, finds the recruiters and hiring managers behind each matching job, reaches out to them by email and LinkedIn, prepares job applications, and reports everything on a dashboard.
 
-| Command | Mode |
-|---|---|
-| `autoreach` or `autoreach server` | HTTP API (`/api/v1`, `/health`, `/metrics`, `/swagger`) |
-| `autoreach worker` | Queue consumers and cron jobs, plus `/health` and `/metrics` |
-| `autoreach create-admin <email>` | One-off: creates an administrator. Password is read from `ADMIN_PASSWORD` |
+This repository is the Go backend: a REST API and a background worker built from one binary. The Next.js frontend lives in its own repository.
 
-The product requirements, technical specification, architecture spec and implementation plan are working documents kept outside the repository.
+**Contents:** [How it works](#how-it-works) · [Tech stack](#tech-stack) · [Quick start](#quick-start) · [Configuration](#configuration) · [Daily development](#daily-development) · [Testing and quality](#testing-and-quality) · [Project layout](#project-layout) · [Documentation](#documentation) · [Troubleshooting](#troubleshooting) · [Status](#status)
 
-## Requirements
+## How it works
 
-- Go 1.26+
-- Docker (PostgreSQL 16 with pgvector, Redis 7)
-
-## Run locally
-
-```bash
-cp .env.example .env            # then set JWT_SECRET (32+ characters)
-make dev-up                     # postgres + redis + migrations
-make run-server                 # API on :8080
-make run-worker                 # in a second terminal; set PORT=8081 for it
+```
+ job boards (Greenhouse, Lever, Ashby,      external feeds
+ SmartRecruiters, Workday, Adzuna,          (POST /api/v1/jobs/ingest)
+ career pages)                                       │
+        │  polled by the worker                      │
+        └──────────────────────┬─────────────────────┘
+                               ▼
+                         job postings ──► embeddings (OpenAI) ◄── resumes (PDF/DOCX)
+                               │                                      │
+                               └──────────► matching (pgvector) ◄─────┘
+                                                  │
+                                ┌─────────────────┼──────────────────┐
+                                ▼                 ▼                  ▼
+                       contact enrichment   assisted apply     dashboard
+                       (Apollo, SignalHire, (Greenhouse,       (metrics, funnel,
+                        ContactOut)          Lever)             live activity)
+                                │
+                                ▼
+                       outreach: email campaigns (SMTP/IMAP)
+                       and assisted LinkedIn invites and messages
 ```
 
-Create an administrator and an API key for a scraper:
+The binary runs in one of three modes:
+
+| Command | What it runs |
+|---|---|
+| `autoreach` or `autoreach server` | The HTTP API: `/api/v1/*`, `/health`, `/metrics`, `/swagger` |
+| `autoreach worker` | Queue consumers and scheduled jobs (polling, sending, reply checks, reconciliation), plus `/health` and `/metrics` |
+| `autoreach create-admin <email>` | One-off: creates an administrator; the password is read from `ADMIN_PASSWORD` |
+
+The API only records work and queues tasks; the worker does everything slow or external (embedding, enrichment, sending, polling). The database is the source of truth, so a lost task is re-queued by a reconciler.
+
+## Tech stack
+
+| Concern | Choice |
+|---|---|
+| Language | Go 1.26 (the toolchain pins 1.26.11; `go` downloads it automatically) |
+| HTTP | gin, with an OpenAPI 3 spec in `docs/swagger/openapi.json` |
+| Database | PostgreSQL 16 with pgvector, accessed with pgx and plain SQL; migrations with golang-migrate |
+| Queue and cache | Redis 7; tasks with asynq; rate limits, locks and counters in Redis |
+| AI | OpenAI embeddings (`text-embedding-3-small`) and a chat model for resume parsing |
+| Files | Local disk or S3-compatible storage |
+| Observability | Structured JSON logs (slog) and Prometheus metrics |
+
+## Quick start
+
+### 1. Install the prerequisites
+
+- **Go 1.26 or newer**: <https://go.dev/dl/>
+- **Docker** with Compose (Docker Desktop on Windows and macOS)
+- **make**: preinstalled on Linux and macOS. On Windows, use Git Bash with make installed (`choco install make` or `winget install GnuWin32.Make`), or run the commands each target prints with `make -n <target>`.
+- **An OpenAI API key** if you want matching to work (see step 2).
+
+### 2. Configure
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and set:
+
+- `JWT_SECRET`: any random string of at least 32 characters, for example the output of `openssl rand -base64 48`. The app refuses to start without it.
+- `OPENAI_API_KEY`: without it everything runs, but jobs and resumes cannot be embedded, so no matches appear.
+
+The database and Redis defaults already match the local containers. Every other setting is optional and documented in place in [`.env.example`](.env.example); see [Configuration](#configuration).
+
+### 3. Start Postgres and Redis
+
+```bash
+make dev-up
+```
+
+This starts PostgreSQL (with pgvector) on `localhost:5432` and Redis on `localhost:6379`, then applies every migration in `migrations/`.
+
+### 4. Start the API and the worker
+
+```bash
+make run-server                 # terminal 1: API on http://localhost:8080
+PORT=8081 make run-worker       # terminal 2: worker; its /health and /metrics on :8081
+```
+
+Both read `.env`. The worker needs its own port because both processes serve `/health` and `/metrics`.
+
+### 5. Check it is running
+
+```bash
+curl http://localhost:8080/health          # {"success":true,...,"data":{"status":"ok"}}
+```
+
+The interactive API reference is at <http://localhost:8080/swagger/index.html>.
+
+### 6. Create an administrator
 
 ```bash
 ADMIN_PASSWORD='choose-a-long-password' go run ./cmd/autoreach create-admin admin@example.com
-# log in at POST /api/v1/auth/login, then POST /api/v1/admin/api-clients
 ```
 
-API reference: `http://localhost:8080/swagger/index.html` (source: `docs/swagger/openapi.json`).
+Sign in with `POST /api/v1/auth/login` to get an admin token. Admins manage job sources, API keys for job feeds, queues, suppressions and contact erasure under `/api/v1/admin/*`.
 
-## Authorisation
+### 7. Try the main flow
 
-Roles are defined in code, in `config/authorizationPolicy.go`; there is no role enum in the database.
+Using Swagger or curl:
 
-- **Permissions** are `resource:action` strings in one catalogue, for example `resume:update`.
-- **Grants** give a permission at a scope, for example `resume:update:own`. `own` means the resource belongs to the caller's candidate; `any` means every resource. The scope is where attributes of the resource decide access (ABAC).
-- **Roles** are named lists of grants. A user can hold several roles, stored in the `users.roles` array, and gets the union of their grants. Access tokens carry role names only.
-- **API clients** hold grants from a separate allow-list (`job:ingest:any` today), checked by the same middleware.
+1. **Register a candidate:** `POST /api/v1/auth/register` with `email`, `password` (10+ characters) and `fullName`. The response holds an `accessToken` and the `user.candidateId`.
+2. **Upload a resume:** `POST /api/v1/candidates/{candidateId}/resumes` as multipart with the field `file` (PDF or DOCX). The worker parses and embeds it.
+3. **Add jobs**, either way:
+   - as admin, add a job board: `POST /api/v1/admin/job-sources` with `{"boardType":"GREENHOUSE","boardToken":"stripe","companyName":"Stripe","companyDomain":"stripe.com"}`; the worker polls it right away; or
+   - as admin, create an API key (`POST /api/v1/admin/api-clients` with `{"name":"feed","scopes":["job:ingest:any"]}`) and push jobs to `POST /api/v1/jobs/ingest` with the `X-API-Key` header.
+4. **See matches:** `GET /api/v1/candidates/{candidateId}/jobs`, and the dashboard at `GET /api/v1/dashboard/funnel`.
 
-Routes declare what they need with `middlewares.Authorize(config.PermissionXxx)`. A missing permission is `403`; another candidate's data is `404`. Using an `any` grant on a candidate's data is logged.
+Contact enrichment, email outreach and assisted applications need provider keys, a connected mailbox or an application profile; [docs/FEATURES.md](docs/FEATURES.md) explains each.
 
-To add a role, add an entry to `rolePoliciesI`. To add a permission, add it to the catalogue and grant it to roles. A typo in either stops the server at startup. A new kind of access (for example "candidates assigned to me") is a new scope plus one case in `scopeAllows` in `middlewares/authorize.go`.
+To stop the containers: `make dev-down`.
 
-## Rate limiting
+## Configuration
 
-Limits use GCRA (the generic cell rate algorithm) in Redis: one key per subject and one atomic script per check, so every API and worker replica shares the same limits. Each policy allows a burst, then spaces requests evenly over its period, so there is no extra burst at window edges.
+All settings come from environment variables, normally through `.env`. [`.env.example`](.env.example) lists every variable the code reads, grouped into numbered sections with an explanation for each, so it is the reference.
 
-Policies are named in `config/rateLimitPolicy.go` and tuned with `RATE_LIMIT_<NAME>`, `_PERIOD` and `_BURST`:
+What you need to set depends on what you want to use:
 
-| Policy | Applies to | Keyed by | If Redis is down |
-|---|---|---|---|
-| `ip` | every `/api/v1` request | client IP | allow |
-| `auth` | register, login, refresh | client IP | refuse (503) |
-| `login_account` | failed logins | account (email digest) | refuse (503) |
-| `user` | authenticated requests | user | allow |
-| `api_client` | API-key requests | API client | allow |
-| `resume_upload` | resume uploads | user | refuse (503) |
-| `contact_enrich` | enrichment requests | user | refuse (503) |
+| To use | Set (section in `.env.example`) |
+|---|---|
+| Anything at all | `JWT_SECRET` (6) |
+| Matching resumes to jobs | `OPENAI_API_KEY` (9) |
+| Finding recruiters and hiring managers | At least one of `APOLLO_API_KEY`, `SIGNALHIRE_API_KEY` (plus `PUBLIC_BASE_URL` and `SIGNALHIRE_WEBHOOK_SECRET`), `CONTACTOUT_API_KEY` (12) |
+| Connecting a candidate's mailbox for email outreach | `CHANNEL_CREDENTIAL_KEYS` (13); `PUBLIC_BASE_URL` (1) for one-click unsubscribe and tracking links |
+| Adzuna job searches | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` (11) and an Apollo key for company domains |
+| Submitting applications through an ATS | `GREENHOUSE_BOARD_KEYS` or `LEVER_SITE_KEYS`, issued by the employer (15) |
+| Storing resumes in S3, R2 or MinIO | `STORAGE_DRIVER=s3` and the `S3_*` settings (18) |
+| Production | `APP_ENV=production`, `INTERNAL_SHARED_SECRET`, `CHANNEL_CREDENTIAL_KEYS`, real database and Redis passwords; see [docs/RUNBOOK.md](docs/RUNBOOK.md) |
 
-Routes add a policy with `middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyXxx)`. Responses follow draft-ietf-httpapi-ratelimit-headers: `RateLimit-Policy: "user";q=600;w=60` describes each policy and `RateLimit: "user";r=42;t=1` gives the remaining allowance and the seconds until one more request is available (omitted when the allowance is full). A `429` also carries `Retry-After`. `login_account` counts only failed logins and publishes no `RateLimit` fields, so they cannot reveal another account's failures. CORS exposes these headers to browsers. Enrichment providers use the same limiter with their own `<PROVIDER>_RATE_LIMIT`, `_RATE_WINDOW` and `_RATE_BURST`.
+Real environment variables override `.env`, which is handy for one-off changes such as `PORT=8081`.
 
-The client IP is the TCP peer unless `TRUSTED_PROXIES` lists the proxy in front of the API, or `TRUSTED_PLATFORM` names the edge header (such as `CF-Connecting-IP`). Without this, `X-Forwarded-For` would let any caller choose its own IP and get past the limits.
+## Daily development
 
-## Email outreach
+| Task | Command |
+|---|---|
+| Start or stop Postgres and Redis | `make dev-up` / `make dev-down` |
+| Run the API / the worker | `make run-server` / `PORT=8081 make run-worker` |
+| Reload the API on every change | `make dev` (needs [air](https://github.com/air-verse/air); `air -- worker` reloads the worker) |
+| Apply or roll back one migration | `make migrate-up` / `make migrate-down` |
+| Build the binary into `bin/` | `make build` |
+| Run the whole production stack in Docker | `make docker-up` (needs the production secrets; see [docs/RUNBOOK.md](docs/RUNBOOK.md)) |
 
-A candidate connects a mailbox (`/candidates/{id}/channel-accounts`): SMTP and IMAP settings plus a password or app password, stored encrypted with AES-256-GCM. `POST .../{accountId}/verify` logs in to both servers and records the inbox position, so mail that arrived earlier is never treated as a reply.
+New database changes go into a new pair of files in `migrations/` (`NNNN_name.up.sql` and `.down.sql`). New endpoints must be added to `docs/swagger/openapi.json`, or the tests fail. Before you write code, read [docs/CONVENTIONS.md](docs/CONVENTIONS.md): the project follows a strict layout and set of rules.
 
-- **Templates** use a closed set of placeholders (`{{contactFirstName}}`, `{{jobTitle}}`, `{{companyName}}`, `{{matchingSkills}}`, and a few more) and must be `APPROVED` before automatic outreach uses them. Rewording an approved template sends it back to `DRAFT`.
-- **Campaigns** are ordered steps (template plus a delay in days). A candidate has at most one `ACTIVE` campaign. Pausing it pauses its unsent steps; resuming restores them, except for contacts who replied or bounced.
-- **Planning:** when enrichment finds contacts for a job the candidate was matched to (with automatic outreach on), `task:plan_outreach` creates one message per step for each new, reachable, unsuppressed contact. Planning twice changes nothing, and a contact is never approached twice.
-- **Sending:** the dispatcher cron claims due messages and queues `task:send_cold_email`. Each email goes out at most once, inside the send window in the candidate timezone, within the mailbox daily cap (30 by default, enforced across workers). Follow-ups are threaded with `In-Reply-To`.
-- **Replies and bounces:** the reply sweeper reads every active inbox over IMAP. A reply marks the message `REPLIED` and pauses the remaining steps to that contact; a bounce marks it `BOUNCED`, cancels the rest and suppresses the address; auto-replies are only recorded.
-- **Unsubscribe:** every email carries `List-Unsubscribe` with a signed one-click link (`List-Unsubscribe-Post`, RFC 8058) when `PUBLIC_BASE_URL` is set, plus a `mailto:` fallback. Opening the link shows a confirmation page and changes nothing; the POST (from the mail client or the page) suppresses the address for that candidate and cancels pending messages. A reply whose subject is "unsubscribe" does the same.
-- **Tracking** of opens and clicks is off unless the candidate sets `settings.emailTracking`, because tracking pixels and rewritten links hurt inbox placement. Click links are signed, so the redirect endpoint cannot be used to send people elsewhere.
-
-Manual messages go through `POST /candidates/{id}/outreach-messages`, one message per requested channel.
-
-## LinkedIn outreach
-
-LinkedIn has no public API for invites or messages, so the default provider is **assisted**: the dispatcher prepares each item and moves it to `ACTION_REQUIRED`; the dashboard shows the note and the contact's profile, the candidate sends it in LinkedIn and confirms it with `POST /candidates/{id}/outreach-messages/{outreachId}/confirm` (`SENT`, `ACCEPTED` for a connection request, or `REPLIED`, which pauses the remaining steps like an email reply).
-
-- Campaigns may mix `EMAIL`, `LINKEDIN_CONNECT` and `LINKEDIN_DM` steps; each contact only gets the steps it can be reached on (an email address, a LinkedIn profile, or both).
-- Connection notes are limited to 300 characters: templates are checked when saved, rendered notes when planned (a longer one is stored as `FAILED` with the reason) and manual notes when submitted.
-- At most 20 connection requests per candidate per rolling day (`LINKEDIN_DAILY_INVITE_LIMIT`), counting invites still waiting for the candidate, enforced across workers with an advisory lock.
-- A LinkedIn message to a contact who was sent an invite waits until the invite is confirmed accepted, and is cancelled after `LINKEDIN_ACCEPTANCE_WAIT`.
-- Automation providers implement `linkedinProviders.Provider` (`SendInvite`, `SendMessage`) and are chosen with `LINKEDIN_PROVIDER`; the caps and note limit apply to every provider.
-
-## Job sources
-
-Jobs reach AutoReach in two ways:
-
-- **Polled sources.** Admins add sources with `POST /api/v1/admin/job-sources`:
-
-  | `boardType` | `boardToken` | Notes |
-  |---|---|---|
-  | `GREENHOUSE` | board token | Public Job Board API. Jobs link to `job-boards.greenhouse.io`, because some companies report their own site as the job URL. |
-  | `LEVER` | site name | Public Postings API; `region: EU` for Lever's EU instance. |
-  | `ASHBY` | job board name | Public Job Posting API; unlisted jobs are skipped. |
-  | `SMARTRECRUITERS` | company identifier | Public Posting API; one extra request per new posting. |
-  | `WORKDAY` | `{tenant}.{instance}/{site}`, e.g. `nvidia.wd5/nvidiaexternalcareersite` | Workday has no official job API; this reads the JSON its public career sites use. One extra request per new posting; at most 2000 postings are listed. |
-  | `ADZUNA` | country code (`in`, `gb`, `us`, ...) | Job search across many employers. Needs `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` and a `searchQuery` (optional `searchLocation`). Descriptions are short snippets. Company domains are looked up with Apollo (see below). |
-  | `CAREER_PAGE` | https URL of a careers page or sitemap | Reads schema.org `JobPosting` structured data (the format sites publish for Google's job search). For a sitemap, each page whose URL contains `searchQuery` is read. robots.txt is obeyed, and private network addresses are refused. |
-
-  Every board type except `ADZUNA` needs `companyName` and `companyDomain`; Adzuna jobs name their own company. Every `JOB_SOURCE_POLL_INTERVAL` (and right after a source is added, or on `POST /admin/job-sources/{id}/poll`), `task:poll_job_source` reads the source, converts descriptions to plain text and feeds the jobs through the normal ingest path (deduplication, embedding, matching). Sources that list every open job close the jobs they no longer list; Adzuna searches and Workday sites at the 2000-posting cap close a job only after `JOB_SOURCE_STALE_AFTER` without seeing it. A failed fetch is recorded on the source and closes nothing. Where each job needs its own request (SmartRecruiters, Workday, career-page sitemaps), only new jobs are read, up to `JOB_BOARD_MAX_DETAILS_PER_POLL` per poll; known ones just stay open. Sources can be paused (`PATCH`, `isActive: false`) or removed.
-
-  **Company domains for Adzuna.** Every job needs its company's domain (deduplication and contact enrichment use it). Adzuna gives only the name, so the domain is looked up with Apollo's organization search, accepting only an exact name match, and cached in `company_domains`. Each lookup costs one Apollo credit from its daily budget, at most `COMPANY_DOMAIN_LOOKUPS_PER_POLL` per poll; jobs whose company cannot be resolved are skipped, and failed lookups are retried after `COMPANY_DOMAIN_RETRY_AFTER`.
-- **Ingest API.** External feeds push jobs to `POST /api/v1/jobs/ingest` with an API key. Accepted sources: LinkedIn, Indeed, Glassdoor, ZipRecruiter, Naukri, Wellfound, Greenhouse, Lever, Workday, Ashby, SmartRecruiters, Adzuna and direct career pages. LinkedIn, Indeed, Glassdoor and Naukri have no API that allows reading their jobs, so their jobs come only from a licensed data provider pushing to this API; AutoReach does not scrape them.
-
-## Job applications
-
-Greenhouse and Lever only accept applications through their APIs with the employer's own key, and their hosted forms are protected by reCAPTCHA, so AutoReach does **assisted apply**:
-
-1. A match at or above the candidate's threshold (with automatic applying on), or `POST /candidates/{id}/applications`, creates a `QUEUED` application. Each job is applied to once.
-2. `task:prepare_application` reads the job's form (Greenhouse questions through the public Job Board API; Lever's standard fields) and fills it from the candidate's details and their application profile (`PUT /candidates/{id}/application-profile`: phone, links, work authorisation, sponsorship, salary, notice period, a cover letter, and exact answers keyed by question label). Questions are matched by label keywords; yes/no selects use the option's value.
-3. With an employer key for that board or site (`GREENHOUSE_BOARD_KEYS`, `LEVER_SITE_KEYS`) and every required answer known, it submits through the official API with the active resume (`SUBMITTED`). Otherwise the application is `ACTION_REQUIRED`: the prepared answers, the questions still unanswered and the apply link are shown to the candidate, who submits in the browser and confirms with `PATCH /candidates/{id}/applications/{applicationId}` (`SUBMITTED`, then `INTERVIEWING` or `REJECTED`).
-
-Requests to each application site are rate limited; transient failures are retried and stalled applications are re-queued by the reconciler. Every step is recorded in `executionLogs`.
-
-## Dashboard and operations
-
-**Candidates** (and admins, for any candidate):
-
-- `GET /candidates/{id}/metrics`: jobs scraped (active jobs overall), jobs matched (at or above the candidate's threshold), applications submitted, contacts discovered for matched jobs, cold emails sent, LinkedIn requests sent and accepted, recruiter responses (contacts who replied on any channel), and `responseRatePercentage` = responses / cold emails x 100.
-- `GET /dashboard/funnel`: the same counts as funnel stages, from jobs scraped to interviews.
-- `GET /dashboard/activity?limit=&before=`: matches, application changes and outreach events (sent, opened, clicked, replied, accepted, bounced, unsubscribed), newest first, paged with `nextCursor`.
-- `GET /dashboard/activity/stream`: the same feed live as server-sent events. Each event's `id` is a cursor; reconnecting with `Last-Event-ID` resumes without gaps.
-
-The `/dashboard` routes use the signed-in user's candidate; admins pass `?candidateId=`. The feed is the `activity_events` view (migration 0022) over the tables that already record each step, so nothing has to write it separately.
-
-**Admins:**
-
-- `GET /admin/queues`: depth of each queue by state, and today's processed and failed counts.
-- `GET /admin/queues/{queue}/dead`: tasks that used up their retries or failed permanently, with payload and last error. `POST /admin/queues/{queue}/dead/{taskId}/retry` runs one again.
-- `GET /admin/providers`: each enrichment provider's configuration, rate limit and credits used today, and cold-email deliverability over the last 7 days.
-- `GET/POST /admin/suppressions`, `DELETE /admin/suppressions/{id}`: addresses and domains outreach must never contact, for every candidate or one.
-
-**Prometheus** (`GET /metrics` on the API and the worker's ops port; behind the internal secret in production):
-
-- `autoreach_http_requests_total` and `autoreach_http_request_duration_seconds`, by method, route template and status.
-- `autoreach_worker_tasks_total` (`outcome` = success, retry or failed) and `autoreach_worker_task_duration_seconds`, by pipeline `stage` (INGESTION, EMBEDDING, RESUME, MATCHING, ENRICHMENT, OUTREACH, APPLICATION) and task.
-- `autoreach_queue_tasks`: tasks per queue and state (pending, active, scheduled, retry, dead), from the worker.
-
-## File storage
-
-`STORAGE_DRIVER` chooses where uploaded files go: `local` (the default, under `STORAGE_LOCAL_DIR`) or `s3` (configured by the `S3_*` settings). `S3_ENDPOINT` and `S3_USE_PATH_STYLE` cover S3-compatible services such as Cloudflare R2 or MinIO. Startup fails if `s3` is chosen and the bucket is missing or unreachable, or if the driver name is unknown. Files already on local disk are not copied across automatically.
-
-## Production
-
-`docker-compose.yml` is the production stack (server, worker, Postgres with pgvector, Redis, migrations). It reads `.env`, refuses to start without its secrets, runs the app as a non-root user on a read-only filesystem with all capabilities dropped, shares the upload volume between server and worker, and binds every port to loopback for a TLS proxy in front. `docs/RUNBOOK.md` covers deployment, upgrades, backups, secret rotation, monitoring, admin operations, incidents and measured performance; `docs/SECURITY.md` is the security checklist with the evidence for each control.
-
-## Tests
+## Testing and quality
 
 ```bash
-make test-unit                  # no infrastructure
-make test-up                    # throwaway postgres :55432, redis :56379, S3 mock :59090, mail :53025/:53143
-make test-integration           # real database, real queue; -p 1
-make test-live                  # reads real public job boards (LIVE_JOB_BOARDS=TYPE:token,...)
-make vuln                       # known vulnerabilities (govulncheck)
-make secrets-scan               # secrets in git history (gitleaks)
-make loadtest-api               # API latency against a running stack (scripts/README.md)
-make loadtest-apply             # application throughput against a stub ATS
-make test-down
-make tools                      # install the pinned golangci-lint
-make fmt                        # format, wrap at 100 columns, fix blank-line rules
-make lint                       # fail on anything fmt would change, plus linters
-make check                      # fmt + vet + lint + unit + build
+make test-unit          # unit tests, no infrastructure needed
+make test-up            # start throwaway Postgres :55432, Redis :56379, S3 mock :59090, mail server :53025/:53143
+make test-integration   # integration tests against those containers (runs one package at a time)
+make test-down          # stop and delete the test containers
+
+make fmt                # format code (run before committing)
+make lint               # what CI checks: formatting plus linters
+make check              # fmt, vet, lint, unit tests and build
+make tools              # install the pinned golangci-lint
+
+make vuln               # known vulnerabilities in dependencies (govulncheck)
+make secrets-scan       # secrets in git history (gitleaks)
+make test-live          # read real public job boards (LIVE_JOB_BOARDS=TYPE:token,...)
+make loadtest-api       # API latency against a running stack (scripts/README.md)
+make loadtest-apply     # application throughput against a stub ATS
 ```
 
-Integration tests refuse to run unless the database name ends in `_test`, because they truncate tables. They rebuild the schema from `migrations/` on every run.
+Integration tests use `.env.test` and refuse to run unless the database name ends in `_test`, because they empty every table. They rebuild the schema from `migrations/` on every run. CI (`.github/workflows/ci.yml`) runs the build, lint, unit and integration tests, the vulnerability and secret scans, and an image build on every pull request.
 
-## Full stack in Docker
-
-```bash
-DB_PASSWORD=... REDIS_PASSWORD=... JWT_SECRET=... docker compose up -d --build
-```
-
-Server is published on `127.0.0.1:8080`, worker ops endpoints on `127.0.0.1:8081`.
-
-## Layout
+## Project layout
 
 ```
-cmd/autoreach      process bootstrap and mode selection
-config             every env read, constant, error code and table name
-routes             route tables per group, under routes/v1
-middlewares        request logging, error translation, auth, tenancy, rate limit
-pkg/dependencies   the one place repositories, services and handlers are built
-pkg/handlers       HTTP in and out; one method per file
-pkg/services       use cases; one per file
-pkg/repositories   SQL, one file per table
-pkg/models         persisted shapes and enums
-pkg/customtypes    request, response and result shapes
-pkg/integrations   clients for third-party HTTP APIs (OpenAI embeddings and chat completions, enrichment providers)
-pkg/storage        file storage: local disk (default) or S3, chosen by STORAGE_DRIVER
-pkg/emailTemplates html/template renderers for outgoing email (the tracked HTML version of outreach mail)
-pkg/db             pools, transactions
-pkg/utils          logging, HTTP helpers, hashing, tokens, rate limiter, locks, email (SMTP send, IMAP inbox, parsing)
-worker             queue contracts, publisher, asynq adapter, task handlers
-cronJobs           scheduled jobs, each guarded by a Redis lock
-migrations         golang-migrate SQL pairs
-tests              unit, integration, setup, helpers, mocks
+cmd/autoreach        process entry point and mode selection (server, worker, create-admin)
+config               every environment variable, constant, error and table name
+routes               route tables, under routes/v1
+middlewares          logging, errors, authentication, authorisation, rate limits, CORS, metrics
+pkg/dependencies     builds repositories, services and handlers once per process
+pkg/handlers         HTTP in and out; one handler per file
+pkg/services         use cases; one per file
+pkg/repositories     SQL, one file per table
+pkg/models           database entities and their enums (pkg/models/helpers)
+pkg/customtypes      request, response and other non-entity shapes
+pkg/integrations     clients for third-party HTTP APIs (OpenAI, enrichment providers, ATS and job boards)
+pkg/storage          file storage: local disk or S3
+pkg/emailTemplates   HTML templates for outgoing email
+pkg/db               connection pools and transactions
+pkg/utils            shared helpers: logging, HTTP, crypto, rate limiter, locks, email, web fetching
+pkg/validations      custom validation rules
+worker               task definitions, queue adapter (asynq) and task handlers
+cronJobs             scheduled jobs, each guarded by a Redis lock
+migrations           golang-migrate SQL pairs
+docs                 OpenAPI spec, features, conventions, runbook, security checklist
+scripts              benchmarks, calibration and load tests (scripts/README.md)
+tests                unit, integration and live tests, with setup, helpers and mocks
 ```
 
-## Conventions that are easy to miss
+A request flows `routes` → `middlewares` → `pkg/handlers` → `pkg/services` → `pkg/repositories` / `pkg/integrations`. Worker tasks in `worker/tasks` call the same services.
 
-- Every response uses one envelope: `{ success, statusCode, data, meta, error }`. JSON keys are camelCase.
-- Malformed JSON is `400`; a payload that parses but fails validation is `422` with `error.details[]`.
-- Error bodies carry a fixed public message per error code. Internal detail is logged, never returned.
-- A candidate-scoped route returns `404`, not `403`, for another tenant's ID.
-- Every route under `/api/v1` must be in `docs/swagger/openapi.json`; a unit test fails otherwise, and router tests validate real responses against the spec.
-- Every worker task needs a `TaskConfig` and a registered handler; the worker refuses to start if they drift.
-- The database is the source of truth for pipeline state. Queue tasks are idempotent, and a reconciler cron re-enqueues rows whose task was lost.
-- Comments are rare: one line, only where the logic is not obvious from the names (an algorithm, a security reason, a protocol quirk).
-- Models in `pkg/models` are database entities only. Each has `New<Model>()` (generates the ID, stamps timestamps and defaults), `UpdateTimestamp()` and `Validate()`. Projections, requests and responses live in `pkg/customtypes`.
-- One validation per stage: `utils.BindAndValidate` validates the request from its tags; the request's `To<Model>Model()` receiver only maps fields and never validates; the service calls `UpdateTimestamp()` then the model's `Validate()` before saving.
-- A handler only reads the request, calls one service method and writes the response or error. Create endpoints convert the request to a model and pass the model; update endpoints pass the request, and the service loads the existing entity and converts it there.
-- Saves are `Upsert(ctx, model)` and return the model they were given. IDs and defaults are set in the constructor, so nothing is read back from the database after a write.
-- Repositories hold no duplicated query or scan code: one private finder per table, and `db.FindOne` / `pgx.CollectRows` for row mapping.
-- Services, handlers, repositories, utilities and integrations declare no constants and no stray types. Constants live in `config` behind getters (headers, vendor wire values, lock names, validation messages); non-entity structs live in `pkg/customtypes/<domain>`. Enum types stay in `pkg/models/helpers`, task and queue names in `worker/configs`, and SQL column lists beside the queries that use them.
-- Error messages live in `config/errors.go` as `config.ErrXxx`; no other package calls `errors.New`.
-- Independent operations run through `utils.RunConcurrently`; fire-and-forget work through `utils.RunInBackground`. No bare `go` outside `pkg/utils` and bootstrap.
-- Formatting is mechanical: run `make fmt` before committing. CI runs `make lint`. Format-on-save is a personal editor choice and is not part of the repository.
+## Documentation
+
+| Document | Read it for |
+|---|---|
+| [docs/FEATURES.md](docs/FEATURES.md) | How each feature behaves: authorisation, rate limits, email and LinkedIn outreach, job sources, applications, dashboard, storage |
+| [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | The rules every change follows |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Deploying and operating production: secrets, backups, monitoring, incidents, performance |
+| [docs/SECURITY.md](docs/SECURITY.md) | The security checklist and the evidence for each control |
+| [scripts/README.md](scripts/README.md) | Vector benchmark, match calibration and load tests |
+| `/swagger/index.html` | The API reference, served by a running server from `docs/swagger/openapi.json` |
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `JWT_SECRET must be at least 32 characters` | Set `JWT_SECRET` in `.env` |
+| The worker exits because it cannot listen on port 8080 | The API already uses it; start the worker with `PORT=8081` |
+| `connect postgres` or `connect redis` errors | Run `make dev-up` and check `docker ps`; the defaults expect ports 5432 and 6379 to be free |
+| Resumes and jobs stay unmatched | Set `OPENAI_API_KEY`, then retry the failed tasks (`POST /api/v1/admin/queues/{queue}/dead/{taskId}/retry`) or upload again |
+| Enrichment finds no contacts | No provider key is set, or a provider's daily credit budget is used up (`GET /api/v1/admin/providers`) |
+| Connecting a mailbox fails | Set `CHANNEL_CREDENTIAL_KEYS` |
+| Migrations report a "dirty" database, or the schema changed under you | A migration failed half way, or an existing migration was edited. During development, reset the local database: `docker compose -f docker-compose.dev.yml down -v` then `make dev-up` (this deletes local data). In production, follow docs/RUNBOOK.md |
+| Integration tests are skipped or fail to connect | Run `make test-up` first; set `TEST_REQUIRE_SERVICES=1` to turn a missing service into a failure |
+| `go test -race` fails to build on Windows | The race detector needs a 64-bit C compiler; CI runs it on Linux |
 
 ## Status
 
-Implemented and covered by tests: foundation, authentication, candidate profiles, API clients, job ingestion with deduplication, batched job embedding, resume upload with PDF/DOCX parsing and embedding, candidate-to-job matching in both directions (new resume against jobs, new job against resumes), decision-maker contact enrichment through Apollo, ContactOut and SignalHire with rate limits, a daily credit budget and circuit breakers, AI resume parsing, email outreach (mailboxes, templates, campaigns, sending, reply and bounce handling, tracking, unsubscribe), assisted LinkedIn outreach, assisted job applications for Greenhouse and Lever, job polling from Greenhouse, Lever, Ashby, SmartRecruiters and Workday boards, Adzuna searches and career pages with JobPosting data (boards checked against live sites with `make test-live`), the candidate dashboard (metrics, funnel, activity feed and live stream), admin operations (queues and dead tasks, provider status, suppressions, contact erasure), contacts kept current from replies, bounces, LinkedIn responses and enrichment (with history and optional anonymizing retention), Prometheus metrics per pipeline stage, and production hardening (authorization matrix over every route, dependency and secret scans in CI, hardened Compose, runbook, load and soak tests: 1,800 API requests/s at p95 21 ms, about 220,000 applications/hour against a stub ATS, server and worker under 100 MB). The three provider clients are tested against a stub server only and have not yet been run against the live APIs.
+Implemented and covered by tests:
+
+- **Foundation:** authentication with refresh tokens, role-based authorisation checked on every route, rate limits, API clients for job feeds.
+- **Jobs:** ingestion with deduplication, polling of Greenhouse, Lever, Ashby, SmartRecruiters and Workday boards, Adzuna searches and career pages (boards checked against live sites with `make test-live`), batched embeddings.
+- **Candidates:** resume upload with PDF/DOCX parsing, AI resume parsing, embeddings, and matching in both directions.
+- **Contacts:** enrichment through Apollo, ContactOut and SignalHire with rate limits, daily credit budgets and circuit breakers; contacts kept current from replies, bounces, LinkedIn responses and re-enrichment; erasure on request and optional anonymizing retention.
+- **Outreach:** email campaigns with send windows, daily caps, reply and bounce handling, unsubscribe and optional tracking; assisted LinkedIn invites and messages.
+- **Applications:** assisted apply for Greenhouse and Lever.
+- **Dashboard and operations:** metrics, funnel and a live activity feed; queue, dead-task, provider and suppression administration; Prometheus metrics per pipeline stage.
+- **Production hardening:** hardened Docker image and Compose stack, dependency and secret scans in CI, runbook and security checklist. Measured: 1,800 API requests/s at p95 21 ms, and about 220,000 applications/hour against a stub ATS, with server and worker each under 100 MB.
+
+Not yet verified against live services: the Apollo, ContactOut and SignalHire clients and the Adzuna client (tested against stub servers only), and the vector search benchmark at 500,000 jobs, which needs a host with about 12 GB of RAM.
