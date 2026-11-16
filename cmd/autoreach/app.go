@@ -40,6 +40,7 @@ func (app *App) Start(ctx context.Context) error {
 		WriteTimeout:      config.GetWriteTimeout(),
 		IdleTimeout:       config.GetIdleTimeout(),
 	}
+	server.RegisterOnShutdown(utils.BeginShutdown)
 
 	serverErrors := make(chan error, 1)
 

@@ -34,20 +34,32 @@ func (ws *WorkerServer) Start(ctx context.Context) error {
 
 	ws.cronManager.StartJobs(ctx)
 
+	// The consumer outlives the signal so tasks the cron jobs publish while stopping still run.
+	consumerCtx, stopConsumer := context.WithCancel(context.WithoutCancel(ctx))
+	defer stopConsumer()
+
 	consumerErrors := make(chan error, 1)
 	go func() {
-		consumerErrors <- server.Start(ctx, ws.handlerRegistry)
+		consumerErrors <- server.Start(consumerCtx, ws.handlerRegistry)
 	}()
 
 	var runErr error
+
+	consumerStopped := false
+
 	select {
 	case runErr = <-opsErrors:
 	case runErr = <-consumerErrors:
+		consumerStopped = true
 	case <-ctx.Done():
-		runErr = <-consumerErrors
 	}
 
 	ws.cronManager.StopJobs()
+	stopConsumer()
+
+	if !consumerStopped {
+		runErr = errors.Join(runErr, <-consumerErrors)
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(
 		context.Background(),

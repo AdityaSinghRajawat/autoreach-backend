@@ -19,8 +19,11 @@ func (h *DashboardHandler) StreamActivity(c *gin.Context) {
 	controller := http.NewResponseController(c.Writer)
 	started := false
 
+	ctx, stop := utils.UntilShutdown(c.Request.Context())
+	defer stop()
+
 	customErr := h.dashboardService.StreamActivity(
-		c.Request.Context(),
+		ctx,
 		c.Param(config.GetCandidateIDParam()),
 		c.GetHeader(config.GetLastEventIDHeader()),
 		func(items []dashboardTypes.ActivityItem) error {
