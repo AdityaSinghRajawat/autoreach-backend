@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
@@ -15,7 +16,37 @@ func wrapWorkerMiddleware(
 	logger *slog.Logger,
 	handler workerConfigs.WorkerMessageHandler,
 ) workerConfigs.WorkerMessageHandler {
-	return workerLoggerMiddleware(logger, handler)
+	return workerLoggerMiddleware(logger, workerMetricsMiddleware(handler))
+}
+
+func workerMetricsMiddleware(
+	next workerConfigs.WorkerMessageHandler,
+) workerConfigs.WorkerMessageHandler {
+	return func(ctx context.Context, message workerConfigs.Message) *workerConfigs.WorkerMessageResult {
+		startedAt := time.Now()
+		result := next(ctx, message)
+
+		utils.RecordWorkerTask(
+			workerConfigs.GetTaskStage(message.TaskID),
+			string(message.TaskID),
+			taskOutcome(message, result),
+			time.Since(startedAt),
+		)
+
+		return result
+	}
+}
+
+// A failure is counted as a retry while attempts remain, and as failed once the task will not run again.
+func taskOutcome(message workerConfigs.Message, result *workerConfigs.WorkerMessageResult) string {
+	switch {
+	case result == nil || result.Success:
+		return config.GetTaskOutcomeSuccess()
+	case result.IsRetryable && message.RetryCount < message.MaxRetry:
+		return config.GetTaskOutcomeRetry()
+	default:
+		return config.GetTaskOutcomeFailed()
+	}
 }
 
 func workerLoggerMiddleware(

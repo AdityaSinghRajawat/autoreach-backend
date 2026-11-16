@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -95,4 +96,18 @@ func (r *RedisUtil) IncrementDaily(
 	}
 
 	return counter.Val(), nil
+}
+
+func (r *RedisUtil) GetDaily(ctx context.Context, namespace, name string) (int64, error) {
+	value, err := r.client.Get(ctx, BuildKey(namespace, name, GetCurrTimeStamp().Format(time.DateOnly))).
+		Int64()
+	if errors.Is(err, redis.Nil) {
+		return 0, nil
+	}
+
+	if err != nil {
+		return 0, fmt.Errorf("read daily counter %s: %w", name, err)
+	}
+
+	return value, nil
 }

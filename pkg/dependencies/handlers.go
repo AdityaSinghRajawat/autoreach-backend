@@ -1,9 +1,11 @@
 package dependencies
 
 import (
+	adminHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/adminManagement"
 	applicationHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/applicationManagement"
 	authHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/authManagement"
 	candidateHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/candidateManagement"
+	dashboardHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/dashboardManagement"
 	enrichmentHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/enrichmentManagement"
 	jobHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/jobManagement"
 	matchingHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/matchingManagement"
@@ -11,6 +13,8 @@ import (
 )
 
 type Handlers struct {
+	Admin       *adminHandler.AdminHandler
+	Dashboard   *dashboardHandler.DashboardHandler
 	Application *applicationHandler.ApplicationHandler
 	Auth        *authHandler.AuthHandler
 	Candidate   *candidateHandler.CandidateHandler
@@ -56,7 +60,19 @@ func (d *Dependencies) initHandlers() error {
 		return err
 	}
 
+	dashboard, err := dashboardHandler.NewDashboardHandler(d.Services.Dashboard)
+	if err != nil {
+		return err
+	}
+
+	admin, err := adminHandler.NewAdminHandler(d.Services.Admin)
+	if err != nil {
+		return err
+	}
+
 	d.Handlers = Handlers{
+		Admin:       admin,
+		Dashboard:   dashboard,
 		Application: application,
 		Outreach:    outreach,
 		Enrichment:  enrichment,

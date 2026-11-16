@@ -25,6 +25,7 @@ type Dependencies struct {
 	RedisUtil           *utils.RedisUtil
 	WorkerStrategy      workerConfigs.IWorkerStrategy
 	WorkerClient        workerConfigs.IWorkerClient
+	WorkerInspector     workerConfigs.IWorkerInspector
 	Embedder            sharedTypes.Embedder
 	ChatCompleter       sharedTypes.ChatCompleter
 	FileStore           sharedTypes.FileStore
@@ -75,6 +76,7 @@ func (d *Dependencies) Wire() error {
 	if d.Logger == nil || d.Postgres == nil || d.TransactionManager == nil ||
 		d.RateLimiter == nil ||
 		d.WorkerClient == nil ||
+		d.WorkerInspector == nil ||
 		d.Embedder == nil ||
 		d.ChatCompleter == nil {
 		return fmt.Errorf("wire dependencies: %w", config.ErrMissingDependency)
@@ -92,6 +94,12 @@ func (d *Dependencies) Wire() error {
 }
 
 func (d *Dependencies) Close() {
+	if d.WorkerInspector != nil {
+		if err := d.WorkerInspector.Close(); err != nil {
+			utils.LogErrorWithoutCtx(err)
+		}
+	}
+
 	if d.WorkerClient != nil {
 		if err := d.WorkerClient.Close(); err != nil {
 			utils.LogErrorWithoutCtx(err)

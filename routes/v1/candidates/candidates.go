@@ -66,6 +66,12 @@ func LoadCandidateRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies
 	)
 
 	candidateGroup.GET(
+		"/metrics",
+		middlewares.Authorize(config.PermissionDashboardRead),
+		deps.Handlers.Dashboard.GetMetrics,
+	)
+
+	candidateGroup.GET(
 		"/jobs",
 		middlewares.Authorize(config.PermissionMatchRead),
 		matchingHandler.ListMatchedJobs,

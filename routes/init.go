@@ -15,6 +15,7 @@ import (
 	adminRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/admin"
 	authRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/auth"
 	candidateRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/candidates"
+	dashboardRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/dashboard"
 	jobRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/jobs"
 	webhookRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/webhooks"
 )
@@ -33,6 +34,7 @@ func NewRoutes(deps *dependencies.Dependencies) http.Handler {
 	}
 
 	router.Use(middlewares.Recovery())
+	router.Use(middlewares.Metrics())
 	router.Use(middlewares.RequestLogger(deps.Logger))
 	router.Use(middlewares.ErrorHandler())
 	router.Use(middlewares.CORS(config.GetCORSAllowedOrigins()))
@@ -81,6 +83,7 @@ func loadAPIRoutes(router *gin.Engine, deps *dependencies.Dependencies) {
 	))
 	authRoutes.LoadAuthRoutes(api, deps)
 	candidateRoutes.LoadCandidateRoutes(api, deps)
+	dashboardRoutes.LoadDashboardRoutes(api, deps)
 	jobRoutes.LoadJobRoutes(api, deps)
 	adminRoutes.LoadAdminRoutes(api, deps)
 	webhookRoutes.LoadWebhookRoutes(api, deps)

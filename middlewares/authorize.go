@@ -97,3 +97,23 @@ func notAccessible(permission config.Permission) *config.CustomError {
 		config.GetErrCodeNotFound(),
 	)
 }
+
+// UsePrincipalCandidate serves routes without a candidate in the path from the signed-in user's
+// candidate, or from ?candidateId= when given, so Authorize can check access as usual.
+func UsePrincipalCandidate() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		candidateID := c.Query(config.GetCandidateIDQueryParam())
+		if candidateID == "" {
+			if principal, found := utils.GetPrincipal(c); found {
+				candidateID = principal.CandidateID
+			}
+		}
+
+		c.Params = append(
+			c.Params,
+			gin.Param{Key: config.GetCandidateIDParam(), Value: candidateID},
+		)
+
+		c.Next()
+	}
+}

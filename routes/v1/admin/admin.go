@@ -58,4 +58,44 @@ func LoadAdminRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 		middlewares.Authorize(config.PermissionJobSourceUpdate),
 		jobHandler.PollJobSource,
 	)
+
+	adminHandler := deps.Handlers.Admin
+	outreachHandler := deps.Handlers.Outreach
+	deadTasksPath := "/queues/:" + config.GetQueueParam() + "/dead"
+
+	adminGroup.GET(
+		"/queues",
+		middlewares.Authorize(config.PermissionQueueRead),
+		adminHandler.ListQueues,
+	)
+	adminGroup.GET(
+		deadTasksPath,
+		middlewares.Authorize(config.PermissionQueueRead),
+		adminHandler.ListDeadTasks,
+	)
+	adminGroup.POST(
+		deadTasksPath+"/:"+config.GetTaskIDParam()+"/retry",
+		middlewares.Authorize(config.PermissionQueueRetry),
+		adminHandler.RetryDeadTask,
+	)
+	adminGroup.GET(
+		"/providers",
+		middlewares.Authorize(config.PermissionProviderRead),
+		adminHandler.ListProviders,
+	)
+	adminGroup.GET(
+		"/suppressions",
+		middlewares.Authorize(config.PermissionSuppressionRead),
+		outreachHandler.ListSuppressions,
+	)
+	adminGroup.POST(
+		"/suppressions",
+		middlewares.Authorize(config.PermissionSuppressionCreate),
+		outreachHandler.CreateSuppression,
+	)
+	adminGroup.DELETE(
+		"/suppressions/:"+config.GetSuppressionIDParam(),
+		middlewares.Authorize(config.PermissionSuppressionDelete),
+		outreachHandler.DeleteSuppression,
+	)
 }

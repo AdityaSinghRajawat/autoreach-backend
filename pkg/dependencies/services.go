@@ -1,9 +1,11 @@
 package dependencies
 
 import (
+	adminService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/adminManagement"
 	applicationService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/applicationManagement"
 	authService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/authManagement"
 	candidateService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/candidateManagement"
+	dashboardService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/dashboardManagement"
 	enrichmentService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement"
 	jobService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement"
 	matchingService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/matchingManagement"
@@ -11,6 +13,8 @@ import (
 )
 
 type Services struct {
+	Admin       *adminService.AdminService
+	Dashboard   *dashboardService.DashboardService
 	Application *applicationService.ApplicationService
 	Auth        *authService.AuthService
 	Candidate   *candidateService.CandidateService
@@ -132,7 +136,28 @@ func (d *Dependencies) initServices() error {
 		return err
 	}
 
+	dashboard, err := dashboardService.NewDashboardService(
+		dashboardService.DashboardServiceDependencies{
+			MetricsRepo:       d.Repositories.Metrics,
+			ActivityEventRepo: d.Repositories.ActivityEvent,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	admin, err := adminService.NewAdminService(adminService.AdminServiceDependencies{
+		WorkerInspector: d.WorkerInspector,
+		CreditReader:    d.RedisUtil,
+		MetricsRepo:     d.Repositories.Metrics,
+	})
+	if err != nil {
+		return err
+	}
+
 	d.Services = Services{
+		Admin:       admin,
+		Dashboard:   dashboard,
 		Application: application,
 		Outreach:    outreach,
 		Enrichment:  enrichment,

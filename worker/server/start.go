@@ -21,6 +21,8 @@ func (ws *WorkerServer) Start(ctx context.Context) error {
 		return err
 	}
 
+	registerQueueMetrics(ws.dependencies.WorkerInspector)
+
 	opsServer := ws.newOpsServer()
 	opsErrors := make(chan error, 1)
 

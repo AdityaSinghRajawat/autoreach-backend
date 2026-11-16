@@ -69,6 +69,13 @@ const (
 	PermissionApplicationRead        Permission = "application:read"
 	PermissionApplicationCreate      Permission = "application:create"
 	PermissionOutreachCampaignUpdate Permission = "outreach_campaign:update"
+	PermissionDashboardRead          Permission = "dashboard:read"
+	PermissionQueueRead              Permission = "queue:read"
+	PermissionQueueRetry             Permission = "queue:retry"
+	PermissionProviderRead           Permission = "provider:read"
+	PermissionSuppressionRead        Permission = "suppression:read"
+	PermissionSuppressionCreate      Permission = "suppression:create"
+	PermissionSuppressionDelete      Permission = "suppression:delete"
 )
 
 var permissionCatalogueI = []Permission{
@@ -107,6 +114,13 @@ var permissionCatalogueI = []Permission{
 	PermissionApplicationCreate,
 	PermissionOutreachMessageRead,
 	PermissionOutreachMessageCreate,
+	PermissionDashboardRead,
+	PermissionQueueRead,
+	PermissionQueueRetry,
+	PermissionProviderRead,
+	PermissionSuppressionRead,
+	PermissionSuppressionCreate,
+	PermissionSuppressionDelete,
 }
 
 var accessScopesI = []AccessScope{ScopeOwn, ScopeAny}
@@ -140,6 +154,7 @@ var rolePoliciesI = map[string][]string{
 		"application:create:own",
 		"outreach_message:read:own",
 		"outreach_message:create:own",
+		"dashboard:read:own",
 	},
 	RoleAdmin: grantEveryPermission(ScopeAny),
 }

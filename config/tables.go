@@ -29,6 +29,7 @@ const (
 	TableApplications          Table = "applications"
 	TableJobSources            Table = "job_sources"
 	TableCompanyDomains        Table = "company_domains"
+	TableActivityEvents        Table = "activity_events"
 )
 
 var declaredTables = []Table{
@@ -54,13 +55,18 @@ var declaredTables = []Table{
 	TableCompanyDomains,
 }
 
+// declaredViews are read-only views; their names can be overridden like tables, but they hold no rows.
+var declaredViews = []Table{
+	TableActivityEvents,
+}
+
 var (
 	tableNamesI            = map[Table]string{}
 	tableIdentifierPattern = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
 )
 
 func loadTableNames() {
-	for _, table := range declaredTables {
+	for _, table := range append(GetDeclaredTables(), declaredViews...) {
 		name := getEnvWithDefault("DB_TABLE_"+strings.ToUpper(string(table)), string(table))
 		if !tableIdentifierPattern.MatchString(name) {
 			log.Fatalf("table name override for %s is not a valid identifier", table)

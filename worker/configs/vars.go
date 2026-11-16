@@ -40,6 +40,15 @@ const (
 
 	PublishStatusEnqueued = "ENQUEUED"
 	PublishStatusDeferred = "DEFERRED"
+
+	StageIngestion   = "INGESTION"
+	StageEmbedding   = "EMBEDDING"
+	StageResume      = "RESUME"
+	StageMatching    = "MATCHING"
+	StageEnrichment  = "ENRICHMENT"
+	StageOutreach    = "OUTREACH"
+	StageApplication = "APPLICATION"
+	StageOther       = "OTHER"
 )
 
 type TaskConfig struct {
@@ -49,6 +58,8 @@ type TaskConfig struct {
 	Timeout      time.Duration
 	Retention    time.Duration
 	AggregatedBy string
+	// Stage is the pipeline stage the task belongs to, used as a metrics label.
+	Stage string
 }
 
 type QueueDefinition struct {
@@ -70,6 +81,7 @@ var (
 
 var taskConfigsI = map[WorkerTaskID]TaskConfig{
 	TaskEmbedJob: {
+		Stage:        StageEmbedding,
 		QueueName:    QueueEmbedding,
 		MaxRetry:     5,
 		RetryBackoff: embeddingBackoffI,
@@ -77,70 +89,83 @@ var taskConfigsI = map[WorkerTaskID]TaskConfig{
 		AggregatedBy: GroupEmbedJob,
 	},
 	TaskEmbedJobBatch: {
+		Stage:        StageEmbedding,
 		QueueName:    QueueEmbedding,
 		MaxRetry:     5,
 		RetryBackoff: embeddingBackoffI,
 		Timeout:      60 * time.Second,
 	},
 	TaskProcessResume: {
+		Stage:        StageResume,
 		QueueName:    QueueEmbedding,
 		MaxRetry:     5,
 		RetryBackoff: embeddingBackoffI,
 		Timeout:      2 * time.Minute,
 	},
 	TaskMatchResume: {
+		Stage:        StageMatching,
 		QueueName:    QueueMatching,
 		MaxRetry:     3,
 		RetryBackoff: matchingBackoffI,
 		Timeout:      60 * time.Second,
 	},
 	TaskMatchJob: {
+		Stage:        StageMatching,
 		QueueName:    QueueMatching,
 		MaxRetry:     3,
 		RetryBackoff: matchingBackoffI,
 		Timeout:      30 * time.Second,
 	},
 	TaskPlanOutreach: {
+		Stage:        StageOutreach,
 		QueueName:    QueueOutreach,
 		MaxRetry:     3,
 		RetryBackoff: matchingBackoffI,
 		Timeout:      30 * time.Second,
 	},
 	TaskSendColdEmail: {
+		Stage:     StageOutreach,
 		QueueName: QueueOutreach,
 		Timeout:   45 * time.Second,
 	},
 	TaskSendLinkedinInvite: {
+		Stage:     StageOutreach,
 		QueueName: QueueOutreach,
 		Timeout:   45 * time.Second,
 	},
 	TaskSendLinkedinDM: {
+		Stage:     StageOutreach,
 		QueueName: QueueOutreach,
 		Timeout:   45 * time.Second,
 	},
 	TaskQueueApplications: {
+		Stage:        StageApplication,
 		QueueName:    QueueApplication,
 		MaxRetry:     3,
 		RetryBackoff: matchingBackoffI,
 		Timeout:      30 * time.Second,
 	},
 	TaskPrepareApplication: {
+		Stage:        StageApplication,
 		QueueName:    QueueApplication,
 		MaxRetry:     3,
 		RetryBackoff: enrichmentBackoffI,
 		Timeout:      time.Minute,
 	},
 	TaskPollJobSource: {
+		Stage:        StageIngestion,
 		QueueName:    QueueEmbedding,
 		MaxRetry:     3,
 		RetryBackoff: enrichmentBackoffI,
 		Timeout:      2 * time.Minute,
 	},
 	TaskSweepMailbox: {
+		Stage:     StageOutreach,
 		QueueName: QueueOutreach,
 		Timeout:   2 * time.Minute,
 	},
 	TaskEnrichContacts: {
+		Stage:        StageEnrichment,
 		QueueName:    QueueEnrichment,
 		MaxRetry:     3,
 		RetryBackoff: enrichmentBackoffI,
@@ -160,6 +185,20 @@ func GetTaskConfig(taskID WorkerTaskID) (TaskConfig, bool) {
 	taskConfig, found := taskConfigsI[taskID]
 
 	return taskConfig, found
+}
+
+func GetTaskStage(taskID WorkerTaskID) string {
+	if taskConfig, found := taskConfigsI[taskID]; found && taskConfig.Stage != "" {
+		return taskConfig.Stage
+	}
+
+	return StageOther
+}
+
+func IsKnownQueue(queue string) bool {
+	return slices.ContainsFunc(queueDefinitionsI, func(definition QueueDefinition) bool {
+		return definition.Name == queue
+	})
 }
 
 func GetTaskIDs() []WorkerTaskID {

@@ -17,6 +17,13 @@ func (d *Dependencies) initClients(ctx context.Context, postgresMaxConns int) er
 
 	d.WorkerStrategy = workerStrategy
 
+	workerInspector, err := workerStrategy.InitializeInspector(ctx)
+	if err != nil {
+		return err
+	}
+
+	d.WorkerInspector = workerInspector
+
 	err = utils.RunConcurrently(
 		ctx,
 		utils.ConcurrentTask{

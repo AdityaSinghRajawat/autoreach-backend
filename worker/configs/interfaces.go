@@ -50,7 +50,42 @@ type IWorkerServer interface {
 	Start(ctx context.Context, handlerRegistry WorkerHandlerRegistry) error
 }
 
+// QueueInfo is a snapshot of one queue; Processed and Failed count today's tasks.
+type QueueInfo struct {
+	Queue     string
+	Size      int
+	Pending   int
+	Active    int
+	Scheduled int
+	Retry     int
+	Dead      int
+	Processed int
+	Failed    int
+	Paused    bool
+	Latency   time.Duration
+}
+
+// DeadTask is a task that used up its retries or failed permanently.
+type DeadTask struct {
+	ID           string
+	TaskID       WorkerTaskID
+	Queue        string
+	Payload      []byte
+	LastError    string
+	LastFailedAt time.Time
+	Retried      int
+	MaxRetry     int
+}
+
+type IWorkerInspector interface {
+	ListQueues(ctx context.Context) ([]QueueInfo, error)
+	ListDeadTasks(ctx context.Context, queue string, page, perPage int) ([]DeadTask, int, error)
+	RetryDeadTask(ctx context.Context, queue, id string) error
+	Close() error
+}
+
 type IWorkerStrategy interface {
+	InitializeInspector(ctx context.Context) (IWorkerInspector, error)
 	InitializeClient(ctx context.Context) (IWorkerClient, error)
 	InitializeServer(
 		ctx context.Context,

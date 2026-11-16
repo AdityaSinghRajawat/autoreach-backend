@@ -4,6 +4,7 @@ import (
 	applicationRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/applicationManagement"
 	authRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/authManagement"
 	candidateRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/candidateManagement"
+	dashboardRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/dashboardManagement"
 	enrichmentRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/enrichmentManagement"
 	jobRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/jobManagement"
 	matchingRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/matchingManagement"
@@ -11,6 +12,8 @@ import (
 )
 
 type Repositories struct {
+	Metrics           *dashboardRepo.MetricsRepo
+	ActivityEvent     *dashboardRepo.ActivityEventRepo
 	CompanyDomain     *enrichmentRepo.CompanyDomainRepo
 	JobSource         *jobRepo.JobSourceRepo
 	Application       *applicationRepo.ApplicationRepo
@@ -122,7 +125,19 @@ func (d *Dependencies) initRepositories() error {
 		return err
 	}
 
+	metricsRepo, err := dashboardRepo.NewMetricsRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
+	activityEventRepo, err := dashboardRepo.NewActivityEventRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
 	d.Repositories = Repositories{
+		Metrics:           metricsRepo,
+		ActivityEvent:     activityEventRepo,
 		CompanyDomain:     companyDomainRepo,
 		JobSource:         jobSourceRepo,
 		Application:       applicationRepository,

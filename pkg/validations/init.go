@@ -15,17 +15,18 @@ var (
 )
 
 var customValidationsI = map[string]validator.Func{
-	"validate_timezone":         ValidateTimezone,
-	"validate_linkedin_url":     ValidateLinkedinURL,
-	"validate_external_url":     ValidateExternalURL,
-	"validate_salary_range":     ValidateSalaryRange,
-	"validate_job_title":        ValidateJobTitle,
-	"validate_json_object":      ValidateJSONObject,
-	"validate_resume_file":      ValidateResumeFile,
-	"validate_role":             ValidateRole,
-	"validate_api_client_grant": ValidateAPIClientGrant,
-	"validate_board_token":      ValidateBoardToken,
-	"validate_board_types":      ValidateBoardTypes,
+	"validate_timezone":          ValidateTimezone,
+	"validate_linkedin_url":      ValidateLinkedinURL,
+	"validate_external_url":      ValidateExternalURL,
+	"validate_salary_range":      ValidateSalaryRange,
+	"validate_job_title":         ValidateJobTitle,
+	"validate_json_object":       ValidateJSONObject,
+	"validate_resume_file":       ValidateResumeFile,
+	"validate_role":              ValidateRole,
+	"validate_api_client_grant":  ValidateAPIClientGrant,
+	"validate_board_token":       ValidateBoardToken,
+	"validate_board_types":       ValidateBoardTypes,
+	"validate_suppression_value": ValidateSuppressionValue,
 }
 
 func GetValidator() *validator.Validate {
