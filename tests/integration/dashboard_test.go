@@ -369,3 +369,19 @@ func TestActivityStreamResumesAndDeliversNewEvents(t *testing.T) {
 
 	assert.Equal(t, "OUTREACH_CLICKED", nextEventType(), "new events are pushed while connected")
 }
+
+func TestACandidateCannotHoldMoreThanTheAllowedNumberOfStreams(t *testing.T) {
+	fixture := newJobFixture(t)
+
+	for range config.GetActivityStreamsPerCandidate() {
+		seated, _, err := fixture.deps.RedisUtil.TakeSeat(context.Background(), fixture.candidateID,
+			config.GetActivityStreamsPerCandidate(), time.Minute)
+		require.NoError(t, err)
+		require.True(t, seated)
+	}
+
+	refused := helpers.Do(t, fixture.router, http.MethodGet, "/api/v1/dashboard/activity/stream",
+		nil, bearer(fixture.userToken))
+	assert.Equal(t, http.StatusTooManyRequests, refused.Recorder.Code, string(refused.Body))
+	helpers.AssertMatchesSpec(t, refused)
+}

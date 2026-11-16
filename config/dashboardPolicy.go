@@ -24,6 +24,7 @@ type dashboardConfig struct {
 	streamPollInterval time.Duration
 	streamHeartbeat    time.Duration
 	streamMaxDuration  time.Duration
+	streamsPerOwner    int
 }
 
 var dashboardConfigI dashboardConfig
@@ -39,6 +40,7 @@ func loadDashboardConfig() {
 			"ACTIVITY_STREAM_MAX_DURATION",
 			30*time.Minute,
 		),
+		streamsPerOwner: max(getEnvIntWithDefault("ACTIVITY_STREAMS_PER_CANDIDATE", 5), 1),
 	}
 }
 
@@ -61,3 +63,6 @@ func GetPercentageScale() float64            { return percentageScale }
 func GetActivityStreamPollInterval() time.Duration { return dashboardConfigI.streamPollInterval }
 func GetActivityStreamHeartbeat() time.Duration    { return dashboardConfigI.streamHeartbeat }
 func GetActivityStreamMaxDuration() time.Duration  { return dashboardConfigI.streamMaxDuration }
+
+// GetActivityStreamsPerCandidate caps open activity streams per candidate across every server.
+func GetActivityStreamsPerCandidate() int { return dashboardConfigI.streamsPerOwner }

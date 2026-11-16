@@ -76,6 +76,7 @@ type jobConstants struct {
 	maxIngestBatchSize int
 	hashVersion        string
 	lockNamespace      string
+	seatNamespace      string
 	modeAdminCreate    string
 }
 
@@ -100,6 +101,7 @@ var constI = constants{
 		maxIngestBatchSize: 500,
 		hashVersion:        "v1",
 		lockNamespace:      "lock",
+		seatNamespace:      "seat",
 		modeAdminCreate:    "create-admin",
 	},
 	auth: authConstants{
@@ -220,4 +222,5 @@ func GetAPIKeySecretBytes() int  { return constI.job.apiKeySecretBytes }
 func GetMaxIngestBatchSize() int { return constI.job.maxIngestBatchSize }
 func GetJobHashVersion() string  { return constI.job.hashVersion }
 func GetLockNamespace() string   { return constI.job.lockNamespace }
+func GetSeatNamespace() string   { return constI.job.seatNamespace }
 func GetModeAdminCreate() string { return constI.job.modeAdminCreate }

@@ -142,6 +142,7 @@ func (d *Dependencies) initServices() error {
 		dashboardService.DashboardServiceDependencies{
 			MetricsRepo:       d.Repositories.Metrics,
 			ActivityEventRepo: d.Repositories.ActivityEvent,
+			RedisUtil:         d.RedisUtil,
 		},
 	)
 	if err != nil {

@@ -21,6 +21,17 @@ func BuildKey(parts ...string) string {
 	return strings.Join(segments, config.GetKeyDelimiter())
 }
 
+var takeSeatScriptI = redis.NewScript(`
+local now = tonumber(ARGV[1])
+redis.call("ZREMRANGEBYSCORE", KEYS[1], "-inf", now)
+if redis.call("ZCARD", KEYS[1]) >= tonumber(ARGV[2]) then
+	return 0
+end
+redis.call("ZADD", KEYS[1], ARGV[3], ARGV[4])
+redis.call("PEXPIRE", KEYS[1], ARGV[5])
+return 1
+`)
+
 type RedisUtil struct {
 	client *redis.Client
 }
@@ -75,4 +86,29 @@ func (r *RedisUtil) GetDaily(ctx context.Context, namespace, name string) (int64
 	}
 
 	return value, nil
+}
+
+// TakeSeat holds one of limit seats under name for at most ttl, and returns a release func. Seats
+// expire on their own, so a process that dies holding one cannot keep it.
+func (r *RedisUtil) TakeSeat(
+	ctx context.Context,
+	name string,
+	limit int,
+	ttl time.Duration,
+) (bool, func(), error) {
+	key := BuildKey(config.GetSeatNamespace(), name)
+	seat := uuid.NewString()
+	now := GetCurrTimeStamp()
+
+	taken, err := takeSeatScriptI.Run(ctx, r.client, []string{key},
+		now.UnixMilli(), limit, now.Add(ttl).UnixMilli(), seat, ttl.Milliseconds()).Int()
+	if err != nil {
+		return false, nil, fmt.Errorf("take seat %s: %w", name, err)
+	}
+
+	if taken == 0 {
+		return false, nil, nil
+	}
+
+	return true, func() { _ = r.client.ZRem(context.WithoutCancel(ctx), key, seat).Err() }, nil
 }

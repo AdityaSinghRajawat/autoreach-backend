@@ -2,6 +2,7 @@ package dashboardManagement
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
@@ -30,6 +31,24 @@ func (s *DashboardService) StreamActivity(
 		}
 
 		cursor = parsed
+	}
+
+	seated, release, err := s.redisUtil.TakeSeat(ctx, candidateID,
+		config.GetActivityStreamsPerCandidate(),
+		config.GetActivityStreamMaxDuration()+config.GetActivityStreamHeartbeat())
+	if err != nil {
+		utils.LogWarn(ctx, "activity stream cap unavailable, allowing stream", "error", err.Error())
+	}
+
+	if err == nil && !seated {
+		return config.NewCustomError(
+			fmt.Errorf("stream activity: %w", config.ErrTooManyStreams),
+			config.GetErrCodeRateLimited(),
+		)
+	}
+
+	if release != nil {
+		defer release()
 	}
 
 	if err := emit(nil); err != nil {
