@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
@@ -277,4 +278,137 @@ func TestMetricsEndpointExposesRequestsByRoute(t *testing.T) {
 		"request counter by route template",
 	)
 	assert.Contains(t, body, "autoreach_http_request_duration_seconds_bucket")
+}
+
+func TestAdminFindsAndErasesAContact(t *testing.T) {
+	fixture := newJobFixture(t)
+	fixture.seedDashboard(t)
+	token := loginAdmin(t, fixture.router)
+	ctx := context.Background()
+
+	found := helpers.Do(
+		t,
+		fixture.router,
+		http.MethodGet,
+		adminBasePath+"/contacts?email=Riley@Acme.com",
+		nil,
+		bearer(token),
+	)
+	require.Equal(t, http.StatusOK, found.Recorder.Code, string(found.Body))
+	helpers.AssertMatchesSpec(t, found)
+
+	contacts := helpers.DecodeData[[]map[string]any](t, found)
+	require.Len(t, contacts, 1)
+	contactID, _ := contacts[0]["contactId"].(string)
+
+	erased := helpers.Do(
+		t,
+		fixture.router,
+		http.MethodDelete,
+		adminBasePath+"/contacts/"+contactID,
+		nil,
+		bearer(token),
+	)
+	require.Equal(t, http.StatusNoContent, erased.Recorder.Code, string(erased.Body))
+
+	var remaining, messages int
+	require.NoError(t, fixture.deps.Postgres.GetPool().QueryRow(ctx, `
+		SELECT (SELECT COUNT(*) FROM company_contacts WHERE id = $1),
+			(SELECT COUNT(*) FROM outreach_messages WHERE contact_id = $1)
+	`, contactID).Scan(&remaining, &messages))
+	assert.Zero(t, remaining)
+	assert.Zero(t, messages, "messages to the person go with them")
+
+	suppressed, err := fixture.deps.Repositories.Suppression.IsSuppressed(
+		ctx,
+		fixture.candidateID,
+		"riley@acme.com",
+	)
+	require.NoError(t, err)
+	assert.True(t, suppressed, "an erased person is never contacted again")
+
+	again := helpers.Do(
+		t,
+		fixture.router,
+		http.MethodDelete,
+		adminBasePath+"/contacts/"+contactID,
+		nil,
+		bearer(token),
+	)
+	assert.Equal(t, http.StatusNotFound, again.Recorder.Code)
+	helpers.AssertMatchesSpec(t, again)
+
+	empty := helpers.Do(
+		t,
+		fixture.router,
+		http.MethodGet,
+		adminBasePath+"/contacts",
+		nil,
+		bearer(token),
+	)
+	assert.Equal(
+		t,
+		http.StatusBadRequest,
+		empty.Recorder.Code,
+		"a lookup needs an email or LinkedIn URL",
+	)
+}
+
+func TestStaleContactsAreAnonymizedButTheirHistoryIsKept(t *testing.T) {
+	fixture := newJobFixture(t)
+	fixture.seedDashboard(t)
+
+	ctx := context.Background()
+	pool := fixture.deps.Postgres.GetPool()
+	before := fixture.metricsFor(t)
+
+	_, err := pool.Exec(ctx, `UPDATE company_contacts SET updated_at = NOW() - INTERVAL '400 days'`)
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx, `UPDATE outreach_messages SET created_at = NOW() - INTERVAL '400 days'
+		WHERE contact_id = (SELECT id FROM company_contacts WHERE work_email = 'riley@acme.com')`)
+	require.NoError(t, err)
+
+	untouched, customErr := fixture.deps.Services.Outreach.AnonymizeStaleContacts(ctx, 0)
+	require.Nil(t, customErr)
+	assert.Zero(t, untouched, "retention is off unless a period is set")
+
+	anonymized, customErr := fixture.deps.Services.Outreach.AnonymizeStaleContacts(
+		ctx,
+		365*24*time.Hour,
+	)
+	require.Nil(t, customErr)
+	assert.Equal(
+		t,
+		2,
+		anonymized,
+		"contacts never messaged, or messaged only long ago, lose their details",
+	)
+
+	var named, contacts, blankMessages int
+	require.NoError(t, pool.QueryRow(ctx, `
+		SELECT COUNT(*) FILTER (WHERE work_email IS NOT NULL), COUNT(*),
+			(SELECT COUNT(*) FROM outreach_messages WHERE body_content = '')
+		FROM company_contacts
+	`).Scan(&named, &contacts, &blankMessages))
+	assert.Equal(t, 1, named, "a contact messaged recently keeps their details")
+	assert.Equal(t, 3, contacts, "rows are kept")
+	assert.Equal(t, 2, blankMessages, "the text sent to anonymized contacts is removed")
+
+	assert.Equal(t, before, fixture.metricsFor(t), "dashboard history is unchanged")
+}
+
+func (f jobFixture) metricsFor(t *testing.T) string {
+	t.Helper()
+
+	exchange := helpers.Do(
+		t,
+		f.router,
+		http.MethodGet,
+		candidatePath(f.candidateID)+"/metrics",
+		nil,
+		bearer(f.userToken),
+	)
+	require.Equal(t, http.StatusOK, exchange.Recorder.Code)
+
+	return string(helpers.DecodeEnvelope(t, exchange).Data)
 }

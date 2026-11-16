@@ -23,8 +23,10 @@ import (
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
+	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
 const (
@@ -190,6 +192,10 @@ func TestCampaignEmailIsSentAndAReplyPausesTheFollowUps(t *testing.T) {
 	messages = fixture.messages(t)
 	assert.Equal(t, modelHelpers.OutreachStatusReplied, messages[0].Status)
 	assert.NotNil(t, messages[0].RepliedAt)
+
+	replied := fixture.storedContact(t, fixture.contactID)
+	assert.NotNil(t, replied.EmailConfirmedAt, "a reply confirms the address works")
+	assert.NotNil(t, replied.LastInteractionAt)
 	assert.Equal(
 		t,
 		modelHelpers.OutreachStatusPaused,
@@ -270,6 +276,16 @@ func TestBounceEndsTheConversationAndSuppressesTheAddress(t *testing.T) {
 	messages := fixture.messages(t)
 	assert.Equal(t, modelHelpers.OutreachStatusBounced, messages[0].Status)
 	assert.Equal(t, modelHelpers.OutreachStatusCancelled, messages[1].Status)
+
+	bounced := fixture.storedContact(t, fixture.contactID)
+	assert.Nil(t, bounced.WorkEmail, "the bounced address is dropped from the contact")
+	assert.Equal(t, modelHelpers.EmailStatusInvalid, bounced.EmailVerificationStatus)
+	assert.True(t, bounced.HasBounced(contactAddress))
+	assert.True(
+		t,
+		fixture.refreshQueuedFor(t, fixture.contactID),
+		"a refresh looks for a current address",
+	)
 
 	retry := helpers.Do(t, fixture.router, http.MethodPost,
 		candidatePath(fixture.candidateID)+"/outreach-messages", map[string]any{
@@ -628,4 +644,102 @@ func TestReplyingUnsubscribeIsTreatedAsAnOptOut(t *testing.T) {
 		"an opt-out is not counted as a reply",
 	)
 	assert.Equal(t, modelHelpers.OutreachStatusCancelled, messages[1].Status)
+}
+
+func (f jobFixture) storedContact(t *testing.T, contactID string) *enrichmentModel.CompanyContact {
+	t.Helper()
+
+	contact, err := f.deps.Repositories.CompanyContact.FindByID(context.Background(), contactID)
+	require.NoError(t, err)
+	require.NotNil(t, contact)
+
+	return contact
+}
+
+// refreshQueuedFor reads the queue's task records straight from Redis: the suite flushes Redis
+// between tests while the publishing client stays up, so asynq's queue list can be stale here.
+func (f jobFixture) refreshQueuedFor(t *testing.T, contactID string) bool {
+	t.Helper()
+
+	ctx := context.Background()
+	client := f.deps.Redis.GetClient()
+
+	keys, err := client.Keys(ctx, "asynq:{"+workerConfigs.QueueEnrichment+"}:t:*").Result()
+	require.NoError(t, err)
+
+	for _, key := range keys {
+		message, err := client.HGet(ctx, key, "msg").Result()
+		require.NoError(t, err)
+
+		if strings.Contains(message, string(workerConfigs.TaskRefreshContact)) &&
+			strings.Contains(message, contactID) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func TestRefreshAfterABounceAdoptsTheCurrentAddress(t *testing.T) {
+	fixture := newOutreachFixture(t)
+	ctx := context.Background()
+	stub := helpers.NewEnrichmentStub(t)
+
+	stub.Set(func(stub *helpers.EnrichmentStub) {
+		stub.Matches["p-sarah"] = map[string]any{
+			"id": "p-sarah", "name": "Sarah Lee", "title": "Engineering Manager",
+			"email": "sarah.lee@acme.test", "email_status": "verified",
+		}
+	})
+
+	fixture.deps.EnrichmentProviders = providers.NewProviderRegistry(
+		stub.Policies(),
+		config.GetSignalHireCallbackURL(),
+	)
+	fixture.deps.EmailVerifier = utils.NewEmailVerifier(
+		helpers.FakeMXResolver{Domains: map[string]bool{"acme.test": true}},
+	)
+	require.NoError(t, fixture.deps.Wire())
+
+	t.Cleanup(func() {
+		fixture.deps.EnrichmentProviders = []providers.Provider{}
+		fixture.deps.EmailVerifier = utils.NewEmailVerifier(nil)
+		require.NoError(t, fixture.deps.Wire())
+	})
+
+	contact := fixture.storedContact(t, fixture.contactID)
+	personID := "p-sarah"
+	contact.ProviderPersonID = &personID
+	contact.RecordBounce(time.Now().UTC())
+	_, err := fixture.deps.Repositories.CompanyContact.Upsert(ctx, contact)
+	require.NoError(t, err)
+
+	require.Nil(t, fixture.deps.Services.Enrichment.RefreshContact(ctx, fixture.contactID))
+
+	refreshed := fixture.storedContact(t, fixture.contactID)
+	require.NotNil(t, refreshed.WorkEmail)
+	assert.Equal(t, "sarah.lee@acme.test", *refreshed.WorkEmail)
+	assert.True(t, refreshed.IsEmailVerified)
+
+	reasons := []modelHelpers.ContactChangeReason{}
+	for _, change := range refreshed.History() {
+		reasons = append(reasons, change.Reason)
+	}
+
+	assert.Equal(t, []modelHelpers.ContactChangeReason{
+		modelHelpers.ContactChangeBounced, modelHelpers.ContactChangeRefreshed,
+	}, reasons)
+
+	stub.Set(func(stub *helpers.EnrichmentStub) {
+		stub.Matches["p-sarah"]["email"] = contactAddress
+	})
+
+	contact = fixture.storedContact(t, fixture.contactID)
+	contact.RecordBounce(time.Now().UTC())
+	_, err = fixture.deps.Repositories.CompanyContact.Upsert(ctx, contact)
+	require.NoError(t, err)
+
+	require.Nil(t, fixture.deps.Services.Enrichment.RefreshContact(ctx, fixture.contactID))
+	assert.Nil(t, fixture.storedContact(t, fixture.contactID).WorkEmail,
+		"an address that bounced before is never adopted again")
 }

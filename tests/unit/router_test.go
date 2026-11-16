@@ -2,6 +2,7 @@ package unit
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	"github.com/AdityaSinghRajawat/autoreach-backend/middlewares"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/dependencies"
 	"github.com/AdityaSinghRajawat/autoreach-backend/routes"
@@ -123,4 +125,41 @@ func TestEveryAPIRouteIsDocumentedInTheSpec(t *testing.T) {
 			specPath,
 		)
 	}
+}
+
+func TestCORSAllowsOnlyListedOrigins(t *testing.T) {
+	setup.Config(t)
+
+	engine := gin.New()
+	engine.Use(middlewares.CORS([]string{"https://app.autoreach.example"}))
+	engine.GET("/ping", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	call := func(origin string) http.Header {
+		t.Helper()
+
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodGet, "/ping", nil)
+		request.Header.Set(config.GetOriginHeader(), origin)
+		engine.ServeHTTP(recorder, request)
+
+		return recorder.Header()
+	}
+
+	assert.Equal(
+		t,
+		"https://app.autoreach.example",
+		call("https://app.autoreach.example").Get(config.GetCORSAllowOriginHeader()),
+	)
+	assert.Empty(t, call("https://evil.example").Get(config.GetCORSAllowOriginHeader()))
+
+	router := newRouter(t)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/health", nil)
+	request.Header.Set(config.GetOriginHeader(), "https://evil.example")
+	router.ServeHTTP(recorder, request)
+	assert.Empty(
+		t,
+		recorder.Header().Get(config.GetCORSAllowOriginHeader()),
+		"the default allow-list is empty",
+	)
 }
