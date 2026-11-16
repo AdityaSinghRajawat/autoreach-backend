@@ -16,13 +16,23 @@ func (s *EnrichmentService) publishOutreachPlans(ctx context.Context, jobID stri
 		return
 	}
 
-	for _, candidateID := range candidateIDs {
-		_, err := s.workerClient.Publish(ctx, workerConfigs.PublishParams{
-			TaskID:  workerConfigs.TaskPlanOutreach,
-			Payload: workerCustomTypes.PlanOutreachPayload{CandidateID: candidateID, JobID: jobID},
+	tasks := make([]utils.ConcurrentTask, 0, len(candidateIDs))
+	for _, item := range candidateIDs {
+		tasks = append(tasks, utils.ConcurrentTask{
+			Name: "publish outreach plan",
+			Run: func(ctx context.Context) error {
+				_, err := s.workerClient.Publish(ctx, workerConfigs.PublishParams{
+					TaskID:  workerConfigs.TaskPlanOutreach,
+					Payload: workerCustomTypes.PlanOutreachPayload{CandidateID: item, JobID: jobID},
+				})
+				if err != nil {
+					utils.LogError(ctx, err, "job_id", jobID, "candidate_id", item)
+				}
+
+				return nil
+			},
 		})
-		if err != nil {
-			utils.LogError(ctx, err, "job_id", jobID, "candidate_id", candidateID)
-		}
 	}
+
+	_ = utils.RunConcurrently(ctx, tasks...)
 }

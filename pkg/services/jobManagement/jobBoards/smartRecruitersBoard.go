@@ -3,6 +3,7 @@ package jobBoards
 import (
 	"context"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	jobTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/jobManagement"
 	smartRecruitersIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ats/smartrecruiters"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
@@ -28,7 +29,11 @@ func (b *smartRecruitersBoard) ListJobs(
 		return jobTypes.BoardListing{}, err
 	}
 
-	jobs, err := readNewJobs(ctx, summaries, knownExternalIDs,
+	jobs, err := readNewJobs(
+		ctx,
+		summaries,
+		knownExternalIDs,
+		config.GetJobBoardDetailConcurrency(),
 		func(ctx context.Context, summary jobTypes.BoardJob) (*jobTypes.BoardJob, error) {
 			job, err := b.integration.GetPosting(ctx, source.BoardToken, summary.ExternalID)
 

@@ -67,7 +67,7 @@ func (b *careerPageBoard) ListJobs(
 		summaries = append(summaries, jobTypes.BoardJob{ExternalID: page, URL: page})
 	}
 
-	jobs, err := readNewJobs(ctx, summaries, knownExternalIDs,
+	jobs, err := readNewJobs(ctx, summaries, knownExternalIDs, 1,
 		func(ctx context.Context, summary jobTypes.BoardJob) (*jobTypes.BoardJob, error) {
 			page, err := b.fetcher.Fetch(ctx, summary.URL)
 			if err != nil {

@@ -75,8 +75,14 @@ func DrainBackgroundGoroutines() {
 }
 
 func RunConcurrently(ctx context.Context, tasks ...ConcurrentTask) error {
+	return RunConcurrentlyWithLimit(ctx, config.GetConcurrentTaskLimit(), tasks...)
+}
+
+// RunConcurrentlyWithLimit is RunConcurrently with its own limit, for work that must stay gentler
+// than the default, such as requests to a single outside site.
+func RunConcurrentlyWithLimit(ctx context.Context, limit int, tasks ...ConcurrentTask) error {
 	group, groupCtx := errgroup.WithContext(ctx)
-	group.SetLimit(config.GetConcurrentTaskLimit())
+	group.SetLimit(max(limit, 1))
 
 	for _, task := range tasks {
 		group.Go(func() (err error) {

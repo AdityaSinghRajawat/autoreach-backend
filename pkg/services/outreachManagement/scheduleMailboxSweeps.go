@@ -19,15 +19,25 @@ func (s *OutreachService) ScheduleMailboxSweeps(ctx context.Context) *config.Cus
 		)
 	}
 
-	for _, accountID := range accountIDs {
-		_, err := s.workerClient.Publish(ctx, workerConfigs.PublishParams{
-			TaskID:  workerConfigs.TaskSweepMailbox,
-			Payload: workerCustomTypes.SweepMailboxPayload{AccountID: accountID},
+	tasks := make([]utils.ConcurrentTask, 0, len(accountIDs))
+	for _, item := range accountIDs {
+		tasks = append(tasks, utils.ConcurrentTask{
+			Name: "publish mailbox sweep",
+			Run: func(ctx context.Context) error {
+				_, err := s.workerClient.Publish(ctx, workerConfigs.PublishParams{
+					TaskID:  workerConfigs.TaskSweepMailbox,
+					Payload: workerCustomTypes.SweepMailboxPayload{AccountID: item},
+				})
+				if err != nil {
+					utils.LogError(ctx, err, "channel_account_id", item)
+				}
+
+				return nil
+			},
 		})
-		if err != nil {
-			utils.LogError(ctx, err, "channel_account_id", accountID)
-		}
 	}
+
+	_ = utils.RunConcurrently(ctx, tasks...)
 
 	return nil
 }

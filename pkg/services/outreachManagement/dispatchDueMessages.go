@@ -3,6 +3,7 @@ package outreachManagement
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
@@ -33,29 +34,37 @@ func (s *OutreachService) DispatchDueMessages(ctx context.Context) (int, *config
 		)
 	}
 
-	dispatched := 0
+	var dispatched atomic.Int64
 
+	tasks := make([]utils.ConcurrentTask, 0, len(claimed))
 	for _, message := range claimed {
-		_, err := s.workerClient.Publish(ctx, sendTaskFor(message.ID, message.Channel))
-		if err == nil {
-			dispatched++
+		tasks = append(tasks, utils.ConcurrentTask{
+			Name: "publish send task",
+			Run: func(ctx context.Context) error {
+				if _, err := s.workerClient.Publish(
+					ctx,
+					sendTaskFor(message.ID, message.Channel),
+				); err == nil {
+					dispatched.Add(1)
 
-			continue
-		}
+					return nil
+				}
 
-		utils.LogWarn(
-			ctx,
-			"send task publish failed, releasing the claim",
-			"message_id",
-			message.ID,
-		)
+				utils.LogWarn(ctx, "send task publish failed, releasing the claim",
+					"message_id", message.ID)
 
-		if err := s.messageRepo.ReleaseClaim(ctx, message.ID, now); err != nil {
-			utils.LogError(ctx, err, "message_id", message.ID)
-		}
+				if err := s.messageRepo.ReleaseClaim(ctx, message.ID, now); err != nil {
+					utils.LogError(ctx, err, "message_id", message.ID)
+				}
+
+				return nil
+			},
+		})
 	}
 
-	return dispatched, nil
+	_ = utils.RunConcurrently(ctx, tasks...)
+
+	return int(dispatched.Load()), nil
 }
 
 func sendTaskFor(messageID, channel string) workerConfigs.PublishParams {

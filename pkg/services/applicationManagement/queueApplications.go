@@ -32,9 +32,19 @@ func (s *ApplicationService) QueueApplications(
 		)
 	}
 
-	for _, applicationID := range applicationIDs {
-		s.publishPrepare(ctx, applicationID)
+	tasks := make([]utils.ConcurrentTask, 0, len(applicationIDs))
+	for _, item := range applicationIDs {
+		tasks = append(tasks, utils.ConcurrentTask{
+			Name: "publish prepare application",
+			Run: func(ctx context.Context) error {
+				s.publishPrepare(ctx, item)
+
+				return nil
+			},
+		})
 	}
+
+	_ = utils.RunConcurrently(ctx, tasks...)
 
 	return len(applicationIDs), nil
 }

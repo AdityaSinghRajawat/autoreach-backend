@@ -102,22 +102,24 @@ func Find(registry []JobBoard, boardType string) JobBoard {
 	return nil
 }
 
-// readNewJobs fetches the full record of postings not stored yet, up to the per-poll limit; postings
-// already stored come back marked DetailsSkipped. A posting the board rejects (gone since it was
-// listed) is dropped; other failures end the poll.
+// readNewJobs fetches the full record of postings not stored yet, up to the per-poll limit and
+// concurrency reads at a time; postings already stored come back marked DetailsSkipped. A posting
+// the board rejects (gone since it was listed) is dropped; other failures end the poll.
 func readNewJobs(
 	ctx context.Context,
 	summaries []jobTypes.BoardJob,
 	knownExternalIDs map[string]struct{},
+	concurrency int,
 	read func(ctx context.Context, summary jobTypes.BoardJob) (*jobTypes.BoardJob, error),
 ) ([]jobTypes.BoardJob, error) {
-	jobs := make([]jobTypes.BoardJob, 0, len(summaries))
+	results := make([]*jobTypes.BoardJob, len(summaries))
+	tasks := []utils.ConcurrentTask{}
 	readsLeft := config.GetJobBoardMaxDetailsPerPoll()
 
-	for _, summary := range summaries {
+	for index, summary := range summaries {
 		if _, known := knownExternalIDs[summary.ExternalID]; known {
 			summary.DetailsSkipped = true
-			jobs = append(jobs, summary)
+			results[index] = &summary
 
 			continue
 		}
@@ -128,15 +130,29 @@ func readNewJobs(
 
 		readsLeft--
 
-		job, err := read(ctx, summary)
-		if err != nil && utils.ClassifyUpstreamError(err) == config.GetErrCodeUpstreamRejected() {
-			continue
-		}
+		tasks = append(tasks, utils.ConcurrentTask{
+			Name: "read job posting",
+			Run: func(ctx context.Context) error {
+				job, err := read(ctx, summary)
+				if err != nil &&
+					utils.ClassifyUpstreamError(err) == config.GetErrCodeUpstreamRejected() {
+					return nil
+				}
 
-		if err != nil {
-			return nil, err
-		}
+				results[index] = job
 
+				return err
+			},
+		})
+	}
+
+	if err := utils.RunConcurrentlyWithLimit(ctx, concurrency, tasks...); err != nil {
+		return nil, err
+	}
+
+	jobs := make([]jobTypes.BoardJob, 0, len(summaries))
+
+	for _, job := range results {
 		if job != nil {
 			jobs = append(jobs, *job)
 		}

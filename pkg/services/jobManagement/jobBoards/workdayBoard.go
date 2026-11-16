@@ -33,7 +33,11 @@ func (b *workdayBoard) ListJobs(
 		return jobTypes.BoardListing{}, err
 	}
 
-	jobs, err := readNewJobs(ctx, summaries, knownExternalIDs,
+	jobs, err := readNewJobs(
+		ctx,
+		summaries,
+		knownExternalIDs,
+		config.GetJobBoardDetailConcurrency(),
 		func(ctx context.Context, summary jobTypes.BoardJob) (*jobTypes.BoardJob, error) {
 			return b.integration.GetJob(ctx, site, summary)
 		},

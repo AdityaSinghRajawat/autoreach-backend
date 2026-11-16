@@ -193,9 +193,19 @@ func (s *JobService) ScheduleJobSourcePolls(ctx context.Context) (int, *config.C
 		)
 	}
 
-	for _, sourceID := range sourceIDs {
-		s.publishPollJobSource(ctx, sourceID)
+	tasks := make([]utils.ConcurrentTask, 0, len(sourceIDs))
+	for _, item := range sourceIDs {
+		tasks = append(tasks, utils.ConcurrentTask{
+			Name: "publish job source poll",
+			Run: func(ctx context.Context) error {
+				s.publishPollJobSource(ctx, item)
+
+				return nil
+			},
+		})
 	}
+
+	_ = utils.RunConcurrently(ctx, tasks...)
 
 	return len(sourceIDs), nil
 }

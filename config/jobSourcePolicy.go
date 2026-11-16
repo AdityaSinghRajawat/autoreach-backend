@@ -75,6 +75,7 @@ type jobSourceConfig struct {
 	staleAfter              time.Duration
 	boardTimeout            time.Duration
 	maxDetailsPerPoll       int
+	detailConcurrency       int
 	ashbyAPIURL             string
 	smartRecruitersAPIURL   string
 	workdayHostURLFormat    string
@@ -96,6 +97,7 @@ func loadJobSourceConfig() {
 		staleAfter:        getEnvDurationWithDefault("JOB_SOURCE_STALE_AFTER", 30*24*time.Hour),
 		boardTimeout:      getEnvDurationWithDefault("JOB_BOARD_HTTP_TIMEOUT", time.Minute),
 		maxDetailsPerPoll: getEnvIntWithDefault("JOB_BOARD_MAX_DETAILS_PER_POLL", 100),
+		detailConcurrency: max(getEnvIntWithDefault("JOB_BOARD_DETAIL_CONCURRENCY", 4), 1),
 		ashbyAPIURL: strings.TrimRight(
 			getEnvWithDefault("ASHBY_JOB_BOARD_API_URL", "https://api.ashbyhq.com/posting-api"),
 			"/",
@@ -189,3 +191,7 @@ func GetAdzunaCurrency(country string) (string, bool) {
 
 	return currency, found
 }
+
+// GetJobBoardDetailConcurrency is how many postings are read at once from one job board API. It is
+// kept low because all of them go to the same employer's site.
+func GetJobBoardDetailConcurrency() int { return jobSourceConfigI.detailConcurrency }
