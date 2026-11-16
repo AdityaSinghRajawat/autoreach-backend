@@ -21,6 +21,3 @@ CREATE INDEX idx_candidate_resumes_candidate ON candidate_resumes (candidate_id,
 CREATE UNIQUE INDEX idx_candidate_resumes_one_active ON candidate_resumes (candidate_id) WHERE is_active;
 CREATE INDEX idx_candidate_resumes_pending ON candidate_resumes (updated_at)
     WHERE parse_status IN ('UPLOADED', 'PARSED');
-
-CREATE INDEX idx_candidate_resumes_embedding ON candidate_resumes
-USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
