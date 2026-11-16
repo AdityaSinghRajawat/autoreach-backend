@@ -32,6 +32,8 @@ func newLinkedinFixture(t *testing.T) linkedinFixture {
 	jobID := fixture.ingest(t, withFields(validJob(), map[string]any{"companyDomain": "acme.test"})).
 		QueuedTasks[0].JobID
 
+	fixture.seedMatch(t, jobID)
+
 	return linkedinFixture{
 		jobFixture: fixture,
 		jobID:      jobID,

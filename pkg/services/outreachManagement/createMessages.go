@@ -70,13 +70,32 @@ func (s *OutreachService) CreateMessages(
 
 	saved := make([]*outreachModel.Message, 0, len(messages))
 
-	for _, message := range messages {
-		created, customErr := s.saveMessage(ctx, message, "create outreach messages")
-		if customErr != nil {
-			return nil, customErr
+	var saveErr *config.CustomError
+
+	err := s.transactionManager.WithTransaction(ctx, func(ctx context.Context) error {
+		for _, message := range messages {
+			created, customErr := s.saveMessage(ctx, message, "create outreach messages")
+			if customErr != nil {
+				saveErr = customErr
+
+				return customErr
+			}
+
+			saved = append(saved, created)
 		}
 
-		saved = append(saved, created)
+		return nil
+	})
+
+	if saveErr != nil {
+		return nil, saveErr
+	}
+
+	if err != nil {
+		return nil, config.NewCustomError(
+			fmt.Errorf("create outreach messages: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
 	}
 
 	return &outreachTypes.CreateMessagesResponse{Messages: saved}, nil
@@ -140,6 +159,21 @@ func (s *OutreachService) reachableContact(
 	request outreachTypes.CreateMessagesRequest,
 	messages []*outreachModel.Message,
 ) (*enrichmentModel.CompanyContact, *config.CustomError) {
+	matched, err := s.jobMatchRepo.Exists(ctx, candidateID, request.JobID)
+	if err != nil {
+		return nil, config.NewCustomError(
+			fmt.Errorf("find outreach contact: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
+	}
+
+	if !matched {
+		return nil, config.NewCustomError(
+			fmt.Errorf("find outreach contact: %w", config.ErrJobNotMatched),
+			config.GetErrCodeNotFound(),
+		)
+	}
+
 	contacts, err := s.companyContactRepo.ListByJob(ctx, request.JobID)
 	if err != nil {
 		return nil, config.NewCustomError(

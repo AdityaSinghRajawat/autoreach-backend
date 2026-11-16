@@ -8,6 +8,7 @@ import (
 	candidateRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/candidateManagement"
 	enrichmentRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/enrichmentManagement"
 	jobRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/jobManagement"
+	matchingRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/matchingManagement"
 	outreachRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/outreachManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement/linkedinProviders"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -25,6 +26,7 @@ type OutreachServiceDependencies struct {
 	ResumeRepo         *candidateRepo.ResumeRepo
 	CompanyContactRepo *enrichmentRepo.CompanyContactRepo
 	JobPostingRepo     *jobRepo.JobPostingRepo
+	JobMatchRepo       *matchingRepo.JobMatchRepo
 	TransactionManager db.TransactionManager
 	WorkerClient       workerConfigs.IWorkerClient
 	CredentialCipher   *utils.CredentialCipher
@@ -43,6 +45,7 @@ type OutreachService struct {
 	resumeRepo         *candidateRepo.ResumeRepo
 	companyContactRepo *enrichmentRepo.CompanyContactRepo
 	jobPostingRepo     *jobRepo.JobPostingRepo
+	jobMatchRepo       *matchingRepo.JobMatchRepo
 	transactionManager db.TransactionManager
 	workerClient       workerConfigs.IWorkerClient
 	credentialCipher   *utils.CredentialCipher
@@ -61,6 +64,7 @@ func NewOutreachService(dependencies OutreachServiceDependencies) (*OutreachServ
 		dependencies.ResumeRepo == nil ||
 		dependencies.CompanyContactRepo == nil ||
 		dependencies.JobPostingRepo == nil ||
+		dependencies.JobMatchRepo == nil ||
 		dependencies.TransactionManager == nil ||
 		dependencies.WorkerClient == nil ||
 		dependencies.EmailUtil == nil ||
@@ -79,6 +83,7 @@ func NewOutreachService(dependencies OutreachServiceDependencies) (*OutreachServ
 		resumeRepo:         dependencies.ResumeRepo,
 		companyContactRepo: dependencies.CompanyContactRepo,
 		jobPostingRepo:     dependencies.JobPostingRepo,
+		jobMatchRepo:       dependencies.JobMatchRepo,
 		transactionManager: dependencies.TransactionManager,
 		workerClient:       dependencies.WorkerClient,
 		credentialCipher:   dependencies.CredentialCipher,

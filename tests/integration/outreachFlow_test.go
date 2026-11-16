@@ -55,12 +55,30 @@ func newOutreachFixture(t *testing.T) outreachFixture {
 	jobID := fixture.ingest(t, withFields(validJob(), map[string]any{"companyDomain": "acme.test"})).
 		QueuedTasks[0].JobID
 
+	fixture.seedMatch(t, jobID)
+
 	return outreachFixture{
 		jobFixture: fixture,
 		accountID:  account.ID,
 		jobID:      jobID,
 		contactID:  fixture.seedContact(t, jobID, "Sarah Lee", contactAddress),
 	}
+}
+
+// seedMatch records that the candidate was matched to the job, which outreach requires.
+func (f jobFixture) seedMatch(t *testing.T, jobID string) {
+	t.Helper()
+
+	_, err := f.deps.Postgres.GetPool().Exec(context.Background(), `
+		WITH resume AS (
+			INSERT INTO candidate_resumes (candidate_id, file_name, storage_key, content_type, size_bytes, content_sha256)
+			VALUES ($1, 'resume.pdf', 'resumes/seed', 'application/pdf', 10, 'seed')
+			RETURNING id
+		)
+		INSERT INTO job_matches (candidate_id, job_id, resume_id, raw_similarity, match_score)
+		SELECT $1, $2, id, 0.9, 0.9 FROM resume
+	`, f.candidateID, jobID)
+	require.NoError(t, err)
 }
 
 func (f jobFixture) seedContact(t *testing.T, jobID, fullName, address string) string {
@@ -353,6 +371,56 @@ func TestManualOutreachRejectsUnsupportedChannelsAndCanBeCancelled(t *testing.T)
 	again := helpers.Do(t, fixture.router, http.MethodPatch, path+"/"+messageID,
 		map[string]any{"status": "CANCELLED"}, bearer(fixture.userToken))
 	assert.Equal(t, http.StatusConflict, again.Recorder.Code)
+}
+
+func TestCancelLosesToASendAlreadyInProgress(t *testing.T) {
+	fixture := newOutreachFixture(t)
+	path := candidatePath(fixture.candidateID) + "/outreach-messages"
+
+	created := helpers.Do(t, fixture.router, http.MethodPost, path, map[string]any{
+		"jobId": fixture.jobID, "contactId": fixture.contactID, "channels": []string{"EMAIL"},
+		"subject": "Hello", "emailBody": "Hi there",
+	}, bearer(fixture.userToken))
+	require.Equal(t, http.StatusCreated, created.Recorder.Code, string(created.Body))
+	messageID := helpers.DecodeData[outreachTypes.CreateMessagesResponse](t, created).Messages[0].ID
+
+	_, err := fixture.deps.Postgres.GetPool().Exec(context.Background(),
+		`UPDATE outreach_messages SET status = 'SENDING', sent_at = NOW() WHERE id = $1`, messageID)
+	require.NoError(t, err)
+
+	cancel := helpers.Do(t, fixture.router, http.MethodPatch, path+"/"+messageID,
+		map[string]any{"status": "CANCELLED"}, bearer(fixture.userToken))
+	assert.Equal(t, http.StatusConflict, cancel.Recorder.Code, "the dispatcher already claimed it")
+
+	var (
+		status string
+		sentAt *time.Time
+	)
+	require.NoError(t, fixture.deps.Postgres.GetPool().QueryRow(context.Background(),
+		`SELECT status::text, sent_at FROM outreach_messages WHERE id = $1`, messageID).
+		Scan(&status, &sentAt))
+	assert.Equal(t, "SENDING", status)
+	assert.NotNil(t, sentAt, "the record of the send is not erased by a late cancel")
+}
+
+func TestAnErasedContactIsNotRecreatedByALateUpdate(t *testing.T) {
+	fixture := newOutreachFixture(t)
+	ctx := context.Background()
+
+	stale := fixture.storedContact(t, fixture.contactID)
+
+	deleted, err := fixture.deps.Repositories.CompanyContact.Delete(ctx, fixture.contactID)
+	require.NoError(t, err)
+	require.True(t, deleted)
+
+	stale.RecordReply(contactAddress, time.Now().UTC())
+	updated, err := fixture.deps.Repositories.CompanyContact.UpdateExisting(ctx, stale)
+	require.NoError(t, err)
+	assert.False(t, updated)
+
+	found, err := fixture.deps.Repositories.CompanyContact.FindByID(ctx, fixture.contactID)
+	require.NoError(t, err)
+	assert.Nil(t, found, "a refresh that finishes after an erasure must not bring the person back")
 }
 
 func mailAccountFor(t *testing.T, address, password string) sharedTypes.EmailAccount {
@@ -742,4 +810,29 @@ func TestRefreshAfterABounceAdoptsTheCurrentAddress(t *testing.T) {
 	require.Nil(t, fixture.deps.Services.Enrichment.RefreshContact(ctx, fixture.contactID))
 	assert.Nil(t, fixture.storedContact(t, fixture.contactID).WorkEmail,
 		"an address that bounced before is never adopted again")
+}
+
+func TestOutreachIsOnlyAllowedForMatchedJobs(t *testing.T) {
+	fixture := newOutreachFixture(t)
+
+	otherJobID := fixture.ingest(t, withFields(validJob(), map[string]any{
+		"companyDomain": "acme.test", "jobTitle": "Staff Go Engineer",
+	})).QueuedTasks[0].JobID
+	contactID := fixture.seedContact(t, otherJobID, "Omar Khan", "omar@acme.test")
+
+	refused := helpers.Do(
+		t,
+		fixture.router,
+		http.MethodPost,
+		candidatePath(fixture.candidateID)+"/outreach-messages",
+		map[string]any{
+			"jobId": otherJobID, "contactId": contactID, "channels": []string{"EMAIL"},
+			"subject": "Hello", "emailBody": "Hi Omar",
+		},
+		bearer(fixture.userToken),
+	)
+
+	assert.Equal(t, http.StatusNotFound, refused.Recorder.Code,
+		"contacts of a job the candidate was not matched to are not theirs to message")
+	helpers.AssertMatchesSpec(t, refused)
 }

@@ -29,7 +29,15 @@ func (s *CandidateService) ActivateResume(
 
 	resume.UpdateTimestamp()
 
-	activated, err := s.resumeRepo.Activate(ctx, candidateID, resumeID, resume.UpdatedAt)
+	var activated bool
+
+	err := s.transactionManager.WithTransaction(ctx, func(ctx context.Context) error {
+		var err error
+
+		activated, err = s.resumeRepo.Activate(ctx, candidateID, resumeID, resume.UpdatedAt)
+
+		return err
+	})
 	if err != nil {
 		return nil, config.NewCustomError(
 			fmt.Errorf("activate resume: %w", err),

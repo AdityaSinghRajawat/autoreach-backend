@@ -99,6 +99,7 @@ func (d *Dependencies) initServices() error {
 	}
 
 	outreach, err := outreachService.NewOutreachService(outreachService.OutreachServiceDependencies{
+		JobMatchRepo:       d.Repositories.JobMatch,
 		ChannelAccountRepo: d.Repositories.ChannelAccount,
 		TemplateRepo:       d.Repositories.Template,
 		CampaignRepo:       d.Repositories.Campaign,
