@@ -15,8 +15,11 @@ MIGRATE ?= docker run --rm --network host -v "$(CURDIR)/migrations:/migrations:r
 
 ROWS ?= 50000
 PAIRS ?= pairs.jsonl
+CONCURRENCY ?= 16
+DURATION ?= 2m
+JOBS ?= 1000
 
-.PHONY: vector-bench calibrate build run-server run-worker dev tools fmt lint lint-fix vet test test-unit test-integration test-live test-all cover check \
+.PHONY: vector-bench calibrate build run-server run-worker dev tools fmt lint lint-fix vet test test-unit test-integration test-live test-all vuln secrets-scan loadtest-api loadtest-apply cover check \
 	migrate-up migrate-down docker-build docker-up docker-down docker-logs dev-up dev-down test-up test-down
 
 build:
@@ -55,6 +58,19 @@ test-unit:
 
 test-integration:
 	TEST_REQUIRE_SERVICES=1 go test -tags=integration -count=1 -p 1 ./tests/integration/...
+
+vuln:
+	go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+
+secrets-scan:
+	docker run --rm -v "$(CURDIR):/repo" zricethezav/gitleaks:v8.28.0 git /repo --config /repo/.gitleaks.toml --redact
+
+# Load tests run against a running stack (make docker-up); see scripts/README.md.
+loadtest-api:
+	go run ./scripts/loadtest -mode api -concurrency $(CONCURRENCY) -duration $(DURATION)
+
+loadtest-apply:
+	go run ./scripts/loadtest -mode apply -jobs $(JOBS)
 
 test-live:
 	go test -tags=live -count=1 -v ./tests/live/...

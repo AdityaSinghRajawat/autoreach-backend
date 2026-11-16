@@ -1,3 +1,7 @@
+# Production stack: API server, worker, Postgres (pgvector), Redis and the migration job.
+# Configuration comes from .env (copy .env.example); the values below override what must differ
+# inside the stack. Set AUTOREACH_IMAGE to run a published image instead of building locally.
+
 x-logging: &default-logging
   driver: json-file
   options:
@@ -5,9 +9,8 @@ x-logging: &default-logging
     max-file: "5"
 
 x-app-env: &app-env
-  APP_ENV: ${APP_ENV:-local}
+  APP_ENV: ${APP_ENV:-production}
   PORT: 8080
-  LOG_LEVEL: ${LOG_LEVEL:-info}
   DB_HOST: postgres
   DB_PORT: 5432
   DB_USER: ${DB_USER:-autoreach}
@@ -17,14 +20,41 @@ x-app-env: &app-env
   DB_SSLMODE: disable
   REDIS_ADDR: redis:6379
   REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
-  INTERNAL_SHARED_SECRET: ${INTERNAL_SHARED_SECRET:-}
   JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-  WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-10}
+  INTERNAL_SHARED_SECRET: ${INTERNAL_SHARED_SECRET:?INTERNAL_SHARED_SECRET is required}
+  CHANNEL_CREDENTIAL_KEYS: ${CHANNEL_CREDENTIAL_KEYS:?CHANNEL_CREDENTIAL_KEYS is required}
+  STORAGE_LOCAL_DIR: /app/data/uploads
+
+x-app: &app
+  image: ${AUTOREACH_IMAGE:-autoreach-backend:local}
+  build: .
+  restart: unless-stopped
+  env_file: ${AUTOREACH_ENV_FILE:-.env}
+  environment: *app-env
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+  volumes:
+    # Resumes uploaded through the server are read by the worker, so both share the upload volume
+    # (not needed with STORAGE_DRIVER=s3).
+    - uploads:/app/data/uploads
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  pids_limit: 256
+  stop_grace_period: 45s
+  mem_limit: 512m
+  logging: *default-logging
 
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:0.8.0-pg16
     restart: unless-stopped
     shm_size: "1gb"
     environment:
@@ -41,12 +71,22 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    security_opt:
+      - no-new-privileges:true
     logging: *default-logging
 
   redis:
     image: redis:7.2-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    # The task queue must never lose keys to eviction, and AOF keeps queued tasks across restarts.
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--maxmemory-policy"
+      - "noeviction"
+      - "--requirepass"
+      - "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
     volumes:
       - redis-data:/data
     ports:
@@ -58,6 +98,8 @@ services:
       retries: 20
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    security_opt:
+      - no-new-privileges:true
     logging: *default-logging
 
   migrate:
@@ -74,36 +116,17 @@ services:
     logging: *default-logging
 
   server:
-    build: .
-    restart: unless-stopped
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    environment: *app-env
+    <<: *app
     ports:
-      - "127.0.0.1:8080:8080"
-    stop_grace_period: 45s
-    mem_limit: 512m
-    logging: *default-logging
+      - "127.0.0.1:${SERVER_HOST_PORT:-8080}:8080"
 
   worker:
-    build: .
-    restart: unless-stopped
+    <<: *app
     command: ["worker"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    environment: *app-env
     ports:
-      - "127.0.0.1:8081:8080"
-    stop_grace_period: 45s
-    mem_limit: 512m
-    logging: *default-logging
+      - "127.0.0.1:${WORKER_HOST_PORT:-8081}:8080"
 
 volumes:
   postgres-data:
   redis-data:
+  uploads:

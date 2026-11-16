@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26.11-alpine AS builder
 
 WORKDIR /src
 
@@ -8,11 +8,13 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/main ./cmd/autoreach
 
-FROM alpine:3.20
+FROM alpine:3.22
 
 RUN apk add --no-cache ca-certificates tzdata wget \
     && addgroup -g 1001 app \
-    && adduser -D -u 1001 -G app app
+    && adduser -D -u 1001 -G app app \
+    && mkdir -p /app/data/uploads \
+    && chown -R app:app /app/data
 
 WORKDIR /app
 
@@ -21,7 +23,8 @@ COPY --from=builder /src/migrations /app/migrations
 
 USER app
 
-ENV PORT=8080
+ENV PORT=8080 \
+    STORAGE_LOCAL_DIR=/app/data/uploads
 EXPOSE 8080
 
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \

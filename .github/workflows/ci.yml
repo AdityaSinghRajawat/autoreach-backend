@@ -80,3 +80,31 @@ jobs:
         env:
           TEST_REQUIRE_SERVICES: "1"
         run: go test -tags=integration -count=1 -p 1 ./tests/integration/...
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Known vulnerabilities in dependencies and the standard library
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck ./...
+      - name: Secrets in git history
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.28.0 \
+            git /repo --config /repo/.gitleaks.toml --redact --no-banner
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the production image
+        run: docker build -t autoreach-backend:ci .
+      - name: Validate the production compose file
+        run: |
+          AUTOREACH_ENV_FILE=.env.example DB_PASSWORD=x REDIS_PASSWORD=x JWT_SECRET=x INTERNAL_SHARED_SECRET=x CHANNEL_CREDENTIAL_KEYS=x docker compose config --quiet

@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Test fixtures: the SHA-256 of the word 'password' and an unsigned alg=none JWT that proves forged tokens are rejected"
+condition = "AND"
+paths = ['''(^|/)tests/''']
+regexes = [
+  '''5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8''',
+  '''eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0\.''',
+]
