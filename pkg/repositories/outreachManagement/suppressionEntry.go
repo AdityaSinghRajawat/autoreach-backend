@@ -62,9 +62,13 @@ func (r *SuppressionRepo) IsSuppressed(
 	var suppressed bool
 
 	err := r.postgres.Executor(ctx).QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM `+r.suppressionsTable+`
-			WHERE (candidate_id IS NULL OR candidate_id = $1)
-				AND ((entry_type = 'EMAIL' AND value = $2) OR (entry_type = 'DOMAIN' AND value = $3)))
+		SELECT EXISTS (
+			SELECT 1 FROM `+r.suppressionsTable+`
+			WHERE candidate_id IS NULL AND (entry_type, value) IN (('EMAIL', $2), ('DOMAIN', $3))
+			UNION ALL
+			SELECT 1 FROM `+r.suppressionsTable+`
+			WHERE candidate_id = $1 AND (entry_type, value) IN (('EMAIL', $2), ('DOMAIN', $3))
+		)
 	`, candidateID, address, domain).Scan(&suppressed)
 	if err != nil {
 		return false, fmt.Errorf("check suppression: %w", err)
