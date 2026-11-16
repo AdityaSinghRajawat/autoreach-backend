@@ -17,7 +17,12 @@ func (cm *CronManager) contactRetentionJob(ctx context.Context) {
 	interval := config.GetContactRetentionCheckInterval()
 
 	cm.cronInstance.Schedule(cron.Every(interval), cron.FuncJob(func() {
-		cm.runLocked(ctx, config.GetContactRetentionLock(), interval, cm.RunContactRetention)
+		cm.runOncePerInterval(
+			ctx,
+			config.GetContactRetentionLock(),
+			interval,
+			cm.RunContactRetention,
+		)
 	}))
 }
 

@@ -68,28 +68,22 @@ func (cm *CronManager) StopJobs() {
 	}
 }
 
-func (cm *CronManager) runLocked(
+// runOncePerInterval runs the job on one replica per interval. The claim outlives the run and expires
+// just before the next tick, so replicas whose ticks fall inside the interval skip it.
+func (cm *CronManager) runOncePerInterval(
 	ctx context.Context,
 	name string,
-	ttl time.Duration,
+	interval time.Duration,
 	work func(ctx context.Context),
 ) {
-	lock, acquired, err := cm.redisUtil.AcquireLock(ctx, name, ttl)
+	claimed, err := cm.redisUtil.ClaimSlot(ctx, name, config.GetCronClaimHold(interval))
 	if err != nil {
 		utils.LogError(ctx, err, "cron_job", name)
 
 		return
 	}
 
-	if !acquired {
-		return
+	if claimed {
+		work(ctx)
 	}
-
-	defer func() {
-		if err := cm.redisUtil.ReleaseLock(context.WithoutCancel(ctx), lock); err != nil {
-			utils.LogError(ctx, err, "cron_job", name)
-		}
-	}()
-
-	work(ctx)
 }

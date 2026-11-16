@@ -13,7 +13,12 @@ func (cm *CronManager) outreachDispatcherJob(ctx context.Context) {
 	interval := config.GetOutreachDispatchInterval()
 
 	cm.cronInstance.Schedule(cron.Every(interval), cron.FuncJob(func() {
-		cm.runLocked(ctx, config.GetOutreachDispatchLock(), interval, cm.RunOutreachDispatcher)
+		cm.runOncePerInterval(
+			ctx,
+			config.GetOutreachDispatchLock(),
+			interval,
+			cm.RunOutreachDispatcher,
+		)
 	}))
 }
 

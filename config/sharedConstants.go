@@ -18,6 +18,8 @@ type sharedConstants struct {
 	argonEncodingFormat     string
 	maxErrorBodyBytes       int64
 	maxResponseBodyBytes    int64
+	cronClaimHoldPercent    time.Duration
+	taskIDFormat            string
 	dailyCounterTTL         time.Duration
 	storageDirectoryMode    fs.FileMode
 	storageFileMode         fs.FileMode
@@ -54,6 +56,8 @@ type documentConstants struct {
 	maxFileNameLength  int
 	documentReadFactor int
 	docxMaxBodyBytes   int64
+	pdfMaxPages        int
+	pdfMaxDecodedBytes int64
 }
 
 type calibrationConstants struct {
@@ -97,6 +101,8 @@ var sharedConstI = sharedConstants{
 	argonEncodingFormat:     "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
 	maxErrorBodyBytes:       2048,
 	maxResponseBodyBytes:    64 << 20,
+	cronClaimHoldPercent:    90,
+	taskIDFormat:            "%s:%x",
 	dailyCounterTTL:         48 * time.Hour,
 	storageDirectoryMode:    0o750,
 	storageFileMode:         0o600,
@@ -133,6 +139,8 @@ var documentConstI = documentConstants{
 	maxFileNameLength:  255,
 	documentReadFactor: 4,
 	docxMaxBodyBytes:   64 << 20,
+	pdfMaxPages:        50,
+	pdfMaxDecodedBytes: 32 << 20,
 }
 
 var calibrationConstI = calibrationConstants{
@@ -194,6 +202,7 @@ var vendorConstI = vendorConstants{
 }
 
 func GetTokenTypeBearer() string         { return sharedConstI.tokenTypeBearer }
+func GetTaskIDFormat() string            { return sharedConstI.taskIDFormat }
 func GetAPIKeySeparator() string         { return sharedConstI.apiKeySeparator }
 func GetStuckWorkReconcilerLock() string { return sharedConstI.stuckWorkReconcilerLock }
 func GetOpenAPISpecPath() string         { return sharedConstI.openAPISpecPath }
@@ -226,19 +235,21 @@ func GetCORSExposeHeadersHeader() string    { return headerConstI.corsExposeHead
 func GetVaryHeader() string                 { return headerConstI.vary }
 func GetTrueValue() string                  { return headerConstI.trueValue }
 
-func GetPDFExtension() string     { return documentConstI.pdfExtension }
-func GetDOCXExtension() string    { return documentConstI.docxExtension }
-func GetPDFMagic() []byte         { return []byte(documentConstI.pdfMagic) }
-func GetZipMagic() []byte         { return []byte(documentConstI.zipMagic) }
-func GetDocxBodyPath() string     { return documentConstI.docxBodyPath }
-func GetDocxTextElement() string  { return documentConstI.docxTextElement }
-func GetDocxParagraph() string    { return documentConstI.docxParagraph }
-func GetDocxTab() string          { return documentConstI.docxTab }
-func GetDocxLineBreak() string    { return documentConstI.docxLineBreak }
-func GetFallbackFileName() string { return documentConstI.fallbackFileName }
-func GetMaxFileNameLength() int   { return documentConstI.maxFileNameLength }
-func GetDocumentReadFactor() int  { return documentConstI.documentReadFactor }
-func GetDocxMaxBodyBytes() int64  { return documentConstI.docxMaxBodyBytes }
+func GetPDFExtension() string      { return documentConstI.pdfExtension }
+func GetDOCXExtension() string     { return documentConstI.docxExtension }
+func GetPDFMagic() []byte          { return []byte(documentConstI.pdfMagic) }
+func GetZipMagic() []byte          { return []byte(documentConstI.zipMagic) }
+func GetDocxBodyPath() string      { return documentConstI.docxBodyPath }
+func GetDocxTextElement() string   { return documentConstI.docxTextElement }
+func GetDocxParagraph() string     { return documentConstI.docxParagraph }
+func GetDocxTab() string           { return documentConstI.docxTab }
+func GetDocxLineBreak() string     { return documentConstI.docxLineBreak }
+func GetFallbackFileName() string  { return documentConstI.fallbackFileName }
+func GetMaxFileNameLength() int    { return documentConstI.maxFileNameLength }
+func GetDocumentReadFactor() int   { return documentConstI.documentReadFactor }
+func GetDocxMaxBodyBytes() int64   { return documentConstI.docxMaxBodyBytes }
+func GetPDFMaxPages() int          { return documentConstI.pdfMaxPages }
+func GetPDFMaxDecodedBytes() int64 { return documentConstI.pdfMaxDecodedBytes }
 
 func GetCalibrationBadPercentile() float64  { return calibrationConstI.badPercentile }
 func GetCalibrationGoodPercentile() float64 { return calibrationConstI.goodPercentile }
@@ -275,4 +286,10 @@ func IsSignalHireVerifiedRating(rating string) bool {
 	_, verified := vendorConstI.signalHireVerifiedRating[rating]
 
 	return verified
+}
+
+// GetCronClaimHold ends a cron claim a little before the next tick, so the replica that ticks next
+// can always take it even when its clock runs slightly ahead.
+func GetCronClaimHold(interval time.Duration) time.Duration {
+	return interval * sharedConstI.cronClaimHoldPercent / 100
 }

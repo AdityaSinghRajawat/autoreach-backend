@@ -13,7 +13,12 @@ func (cm *CronManager) stuckWorkReconcilerJob(ctx context.Context) {
 	interval := config.GetReconcilerInterval()
 
 	cm.cronInstance.Schedule(cron.Every(interval), cron.FuncJob(func() {
-		cm.runLocked(ctx, config.GetStuckWorkReconcilerLock(), interval, cm.RunStuckWorkReconciler)
+		cm.runOncePerInterval(
+			ctx,
+			config.GetStuckWorkReconcilerLock(),
+			interval,
+			cm.RunStuckWorkReconciler,
+		)
 	}))
 }
 

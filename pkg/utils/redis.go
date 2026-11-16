@@ -21,18 +21,6 @@ func BuildKey(parts ...string) string {
 	return strings.Join(segments, config.GetKeyDelimiter())
 }
 
-var releaseLockScriptI = redis.NewScript(`
-if redis.call("GET", KEYS[1]) == ARGV[1] then
-	return redis.call("DEL", KEYS[1])
-end
-return 0
-`)
-
-type RedisLock struct {
-	key   string
-	token string
-}
-
 type RedisUtil struct {
 	client *redis.Client
 }
@@ -45,39 +33,16 @@ func NewRedisUtil(client *redis.Client) (*RedisUtil, error) {
 	return &RedisUtil{client: client}, nil
 }
 
-func (r *RedisUtil) AcquireLock(
-	ctx context.Context,
-	name string,
-	ttl time.Duration,
-) (*RedisLock, bool, error) {
-	lock := &RedisLock{
-		key:   BuildKey(config.GetLockNamespace(), name),
-		token: uuid.NewString(),
-	}
-
-	acquired, err := r.client.SetNX(ctx, lock.key, lock.token, ttl).Result()
+// ClaimSlot takes a key that nobody else holds for the next ttl. It is never released, so the
+// claim covers the whole slot even after the holder's work has finished.
+func (r *RedisUtil) ClaimSlot(ctx context.Context, name string, ttl time.Duration) (bool, error) {
+	claimed, err := r.client.SetNX(ctx, BuildKey(config.GetLockNamespace(), name), uuid.NewString(), ttl).
+		Result()
 	if err != nil {
-		return nil, false, fmt.Errorf("acquire lock %s: %w", name, err)
+		return false, fmt.Errorf("claim slot %s: %w", name, err)
 	}
 
-	if !acquired {
-		return nil, false, nil
-	}
-
-	return lock, true, nil
-}
-
-func (r *RedisUtil) ReleaseLock(ctx context.Context, lock *RedisLock) error {
-	if lock == nil {
-		return nil
-	}
-
-	if err := releaseLockScriptI.Run(ctx, r.client, []string{lock.key}, lock.token).
-		Err(); err != nil {
-		return fmt.Errorf("release lock: %w", err)
-	}
-
-	return nil
+	return claimed, nil
 }
 
 func (r *RedisUtil) IncrementDaily(

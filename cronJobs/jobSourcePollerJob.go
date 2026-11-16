@@ -13,7 +13,7 @@ func (cm *CronManager) jobSourcePollerJob(ctx context.Context) {
 	interval := config.GetJobSourcePollInterval()
 
 	cm.cronInstance.Schedule(cron.Every(interval), cron.FuncJob(func() {
-		cm.runLocked(ctx, config.GetJobSourcePollerLock(), interval, cm.RunJobSourcePoller)
+		cm.runOncePerInterval(ctx, config.GetJobSourcePollerLock(), interval, cm.RunJobSourcePoller)
 	}))
 }
 

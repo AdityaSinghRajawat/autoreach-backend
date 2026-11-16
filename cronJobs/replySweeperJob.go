@@ -13,7 +13,7 @@ func (cm *CronManager) replySweeperJob(ctx context.Context) {
 	interval := config.GetReplySweepInterval()
 
 	cm.cronInstance.Schedule(cron.Every(interval), cron.FuncJob(func() {
-		cm.runLocked(ctx, config.GetReplySweeperLock(), interval, cm.RunReplySweeper)
+		cm.runOncePerInterval(ctx, config.GetReplySweeperLock(), interval, cm.RunReplySweeper)
 	}))
 }
 
