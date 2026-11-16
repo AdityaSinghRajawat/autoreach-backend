@@ -4130,6 +4130,7 @@
               "WORKDAY",
               "ASHBY",
               "SMARTRECRUITERS",
+              "ADZUNA",
               "DIRECT"
             ]
           },
@@ -4301,6 +4302,7 @@
               "WORKDAY",
               "ASHBY",
               "SMARTRECRUITERS",
+              "ADZUNA",
               "DIRECT"
             ]
           },
@@ -5830,8 +5832,10 @@
         "type": "object",
         "required": [
           "sourceId",
-          "atsType",
+          "boardType",
           "boardToken",
+          "searchQuery",
+          "searchLocation",
           "region",
           "companyName",
           "companyDomain",
@@ -5847,18 +5851,31 @@
             "type": "string",
             "format": "uuid"
           },
-          "atsType": {
+          "boardType": {
             "type": "string",
             "enum": [
               "GREENHOUSE",
               "LEVER",
               "ASHBY",
-              "SMARTRECRUITERS"
+              "SMARTRECRUITERS",
+              "WORKDAY",
+              "ADZUNA",
+              "CAREER_PAGE"
             ]
           },
           "boardToken": {
             "type": "string",
-            "example": "acme"
+            "description": "Greenhouse board token, Lever site, Ashby job board name, SmartRecruiters company identifier, Workday site as {tenant}.{instance}/{site} (for example nvidia.wd5/nvidiaexternalcareersite), Adzuna country code, or the https URL of a careers page or sitemap"
+          },
+          "searchQuery": {
+            "type": "string",
+            "nullable": true,
+            "description": "Adzuna search terms, or a URL filter for career page sitemaps"
+          },
+          "searchLocation": {
+            "type": "string",
+            "nullable": true,
+            "description": "Adzuna location filter"
           },
           "region": {
             "type": "string",
@@ -5868,10 +5885,13 @@
             ]
           },
           "companyName": {
-            "type": "string"
+            "type": "string",
+            "nullable": true,
+            "description": "Not set for ADZUNA, whose jobs name their own company"
           },
           "companyDomain": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "isActive": {
             "type": "boolean"
@@ -5902,25 +5922,36 @@
       "CreateJobSourceRequest": {
         "type": "object",
         "required": [
-          "atsType",
-          "boardToken",
-          "companyName",
-          "companyDomain"
+          "boardType",
+          "boardToken"
         ],
+        "description": "companyName and companyDomain are required for every board type except ADZUNA, where they are not allowed. searchQuery is required for ADZUNA and optional for CAREER_PAGE.",
         "properties": {
-          "atsType": {
+          "boardType": {
             "type": "string",
             "enum": [
               "GREENHOUSE",
               "LEVER",
               "ASHBY",
-              "SMARTRECRUITERS"
+              "SMARTRECRUITERS",
+              "WORKDAY",
+              "ADZUNA",
+              "CAREER_PAGE"
             ]
           },
           "boardToken": {
             "type": "string",
-            "maxLength": 100,
-            "description": "Greenhouse board token, Lever site, Ashby job board name or SmartRecruiters company identifier"
+            "maxLength": 500,
+            "description": "Greenhouse board token, Lever site, Ashby job board name, SmartRecruiters company identifier, Workday site as {tenant}.{instance}/{site} (for example nvidia.wd5/nvidiaexternalcareersite), Adzuna country code, or the https URL of a careers page or sitemap"
+          },
+          "searchQuery": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "searchLocation": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "ADZUNA only"
           },
           "region": {
             "type": "string",
@@ -5955,6 +5986,16 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "searchQuery": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "searchLocation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
           }
         }
       },
@@ -5981,7 +6022,7 @@
           },
           "skipped": {
             "type": "integer",
-            "description": "Jobs that failed validation"
+            "description": "Jobs that failed validation, including those whose company domain could not be resolved"
           },
           "closed": {
             "type": "integer",
