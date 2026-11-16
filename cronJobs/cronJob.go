@@ -9,6 +9,7 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	applicationService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/applicationManagement"
+	authService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/authManagement"
 	candidateService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/candidateManagement"
 	jobService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement"
 	outreachService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement"
@@ -17,6 +18,7 @@ import (
 
 type CronManagerDependencies struct {
 	RedisUtil          *utils.RedisUtil
+	AuthService        *authService.AuthService
 	JobService         *jobService.JobService
 	CandidateService   *candidateService.CandidateService
 	OutreachService    *outreachService.OutreachService
@@ -26,6 +28,7 @@ type CronManagerDependencies struct {
 type CronManager struct {
 	cronInstance       *cron.Cron
 	redisUtil          *utils.RedisUtil
+	authService        *authService.AuthService
 	jobService         *jobService.JobService
 	candidateService   *candidateService.CandidateService
 	outreachService    *outreachService.OutreachService
@@ -34,6 +37,7 @@ type CronManager struct {
 
 func NewCronManager(dependencies CronManagerDependencies) (*CronManager, error) {
 	if dependencies.RedisUtil == nil ||
+		dependencies.AuthService == nil ||
 		dependencies.JobService == nil ||
 		dependencies.CandidateService == nil ||
 		dependencies.OutreachService == nil ||
@@ -44,6 +48,7 @@ func NewCronManager(dependencies CronManagerDependencies) (*CronManager, error) 
 	return &CronManager{
 		cronInstance:       cron.New(cron.WithChain(cron.Recover(cron.DefaultLogger))),
 		redisUtil:          dependencies.RedisUtil,
+		authService:        dependencies.AuthService,
 		jobService:         dependencies.JobService,
 		candidateService:   dependencies.CandidateService,
 		outreachService:    dependencies.OutreachService,
@@ -56,7 +61,7 @@ func (cm *CronManager) StartJobs(ctx context.Context) {
 	cm.outreachDispatcherJob(ctx)
 	cm.replySweeperJob(ctx)
 	cm.jobSourcePollerJob(ctx)
-	cm.contactRetentionJob(ctx)
+	cm.dataRetentionJob(ctx)
 	cm.cronInstance.Start()
 }
 

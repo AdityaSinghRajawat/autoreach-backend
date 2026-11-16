@@ -3,6 +3,7 @@ package outreachManagement
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
@@ -36,4 +37,15 @@ func (r *EventRepo) Insert(ctx context.Context, event *outreachModel.Event) erro
 	}
 
 	return nil
+}
+
+func (r *EventRepo) DeleteOccurredBefore(ctx context.Context, cutoff time.Time) (int, error) {
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		DELETE FROM `+r.eventsTable+` WHERE occurred_at < $1
+	`, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("delete old outreach events: %w", err)
+	}
+
+	return int(tag.RowsAffected()), nil
 }

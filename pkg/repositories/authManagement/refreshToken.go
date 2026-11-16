@@ -118,3 +118,14 @@ func scanRefreshToken(row db.RowScanner) (*authModel.RefreshToken, error) {
 
 	return &token, nil
 }
+
+func (r *RefreshTokenRepo) DeleteExpiredBefore(ctx context.Context, cutoff time.Time) (int, error) {
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		DELETE FROM `+r.refreshTokensTable+` WHERE expires_at < $1
+	`, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("delete expired refresh tokens: %w", err)
+	}
+
+	return int(tag.RowsAffected()), nil
+}

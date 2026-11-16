@@ -48,6 +48,7 @@ func NewWorkerServer(_ context.Context, deps *dependencies.Dependencies) (*Worke
 
 func (ws *WorkerServer) loadCrons() error {
 	cronManager, err := cronJobs.NewCronManager(cronJobs.CronManagerDependencies{
+		AuthService:        ws.dependencies.Services.Auth,
 		OutreachService:    ws.dependencies.Services.Outreach,
 		ApplicationService: ws.dependencies.Services.Application,
 		RedisUtil:          ws.dependencies.RedisUtil,
