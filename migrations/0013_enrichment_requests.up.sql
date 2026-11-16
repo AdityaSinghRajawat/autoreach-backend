@@ -14,3 +14,5 @@ CREATE TABLE IF NOT EXISTS enrichment_requests (
 );
 
 CREATE INDEX idx_enrichment_requests_pending ON enrichment_requests (created_at) WHERE status = 'PENDING';
+CREATE INDEX idx_enrichment_requests_contact ON enrichment_requests (contact_id);
+CREATE INDEX idx_enrichment_requests_job ON enrichment_requests (job_id);

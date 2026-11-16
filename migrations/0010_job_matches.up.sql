@@ -13,3 +13,4 @@ CREATE TABLE IF NOT EXISTS job_matches (
 
 CREATE INDEX idx_job_matches_candidate_score ON job_matches (candidate_id, match_score DESC, created_at DESC);
 CREATE INDEX idx_job_matches_job ON job_matches (job_id);
+CREATE INDEX idx_job_matches_resume ON job_matches (resume_id);

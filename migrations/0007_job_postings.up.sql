@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_hash VARCHAR(64) NOT NULL UNIQUE,
     source job_source NOT NULL DEFAULT 'DIRECT',
+    job_source_id UUID REFERENCES job_sources(id) ON DELETE SET NULL,
     company_name VARCHAR(255) NOT NULL,
     company_domain VARCHAR(255) NOT NULL,
     job_title VARCHAR(255) NOT NULL,
@@ -30,6 +31,8 @@ CREATE TABLE IF NOT EXISTS job_postings (
 
 CREATE INDEX idx_job_postings_status_created ON job_postings (status, created_at DESC);
 CREATE INDEX idx_job_postings_company_domain ON job_postings (company_domain);
+CREATE INDEX idx_job_postings_job_source ON job_postings (job_source_id, last_seen_at) WHERE status = 'ACTIVE';
+CREATE INDEX idx_job_postings_job_source_any ON job_postings (job_source_id) WHERE job_source_id IS NOT NULL;
 CREATE INDEX idx_job_postings_pending_embedding ON job_postings (updated_at) WHERE embedding IS NULL AND status = 'ACTIVE';
 
 CREATE INDEX idx_job_postings_embedding ON job_postings

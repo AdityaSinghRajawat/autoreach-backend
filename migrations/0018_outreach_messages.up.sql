@@ -28,7 +28,10 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
 CREATE INDEX idx_outreach_messages_due ON outreach_messages (scheduled_at) WHERE status = 'PENDING';
 CREATE INDEX idx_outreach_messages_sending ON outreach_messages (updated_at) WHERE status = 'SENDING';
 CREATE INDEX idx_outreach_messages_candidate ON outreach_messages (candidate_id, created_at DESC);
-CREATE INDEX idx_outreach_messages_contact ON outreach_messages (candidate_id, contact_id);
+CREATE INDEX idx_outreach_messages_contact_created ON outreach_messages (contact_id, created_at);
+CREATE INDEX idx_outreach_messages_campaign ON outreach_messages (campaign_id) WHERE campaign_id IS NOT NULL;
+CREATE INDEX idx_outreach_messages_job ON outreach_messages (job_id);
+CREATE INDEX idx_outreach_messages_email_sent ON outreach_messages (sent_at) WHERE channel = 'EMAIL';
 CREATE INDEX idx_outreach_messages_linkedin_invites ON outreach_messages (candidate_id, sent_at)
     WHERE channel = 'LINKEDIN_CONNECT';
 CREATE INDEX idx_outreach_messages_account_sent ON outreach_messages (channel_account_id, sent_at)

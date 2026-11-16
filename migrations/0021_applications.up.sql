@@ -20,4 +20,5 @@ CREATE TABLE IF NOT EXISTS applications (
 );
 
 CREATE INDEX idx_applications_candidate ON applications (candidate_id, created_at DESC);
+CREATE INDEX idx_applications_job ON applications (job_id);
 CREATE INDEX idx_applications_pending ON applications (updated_at) WHERE status IN ('QUEUED', 'IN_PROGRESS');

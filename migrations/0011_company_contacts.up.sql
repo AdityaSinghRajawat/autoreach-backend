@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS company_contacts (
 );
 
 CREATE INDEX idx_company_contacts_company_role ON company_contacts (company_domain, role_type);
+CREATE INDEX idx_company_contacts_email ON company_contacts (LOWER(work_email)) WHERE work_email IS NOT NULL;
 CREATE UNIQUE INDEX idx_company_contacts_company_email ON company_contacts (company_domain, LOWER(work_email))
     WHERE work_email IS NOT NULL;
 CREATE UNIQUE INDEX idx_company_contacts_linkedin ON company_contacts (LOWER(linkedin_url))

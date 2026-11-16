@@ -19,6 +19,3 @@ CREATE TABLE IF NOT EXISTS job_sources (
 );
 
 CREATE INDEX idx_job_sources_active ON job_sources (last_polled_at NULLS FIRST) WHERE is_active;
-
-ALTER TABLE job_postings ADD COLUMN job_source_id UUID REFERENCES job_sources(id) ON DELETE SET NULL;
-CREATE INDEX idx_job_postings_job_source ON job_postings (job_source_id, last_seen_at) WHERE status = 'ACTIVE';
