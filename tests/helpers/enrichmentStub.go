@@ -167,9 +167,12 @@ func (s *EnrichmentStub) handleContactOut(writer http.ResponseWriter, request *h
 
 	status := s.record("contactout.enrich", s.ContactOutStatus)
 
+	// Like the real API, an unknown profile is a 200 with an empty array.
 	profile, found := s.Profiles[request.URL.Query().Get("profile")]
-	if status == http.StatusOK && !found {
-		status = http.StatusNotFound
+	if !found {
+		writeJSON(writer, status, map[string]any{"status_code": status, "profile": []any{}})
+
+		return
 	}
 
 	writeJSON(writer, status, map[string]any{"status_code": status, "profile": profile})

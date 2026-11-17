@@ -223,7 +223,7 @@ func TestProviderAdaptersTranslateVendorPayloads(t *testing.T) {
 	person.LinkedinURL = "https://www.linkedin.com/in/unknown"
 	missing, err := registry[2].(providers.ContactFinder).FindContact(ctx, person)
 	require.NoError(t, err)
-	assert.Nil(t, missing, "a 404 from the provider means not found, not a failure")
+	assert.Nil(t, missing, "an empty profile from the provider means not found, not a failure")
 
 	asyncFinder := registry[1].(providers.AsyncContactFinder)
 
