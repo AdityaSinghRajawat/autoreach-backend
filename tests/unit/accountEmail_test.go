@@ -49,3 +49,20 @@ func TestPasswordResetEmailCarriesTheLinkAndItsLifetime(t *testing.T) {
 	assert.Contains(t, email.Text, "60 minutes")
 	assert.Contains(t, email.HTML, "token=abc.123")
 }
+
+func TestEmailChangeEmailsCarryTheLinkAndTheNotice(t *testing.T) {
+	link := "https://app.autoreach.test/confirm-email?email=alex%40example.com&token=abc"
+
+	confirm, err := emailTemplates.GetEmailChangeEmail(emailTemplates.EmailChangeEmailData{
+		ConfirmURL:    link,
+		ValidForHours: 48,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, emailTemplates.EmailChangeEmailSubject, confirm.Subject)
+	assert.Contains(t, confirm.Text, link)
+
+	notice, err := emailTemplates.GetEmailChangedEmail()
+	require.NoError(t, err)
+	assert.Equal(t, emailTemplates.EmailChangedEmailSubject, notice.Subject)
+	assert.NotEmpty(t, notice.HTML)
+}
