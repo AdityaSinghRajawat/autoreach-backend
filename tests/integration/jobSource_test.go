@@ -78,12 +78,12 @@ const workdayJob = `{"jobPostingInfo":{"title":"%s","jobDescription":"<p>Work on
 	"startDate":"2026-11-10","externalUrl":"https://initech.wd1.myworkdayjobs.com/careers%s"}}`
 
 const adzunaResults = `{"count":2,"results":[
-	{"id":"az-1","title":"<strong>Go</strong> Developer","description":"Build services in Go for payments.",
+	{"id":"5922025200","title":"<strong>Go</strong> Developer","description":"Build services in Go for payments.",
 	 "redirect_url":"https://www.adzuna.in/land/ad/1","created":"2026-11-12T10:00:00Z",
 	 "salary_min":1500000,"salary_max":2500000,"salary_is_predicted":"0",
 	 "company":{"display_name":"Initrode Ltd"},"location":{"display_name":"Pune, Maharashtra"},
 	 "category":{"label":"IT Jobs"}},
-	{"id":"az-2","title":"Go Engineer","description":"Mystery company role.",
+	{"id":5923277084,"title":"Go Engineer","description":"Mystery company role.",
 	 "redirect_url":"https://www.adzuna.in/land/ad/2","company":{"display_name":"Mystery Co"},
 	 "location":{"display_name":"Remote"}}]}`
 
@@ -704,10 +704,18 @@ func TestAdzunaSearchPollResolvesCompanyDomainsOnce(t *testing.T) {
 	assert.Equal(t, 1, firstResult.Ingested)
 	assert.Equal(t, 1, firstResult.Skipped, "a company whose domain is unknown cannot be ingested")
 
-	assert.Equal(t, "initrode.com", fixture.sourceJobColumn(t, source.ID, "az-1", "company_domain"))
-	assert.Equal(t, "Go Developer", fixture.sourceJobColumn(t, source.ID, "az-1", "job_title"))
-	assert.Equal(t, "INR", fixture.sourceJobColumn(t, source.ID, "az-1", "salary_currency"))
-	assert.Equal(t, "ADZUNA", fixture.sourceJobColumn(t, source.ID, "az-1", "source"))
+	assert.Equal(
+		t,
+		"initrode.com",
+		fixture.sourceJobColumn(t, source.ID, "5922025200", "company_domain"),
+	)
+	assert.Equal(
+		t,
+		"Go Developer",
+		fixture.sourceJobColumn(t, source.ID, "5922025200", "job_title"),
+	)
+	assert.Equal(t, "INR", fixture.sourceJobColumn(t, source.ID, "5922025200", "salary_currency"))
+	assert.Equal(t, "ADZUNA", fixture.sourceJobColumn(t, source.ID, "5922025200", "source"))
 	assert.Equal(t, 2, enrichment.Calls("apollo.organizations"))
 
 	second := fixture.poll(t, source.ID)

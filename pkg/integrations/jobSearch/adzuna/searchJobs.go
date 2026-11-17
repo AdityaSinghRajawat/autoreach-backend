@@ -43,7 +43,7 @@ func (i *AdzunaIntegration) SearchJobs(
 
 	for _, item := range response.Results {
 		job := jobTypes.BoardJob{
-			ExternalID:  item.ID,
+			ExternalID:  item.ID.String(),
 			Title:       utils.HTMLToText(item.Title),
 			Description: utils.HTMLToText(item.Description),
 			URL:         item.RedirectURL,
@@ -53,7 +53,7 @@ func (i *AdzunaIntegration) SearchJobs(
 			CompanyName: item.Company.DisplayName,
 		}
 
-		if knownCurrency && item.SalaryIsPredicted != config.GetAdzunaPredictedSalary() &&
+		if knownCurrency && item.SalaryIsPredicted.String() != config.GetAdzunaPredictedSalary() &&
 			(item.SalaryMin != nil || item.SalaryMax != nil) {
 			job.SalaryMin, job.SalaryMax, job.SalaryCurrency = item.SalaryMin, item.SalaryMax, &currency
 		}

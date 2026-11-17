@@ -1,6 +1,7 @@
 package adzuna
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -12,14 +13,14 @@ type (
 	}
 
 	result struct {
-		ID                string     `json:"id"`
-		Title             string     `json:"title"`
-		Description       string     `json:"description"`
-		RedirectURL       string     `json:"redirect_url"`
-		Created           *time.Time `json:"created"`
-		SalaryMin         *float64   `json:"salary_min"`
-		SalaryMax         *float64   `json:"salary_max"`
-		SalaryIsPredicted string     `json:"salary_is_predicted"`
+		ID                json.Number `json:"id"`
+		Title             string      `json:"title"`
+		Description       string      `json:"description"`
+		RedirectURL       string      `json:"redirect_url"`
+		Created           *time.Time  `json:"created"`
+		SalaryMin         *float64    `json:"salary_min"`
+		SalaryMax         *float64    `json:"salary_max"`
+		SalaryIsPredicted json.Number `json:"salary_is_predicted"`
 		Company           struct {
 			DisplayName string `json:"display_name"`
 		} `json:"company"`
