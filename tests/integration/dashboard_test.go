@@ -27,9 +27,6 @@ type dashboardSeed struct {
 	baseTime     time.Time
 }
 
-// seedDashboard records one candidate's history directly: two jobs (one matched above the
-// threshold), contacts, an application now interviewing, two emails (one replied) and an accepted
-// LinkedIn invite.
 func (f jobFixture) seedDashboard(t *testing.T) dashboardSeed {
 	t.Helper()
 

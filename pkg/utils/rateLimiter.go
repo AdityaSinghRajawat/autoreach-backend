@@ -124,8 +124,6 @@ func (r *RateLimiter) Allow(
 	}, nil
 }
 
-// Refund returns units spent by Allow, for policies that reserve a unit before knowing whether the
-// outcome counts.
 func (r *RateLimiter) Refund(
 	ctx context.Context,
 	policy config.RateLimitPolicy,

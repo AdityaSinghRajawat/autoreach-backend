@@ -64,5 +64,4 @@ func GetActivityStreamPollInterval() time.Duration { return dashboardConfigI.str
 func GetActivityStreamHeartbeat() time.Duration    { return dashboardConfigI.streamHeartbeat }
 func GetActivityStreamMaxDuration() time.Duration  { return dashboardConfigI.streamMaxDuration }
 
-// GetActivityStreamsPerCandidate caps open activity streams per candidate across every server.
 func GetActivityStreamsPerCandidate() int { return dashboardConfigI.streamsPerOwner }

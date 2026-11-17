@@ -5,8 +5,7 @@ import (
 	"slices"
 )
 
-// LockOrder returns the positions of items sorted by the key their writes lock. A batch runs in one
-// transaction, so writing rows in the same order everywhere keeps two batches from deadlocking.
+// Writing rows in one key order keeps concurrent batches from deadlocking.
 func LockOrder[T any](items []T, key func(item T) string) []int {
 	order := make([]int, len(items))
 	for index := range order {

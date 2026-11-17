@@ -173,8 +173,7 @@ func (r *ApplicationRepo) ListByCandidate(
 	return applications, total, nil
 }
 
-// Claim gives one worker an application that is queued, or whose previous run stalled before
-// staleBefore; it reports false when another run holds it or it is no longer pending.
+// A run stalled before staleBefore can be claimed again.
 func (r *ApplicationRepo) Claim(
 	ctx context.Context,
 	applicationID string,

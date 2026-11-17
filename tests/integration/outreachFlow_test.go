@@ -738,8 +738,7 @@ func (f jobFixture) storedContact(t *testing.T, contactID string) *enrichmentMod
 	return contact
 }
 
-// refreshQueuedFor reads the queue's task records straight from Redis: the suite flushes Redis
-// between tests while the publishing client stays up, so asynq's queue list can be stale here.
+// Reads Redis directly: the suite flushes it, so asynq's queue list can be stale.
 func (f jobFixture) refreshQueuedFor(t *testing.T, contactID string) bool {
 	t.Helper()
 

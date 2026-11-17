@@ -192,6 +192,5 @@ func GetAdzunaCurrency(country string) (string, bool) {
 	return currency, found
 }
 
-// GetJobBoardDetailConcurrency is how many postings are read at once from one job board API. It is
-// kept low because all of them go to the same employer's site.
+// Kept low: every read goes to the same employer's site.
 func GetJobBoardDetailConcurrency() int { return jobSourceConfigI.detailConcurrency }

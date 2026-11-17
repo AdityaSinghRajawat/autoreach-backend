@@ -9,8 +9,7 @@ import (
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 )
 
-// ApplyContactSignal lets an admin confirm one candidate's report before enough others agree.
-// Applying a signal that was already applied changes nothing.
+// Applying an already applied signal changes nothing.
 func (s *OutreachService) ApplyContactSignal(
 	ctx context.Context,
 	contactID, signalID string,

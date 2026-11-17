@@ -11,8 +11,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
 )
 
-// ContactSignal is what one candidate observed about a shared contact. It changes the contact only
-// once enough candidates observed the same thing, or an admin applies it.
 type ContactSignal struct {
 	ID          string                         `db:"id" json:"signalId" validate:"required,uuid"`
 	ContactID   string                         `db:"contact_id" json:"contactId" validate:"required,uuid"`

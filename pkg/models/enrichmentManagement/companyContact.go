@@ -75,8 +75,7 @@ func (c *CompanyContact) SetEmail(email string, status modelHelpers.EmailVerific
 	}
 }
 
-// AdoptIdentity turns freshly enriched details into an update of the stored contact: what the
-// interactions established is kept, and every value that changes goes into the contact's history.
+// Keeps what interactions established and records every changed value in the history.
 func (c *CompanyContact) AdoptIdentity(existing *CompanyContact, now time.Time) {
 	c.ID = existing.ID
 	c.CreatedAt = existing.CreatedAt
@@ -128,9 +127,7 @@ func (c *CompanyContact) AdoptIdentity(existing *CompanyContact, now time.Time) 
 	}
 }
 
-// RecordReply notes a reply. An address that matches the stored one confirms it; a new address at
-// the contact's company replaces it; any other address is kept as an alternate and the stored
-// address still counts as confirmed, since the message reached the person.
+// A reply from another company address replaces the email; from elsewhere it is an alternate.
 func (c *CompanyContact) RecordReply(address string, at time.Time) {
 	c.LastInteractionAt = &at
 

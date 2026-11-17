@@ -69,8 +69,7 @@ func (r *UpdateCandidateRequest) ToCandidateModel(
 	return &candidate
 }
 
-// mergeSettings applies a JSON merge patch at the top level: keys in the patch replace stored keys,
-// null removes one, and the application profile is left to its own endpoint.
+// JSON merge patch at the top level; null removes a key.
 func mergeSettings(stored, patch json.RawMessage) json.RawMessage {
 	merged := map[string]json.RawMessage{}
 	_ = json.Unmarshal(stored, &merged)

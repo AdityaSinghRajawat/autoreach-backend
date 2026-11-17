@@ -584,8 +584,7 @@ func scanMessage(row db.RowScanner) (*outreachModel.Message, error) {
 	return &message, nil
 }
 
-// Cancel stops a message only while it can still be cancelled, so a send that the dispatcher already
-// claimed is never overwritten; it reports whether the message was cancelled.
+// Never overwrites a send the dispatcher already claimed.
 func (r *MessageRepo) Cancel(
 	ctx context.Context,
 	candidateID, messageID string,

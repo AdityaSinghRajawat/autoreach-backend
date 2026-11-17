@@ -11,8 +11,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// RecordClick redirects only to an http(s) link that this service signed and that appears in the
-// tracked message, so the endpoint is not an open redirect even if the signing key leaked.
+// Only follows signed links found in the message, so it is not an open redirect.
 func (s *OutreachService) RecordClick(
 	ctx context.Context,
 	token, link, signature string,

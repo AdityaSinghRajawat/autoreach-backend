@@ -30,8 +30,7 @@ var (
 	)
 )
 
-// redactEmailAddresses keeps people's addresses out of logs, including those quoted inside mail
-// server replies and wrapped errors; the domain stays for debugging.
+// Mail server replies quote addresses; the domain stays for debugging.
 func redactEmailAddresses(_ []string, attr slog.Attr) slog.Attr {
 	switch attr.Value.Kind() {
 	case slog.KindString:

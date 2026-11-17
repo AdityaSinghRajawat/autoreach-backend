@@ -49,20 +49,14 @@ func GetContactHistoryKey() string     { return contactHistoryKey }
 func GetContactHistoryLimit() int      { return contactHistoryLimit }
 func GetAnonymizedContactName() string { return anonymizedContactName }
 
-// GetContactRetentionPeriod is how long an unused contact keeps its personal details; zero keeps
-// them forever.
+// Zero keeps contact details forever.
 func GetContactRetentionPeriod() time.Duration { return privacyConfigI.contactRetention }
 
 func GetDataRetentionCheckInterval() time.Duration { return privacyConfigI.retentionCheck }
 
-// GetRefreshTokenRetention is how long an expired refresh token is kept; reuse of a token this
-// old is refused as unknown instead of revoking its family, which no longer matters once it expired.
 func GetRefreshTokenRetention() time.Duration { return privacyConfigI.tokenRetention }
 
-// GetOutreachEventRetention is how long opens, clicks and other outreach events are kept; zero keeps
-// them forever. Removing events also removes them from dashboard history.
+// Zero keeps events forever; deleting them also removes dashboard history.
 func GetOutreachEventRetention() time.Duration { return privacyConfigI.eventRetention }
 
-// GetContactSignalConfirmations is how many candidates must observe the same bounce, reply or
-// LinkedIn response before it changes the contact they share.
 func GetContactSignalConfirmations() int { return privacyConfigI.signalConfirmations }

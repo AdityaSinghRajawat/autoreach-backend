@@ -10,8 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// RefreshContact asks the contact providers for a person's current email after theirs bounced. An
-// address that bounced before, or one another contact at the company holds, is not adopted.
+// An address that bounced before or belongs to another contact is not adopted.
 func (s *EnrichmentService) RefreshContact(
 	ctx context.Context,
 	contactID string,

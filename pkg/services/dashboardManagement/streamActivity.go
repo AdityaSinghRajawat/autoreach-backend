@@ -10,9 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// StreamActivity calls emit with each batch of new events, and with no events as a heartbeat,
-// until the client goes away, emit fails or ACTIVITY_STREAM_MAX_DURATION passes (clients reconnect
-// with Last-Event-ID). Without a lastEventID the stream starts from now.
+// An empty batch is a heartbeat; clients reconnect with Last-Event-ID.
 func (s *DashboardService) StreamActivity(
 	ctx context.Context,
 	candidateID, lastEventID string,

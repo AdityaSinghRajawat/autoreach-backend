@@ -13,8 +13,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// StreamActivity sends new activity as server-sent events: each event's id is its cursor, so a
-// reconnecting client resumes from Last-Event-ID. Comment lines keep idle connections open.
+// Each event id is its cursor, so a reconnecting client resumes from Last-Event-ID.
 func (h *DashboardHandler) StreamActivity(c *gin.Context) {
 	controller := http.NewResponseController(c.Writer)
 	started := false

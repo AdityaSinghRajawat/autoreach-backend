@@ -24,8 +24,7 @@ func RateLimit(limiter sharedTypes.Limiter, name config.RateLimitPolicyName) gin
 
 	countsOutcome := policy.CountOnlyStatus != 0
 
-	// Outcome-counted policies reserve the unit first, so concurrent attempts cannot all pass the
-	// check, and refund it when the outcome does not count.
+	// Reserve first so concurrent attempts cannot all pass; refund when the outcome does not count.
 	return func(c *gin.Context) {
 		subject := rateLimitSubject(c, policy.Key)
 		if !admit(c, limiter, policy, subject, 1) {

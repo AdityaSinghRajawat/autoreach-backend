@@ -9,8 +9,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// recordReply closes the conversation and updates the contact; replyAddress is the sender of an
-// email reply and empty for a reply confirmed on LinkedIn.
+// replyAddress is empty for a reply confirmed on LinkedIn.
 func (s *OutreachService) recordReply(
 	ctx context.Context,
 	message *outreachModel.Message,

@@ -181,8 +181,7 @@ func scanChannelAccount(row db.RowScanner) (*outreachModel.ChannelAccount, error
 	return &account, nil
 }
 
-// AdvanceCursor records how far the inbox was read. It touches nothing else, and nothing at all once
-// the mailbox was paused or deleted while it was being read.
+// Skips a mailbox paused or deleted while it was read.
 func (r *ChannelAccountRepo) AdvanceCursor(
 	ctx context.Context,
 	accountID string,

@@ -11,9 +11,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// PollJobSource ingests a board's open jobs and closes the ones it no longer lists; for boards that
-// may not list every job, only jobs unseen for JOB_SOURCE_STALE_AFTER are closed. A failed fetch is
-// recorded on the source and closes nothing.
+// Boards that may not list every job close only jobs unseen for JOB_SOURCE_STALE_AFTER.
 func (s *JobService) PollJobSource(
 	ctx context.Context,
 	sourceID string,
@@ -97,8 +95,7 @@ func (s *JobService) PollJobSource(
 	return result, s.recordPoll(ctx, source)
 }
 
-// resolveCompanyDomains fills in the domain of jobs from boards that list many companies; jobs
-// whose domain stays unknown fail validation and are skipped.
+// Jobs whose domain stays unknown fail validation and are skipped.
 func (s *JobService) resolveCompanyDomains(ctx context.Context, boardJobs []jobTypes.BoardJob) {
 	companyNames := []string{}
 

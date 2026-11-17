@@ -12,8 +12,7 @@ type breakerEvent struct {
 	failed bool
 }
 
-// CircuitBreaker opens when too many calls fail. After the cooldown it lets a single probe through
-// (half-open): the probe's result closes the circuit or opens it for another cooldown.
+// After the cooldown one probe decides whether the circuit closes.
 type CircuitBreaker struct {
 	mutex          sync.Mutex
 	window         time.Duration

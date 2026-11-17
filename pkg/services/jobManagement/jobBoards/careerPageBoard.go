@@ -19,9 +19,7 @@ type careerPageBoard struct {
 
 func (b *careerPageBoard) BoardType() string { return string(modelHelpers.BoardTypeCareerPage) }
 
-// The board token is a careers page or a sitemap. A page yields the JobPosting structured data it
-// carries; a sitemap's pages (optionally only those whose URL contains the search query) are each
-// read for one. robots.txt is respected for every page.
+// Reads schema.org JobPosting data from a careers page or a sitemap's pages.
 func (b *careerPageBoard) ListJobs(
 	ctx context.Context,
 	source *jobModel.JobSource,

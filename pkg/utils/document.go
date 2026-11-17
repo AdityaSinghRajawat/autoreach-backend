@@ -14,8 +14,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-// ExtractPDFText measures every stream a page decompresses before parsing it, so a small file
-// that inflates to gigabytes is refused instead of exhausting memory.
+// Streams are measured before parsing, so a decompression bomb is refused.
 func ExtractPDFText(content []byte, maxChars int) (text string, err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {

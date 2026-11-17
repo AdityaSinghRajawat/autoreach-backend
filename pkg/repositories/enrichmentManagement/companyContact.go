@@ -314,9 +314,7 @@ func (r *CompanyContactRepo) Delete(ctx context.Context, contactID string) (bool
 	return tag.RowsAffected() == 1, nil
 }
 
-// AnonymizeStale blanks the personal details of contacts not refreshed, contacted or heard from
-// since the cutoff, and the text of the messages sent to them, keeping the rows so outreach history
-// and metrics stay intact.
+// Rows stay so outreach history and metrics are kept.
 func (r *CompanyContactRepo) AnonymizeStale(
 	ctx context.Context,
 	cutoff, now time.Time,
@@ -370,8 +368,7 @@ func (r *CompanyContactRepo) EmailInUse(
 	return inUse, nil
 }
 
-// UpdateExisting saves changes to a contact that still exists and was not anonymized. Unlike Upsert
-// it never inserts, so a contact erased while a refresh was running stays erased.
+// Never inserts, so a contact erased during a refresh stays erased.
 func (r *CompanyContactRepo) UpdateExisting(
 	ctx context.Context,
 	contact *enrichmentModel.CompanyContact,

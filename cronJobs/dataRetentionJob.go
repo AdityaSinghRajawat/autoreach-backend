@@ -17,8 +17,6 @@ func (cm *CronManager) dataRetentionJob(ctx context.Context) {
 	}))
 }
 
-// RunDataRetention anonymizes stale contacts and deletes expired sessions and old outreach events,
-// each only when its retention period is set. The three are independent, so they run together.
 func (cm *CronManager) RunDataRetention(ctx context.Context) {
 	var anonymized, tokens, events int
 

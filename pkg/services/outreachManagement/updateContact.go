@@ -8,8 +8,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// updateContact applies what an interaction taught about the contact. An address another contact at
-// the company already holds is not adopted, so the update can never fail on the unique index.
+// An address held by another contact at the company is not adopted.
 func (s *OutreachService) updateContact(
 	ctx context.Context,
 	contactID string,

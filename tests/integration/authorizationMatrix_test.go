@@ -17,8 +17,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 )
 
-// Routes reached without a user token: login and signup, the ingest API (API key), webhooks
-// (signatures) and the per-message tracking and unsubscribe links (signed URLs).
+// Public: auth, the API-key ingest, signed webhooks.
 var publicRoutePrefixesI = []string{
 	"/api/v1/auth/",
 	"/api/v1/jobs/ingest",

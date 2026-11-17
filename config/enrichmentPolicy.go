@@ -166,6 +166,5 @@ func (p ProviderPolicy) RateLimitPolicy() RateLimitPolicy {
 
 func GetPublicBaseURL() string { return enrichmentConfigI.publicBaseURL }
 
-// GetEnrichmentSaveReserve is the task time kept back after the last provider call, so contacts
-// already paid for are saved before the task times out and is retried.
+// Task time kept for saving contacts already paid for.
 func GetEnrichmentSaveReserve() time.Duration { return enrichmentSaveReserve }

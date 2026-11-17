@@ -98,8 +98,7 @@ func (u *EmailUtil) SendEmail(
 		return fmt.Errorf("smtp data: %w", err)
 	}
 
-	// A reply to the end of DATA is the server's verdict; any other failure there leaves the outcome
-	// unknown, and once the message is accepted a failed QUIT does not matter.
+	// Only the DATA reply decides the outcome; a failed QUIT after acceptance does not matter.
 	if err := writer.Close(); err != nil {
 		var reply *textproto.Error
 		if errors.As(err, &reply) {
@@ -310,8 +309,7 @@ func (u *EmailUtil) FetchInboxSince(
 	return inbound, latest, client.Logout().Wait()
 }
 
-// MailFailureReason is what a user may see about a mailbox failure: a category, never the server's
-// own reply, which would reveal what is listening at the address they entered.
+// A category only: the server's reply would reveal what listens at the address.
 func MailFailureReason(err error) string {
 	for _, category := range []error{
 		config.ErrMailAuthUnsupported,

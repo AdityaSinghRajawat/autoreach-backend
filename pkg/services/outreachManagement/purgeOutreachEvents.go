@@ -9,7 +9,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// PurgeOutreachEvents deletes events older than the retention period; a zero period keeps them.
 func (s *OutreachService) PurgeOutreachEvents(
 	ctx context.Context,
 	retention time.Duration,

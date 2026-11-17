@@ -11,9 +11,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// reportContactSignal stores what one candidate observed about a contact everyone shares, and
-// applies it only once enough candidates observed the same thing, so a single mailbox cannot
-// rewrite the contact or suppress it for everyone. It reports whether the signal was applied.
+// One mailbox cannot change a shared contact; it needs enough candidates to agree.
 func (s *OutreachService) reportContactSignal(
 	ctx context.Context,
 	candidateID, contactID string,
@@ -47,8 +45,6 @@ func (s *OutreachService) reportContactSignal(
 	return true, s.applyContactSignal(ctx, signal)
 }
 
-// applyContactSignal changes the shared contact: a bounce suppresses the address for everyone and
-// drops it from the contact, a reply or LinkedIn response confirms the contact.
 func (s *OutreachService) applyContactSignal(
 	ctx context.Context,
 	signal *enrichmentModel.ContactSignal,

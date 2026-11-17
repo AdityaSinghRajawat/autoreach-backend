@@ -64,8 +64,7 @@ func (c *Client) Publish(
 	return c.enqueueOnce(ctx, params.TaskID, taskConfig.QueueName, payload, encoded, options)
 }
 
-// enqueueOnce names the task after its payload, so publishing the same work again while it is still
-// waiting, running or retrying is a no-op. A finished or dead task does not block a new one.
+// Finished or dead tasks are replaced, so they never block new work.
 func (c *Client) enqueueOnce(
 	ctx context.Context,
 	taskID workerConfigs.WorkerTaskID,

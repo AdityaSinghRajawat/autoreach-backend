@@ -102,9 +102,7 @@ func Find(registry []JobBoard, boardType string) JobBoard {
 	return nil
 }
 
-// readNewJobs fetches the full record of postings not stored yet, up to the per-poll limit and
-// concurrency reads at a time; postings already stored come back marked DetailsSkipped. A posting
-// the board rejects (gone since it was listed) is dropped; other failures end the poll.
+// A posting the board rejects is dropped; any other failure ends the poll.
 func readNewJobs(
 	ctx context.Context,
 	summaries []jobTypes.BoardJob,

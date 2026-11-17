@@ -19,8 +19,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
 )
 
-// fakeSMTPServer speaks just enough SMTP to accept one message. acceptData decides whether it
-// answers the end of DATA; either way it drops the connection instead of answering QUIT.
+// Drops the connection instead of answering QUIT; acceptData decides the DATA reply.
 func fakeSMTPServer(t *testing.T, acceptData bool) int {
 	t.Helper()
 

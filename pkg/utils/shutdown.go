@@ -4,8 +4,7 @@ import "context"
 
 var shutdownCtxI, beginShutdownI = context.WithCancel(context.Background())
 
-// BeginShutdown ends long-lived work such as event streams, which http.Server.Shutdown would
-// otherwise wait for until its timeout.
+// http.Server.Shutdown would otherwise wait for event streams until its timeout.
 func BeginShutdown() {
 	beginShutdownI()
 }

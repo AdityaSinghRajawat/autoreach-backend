@@ -186,8 +186,7 @@ func (c *HTTPClient) send(
 	return nil
 }
 
-// withoutQuery drops the query string from a transport error, because some APIs take their key as a
-// query parameter and the error would otherwise carry it into logs and task records.
+// Some APIs take their key as a query parameter, which errors would otherwise log.
 func withoutQuery(err error) error {
 	var urlErr *url.Error
 	if !errors.As(err, &urlErr) {

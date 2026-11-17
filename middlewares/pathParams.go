@@ -11,8 +11,6 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// ValidateIDParams answers 404 for a malformed ID in the path before any handler or query runs, so a
-// typo or a scanner never reaches the database as a 500.
 func ValidateIDParams() gin.HandlerFunc {
 	uuidParams := config.GetUUIDPathParams()
 

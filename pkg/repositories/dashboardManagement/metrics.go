@@ -36,8 +36,7 @@ func NewMetricsRepo(postgres *db.PostgresConn) (*MetricsRepo, error) {
 	}, nil
 }
 
-// CountForCandidate returns nil when the candidate does not exist. A job counts as matched when its
-// score reaches the candidate's threshold; a response is a contact who replied on any channel.
+// Returns nil when the candidate does not exist.
 func (r *MetricsRepo) CountForCandidate(
 	ctx context.Context,
 	candidateID string,

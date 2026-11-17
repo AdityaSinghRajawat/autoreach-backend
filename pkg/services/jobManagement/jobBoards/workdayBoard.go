@@ -17,8 +17,7 @@ type workdayBoard struct {
 
 func (b *workdayBoard) BoardType() string { return string(modelHelpers.BoardTypeWorkday) }
 
-// Workday has no official job board API; this reads the JSON its public career sites are built on.
-// The board token is "{tenant}.{instance}/{site}", as in nvidia.wd5/nvidiaexternalcareersite.
+// No official API: reads the JSON behind public career sites.
 func (b *workdayBoard) ListJobs(
 	ctx context.Context,
 	source *jobModel.JobSource,

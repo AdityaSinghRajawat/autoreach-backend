@@ -13,8 +13,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-// reservedNetworksI are not reachable on the public internet, or translate to an IPv4 address that
-// may be private (NAT64, 6to4), so outbound connections to them are refused.
+// NAT64 and 6to4 can translate to a private IPv4 address.
 var reservedNetworksI = mustParseNetworks(config.GetReservedNetworks())
 
 func mustParseNetworks(cidrs []string) []*net.IPNet {
@@ -32,8 +31,7 @@ func mustParseNetworks(cidrs []string) []*net.IPNet {
 	return networks
 }
 
-// WebFetcher reads public web pages. Its default transport refuses to connect to loopback, private
-// and link-local addresses, which also covers redirects and DNS tricks.
+// Refuses private addresses at connect time, which also covers redirects and DNS tricks.
 type WebFetcher struct {
 	client    *http.Client
 	userAgent string
@@ -95,8 +93,6 @@ func publicOnlyTransport(timeout time.Duration) *http.Transport {
 	return &http.Transport{DialContext: dialer.DialContext}
 }
 
-// publicAddressOnly runs after DNS resolution, so a hostname that resolves to a private address, or a
-// redirect to one, is refused too.
 func publicAddressOnly(_, address string, _ syscall.RawConn) error {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {

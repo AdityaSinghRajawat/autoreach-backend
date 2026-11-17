@@ -44,8 +44,7 @@ func NewRedisUtil(client *redis.Client) (*RedisUtil, error) {
 	return &RedisUtil{client: client}, nil
 }
 
-// ClaimSlot takes a key that nobody else holds for the next ttl. It is never released, so the
-// claim covers the whole slot even after the holder's work has finished.
+// Never released, so the claim covers the whole slot after the work finishes.
 func (r *RedisUtil) ClaimSlot(ctx context.Context, name string, ttl time.Duration) (bool, error) {
 	claimed, err := r.client.SetNX(ctx, BuildKey(config.GetLockNamespace(), name), uuid.NewString(), ttl).
 		Result()
@@ -88,8 +87,7 @@ func (r *RedisUtil) GetDaily(ctx context.Context, namespace, name string) (int64
 	return value, nil
 }
 
-// TakeSeat holds one of limit seats under name for at most ttl, and returns a release func. Seats
-// expire on their own, so a process that dies holding one cannot keep it.
+// Seats expire on their own, so a crashed process cannot keep one.
 func (r *RedisUtil) TakeSeat(
 	ctx context.Context,
 	name string,

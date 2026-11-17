@@ -291,8 +291,7 @@ func IsSignalHireVerifiedRating(rating string) bool {
 	return verified
 }
 
-// GetCronClaimHold ends a cron claim a little before the next tick, so the replica that ticks next
-// can always take it even when its clock runs slightly ahead.
+// Ends a claim just before the next tick so a replica with a fast clock can take it.
 func GetCronClaimHold(interval time.Duration) time.Duration {
 	return interval * sharedConstI.cronClaimHoldPercent / 100
 }

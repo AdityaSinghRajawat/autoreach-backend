@@ -10,8 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// UpdateMessage cancels a message. The cancel is one conditional update, so it either wins over the
-// dispatcher or reports 409 because the message is already being sent.
+// A conditional update, so it loses with 409 to a send already in progress.
 func (s *OutreachService) UpdateMessage(
 	ctx context.Context,
 	candidateID, messageID string,

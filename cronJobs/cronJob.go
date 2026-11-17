@@ -73,8 +73,7 @@ func (cm *CronManager) StopJobs() {
 	}
 }
 
-// runOncePerInterval runs the job on one replica per interval. The claim outlives the run and expires
-// just before the next tick, so replicas whose ticks fall inside the interval skip it.
+// The claim outlives the run, so other replicas skip ticks inside the interval.
 func (cm *CronManager) runOncePerInterval(
 	ctx context.Context,
 	name string,

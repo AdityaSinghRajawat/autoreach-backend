@@ -17,8 +17,7 @@ import (
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
-// Submits only through an employer's API key; otherwise the candidate submits the prepared answers.
-// The application is claimed first, so a duplicate task or a reconciler requeue never runs it twice.
+// Claimed first, so a duplicate task or a requeue never runs it twice.
 func (s *ApplicationService) PrepareApplication(
 	ctx context.Context,
 	applicationID string,
@@ -240,8 +239,7 @@ func (s *ApplicationService) handleUpstreamError(
 	return s.saveApplication(ctx, application, "prepare application")
 }
 
-// handleSubmitError retries nothing: after a timeout or a server error the employer may already have
-// the application, so the candidate is asked to check instead of risking a duplicate.
+// Never retried: after a timeout the employer may already have the application.
 func (s *ApplicationService) handleSubmitError(
 	ctx context.Context,
 	application *applicationModel.Application,

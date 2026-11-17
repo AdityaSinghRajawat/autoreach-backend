@@ -78,8 +78,7 @@ func (s *AuthService) RefreshSession(
 	return session, nil
 }
 
-// revokeReusedFamily ends every session descended from a token presented twice, whether the reuse
-// came later or raced the first refresh, since either can mean the token was stolen.
+// Reuse, later or concurrent, may mean the token was stolen.
 func (s *AuthService) revokeReusedFamily(ctx context.Context, familyID string) *config.CustomError {
 	if err := s.refreshTokenRepo.MarkFamilyRevoked(
 		ctx,
