@@ -55,6 +55,7 @@ func TestDeadTaskCanBeListedAndRetriedFromTheAPI(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+	registerQueue(t, published.QueueName)
 	require.NoError(t, inspector.ArchiveTask(published.QueueName, published.MessageID))
 
 	t.Cleanup(func() { _ = inspector.DeleteTask(published.QueueName, published.MessageID) })
@@ -429,8 +430,7 @@ func (f jobFixture) metricsFor(t *testing.T) string {
 	return string(helpers.DecodeEnvelope(t, exchange).Data)
 }
 
-// registerQueue lists the queue again after Redis was flushed; the shared client only lists a queue
-// the first time it publishes to it.
+// The shared client lists a queue only once, and the suite flushes Redis between tests.
 func registerQueue(t *testing.T, queue string) {
 	t.Helper()
 
