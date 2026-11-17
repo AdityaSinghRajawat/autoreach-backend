@@ -106,6 +106,8 @@ Requests to each application site are rate limited; transient failures while rea
 
 `POST /auth/register` creates the account and its candidate profile. With `AUTH_REQUIRE_EMAIL_VERIFICATION` on (the default in production) it answers `202` for any address: a new or unverified address is emailed a verification link (valid for `AUTH_EMAIL_VERIFICATION_TTL`), a verified one is emailed a notice that someone tried to sign up, and the existing account is never changed. The link opens the frontend page at `AUTH_EMAIL_VERIFICATION_URL`, which posts its token to `POST /auth/verify-email`; signing in before that answers `403`. Account emails go out from `SYSTEM_MAIL_ADDRESS` through `SYSTEM_SMTP_*`. With verification off, signup returns a session at once (`201`) and an address in use answers `409`.
 
+**Password reset.** `POST /auth/forgot-password` always answers `202`; an active account is emailed a link to `AUTH_PASSWORD_RESET_URL` that works for `AUTH_PASSWORD_RESET_TTL` (1 hour by default). The page posts the link's token and the new password to `POST /auth/reset-password`. The link is tied to the password it was issued for, so it works once; resetting marks the email verified and ends every existing session.
+
 Expired sessions are deleted `REFRESH_TOKEN_RETENTION` after they expire by the daily retention job, which also anonymizes stale contacts (`CONTACT_RETENTION_PERIOD`) and, when `OUTREACH_EVENT_RETENTION` is set, deletes old opens, clicks and other events.
 
 ## Dashboard and operations
