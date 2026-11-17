@@ -13,11 +13,13 @@ import (
 
 type DiscoveryQuery struct {
 	CompanyDomain string
+	CompanyName   string
 	Titles        []string
 	Limit         int
 }
 
 type Person struct {
+	Source           string
 	ProviderPersonID string
 	FullName         string
 	Title            string
@@ -71,6 +73,19 @@ type WebhookAckResponse struct {
 
 func (p Person) HasLinkedin() bool {
 	return p.LinkedinURL != ""
+}
+
+// A provider can look a person up by LinkedIn URL, or by its own ID for people it found itself.
+func (p Person) LookupIdentifier(providerCode string) string {
+	if p.HasLinkedin() {
+		return p.LinkedinURL
+	}
+
+	if p.Source == providerCode {
+		return p.ProviderPersonID
+	}
+
+	return ""
 }
 
 func (p Person) Merge(details *ContactDetails) Person {
@@ -166,6 +181,7 @@ func ResolveTargetRoles(requested []string, job *jobModel.JobPosting) []string {
 // PersonFromContact describes a stored contact the way providers are asked about people.
 func PersonFromContact(contact *enrichmentModel.CompanyContact) Person {
 	person := Person{
+		Source:      contact.EnrichmentProvider,
 		FullName:    contact.FullName,
 		Title:       contact.Title,
 		CompanyName: contact.CompanyName,

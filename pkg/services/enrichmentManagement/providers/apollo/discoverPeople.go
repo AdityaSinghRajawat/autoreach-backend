@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	enrichmentTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/enrichmentManagement"
 	apolloIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/enrichment/apollo"
 )
@@ -37,6 +38,7 @@ func toPerson(person apolloIntegration.Person) enrichmentTypes.Person {
 	}
 
 	return enrichmentTypes.Person{
+		Source:           config.ProviderApollo,
 		ProviderPersonID: person.ID,
 		FullName:         fullName(person),
 		Title:            person.Title,

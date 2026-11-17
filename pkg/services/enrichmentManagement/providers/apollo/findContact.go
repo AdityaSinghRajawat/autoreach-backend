@@ -12,7 +12,7 @@ func (p *ApolloProvider) FindContact(
 	ctx context.Context,
 	person enrichmentTypes.Person,
 ) (*enrichmentTypes.ContactDetails, error) {
-	if person.ProviderPersonID == "" {
+	if person.Source != config.ProviderApollo || person.ProviderPersonID == "" {
 		return nil, nil
 	}
 
