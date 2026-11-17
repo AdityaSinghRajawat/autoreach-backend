@@ -29,6 +29,47 @@ func BuildPDF(t *testing.T, lines ...string) []byte {
 
 	return assemblePDF(
 		fmt.Sprintf("<< /Length %d >>\nstream\n%sendstream", stream.Len(), stream.String()),
+		helveticaFont,
+	)
+}
+
+// BuildSpacelessPDF lays words out the way LaTeX does: each word is placed by position with no
+// space character between, and an invisible zero-width "~" marker follows every word.
+func BuildSpacelessPDF(t *testing.T, lines ...[]string) []byte {
+	t.Helper()
+
+	const charWidth, wordGap, lineHeight = 7.2, 4.0, 14.0
+
+	stream := strings.Builder{}
+	stream.WriteString("BT\n/F1 12 Tf\n")
+
+	for index, words := range lines {
+		x := 72.0
+		y := 720.0 - float64(index)*lineHeight
+
+		for _, word := range words {
+			fmt.Fprintf(&stream, "1 0 0 1 %.1f %.1f Tm\n(%s~) Tj\n", x, y, word)
+			x += float64(len(word))*charWidth + wordGap
+		}
+	}
+
+	stream.WriteString("ET\n")
+
+	widths := make([]string, 0, 95)
+
+	for code := 32; code <= 126; code++ {
+		width := "600"
+		if code == '~' {
+			width = "0"
+		}
+
+		widths = append(widths, width)
+	}
+
+	return assemblePDF(
+		fmt.Sprintf("<< /Length %d >>\nstream\n%sendstream", stream.Len(), stream.String()),
+		"<< /Type /Font /Subtype /Type1 /BaseFont /Courier /FirstChar 32 /LastChar 126 /Widths ["+
+			strings.Join(widths, " ")+"] /Encoding /WinAnsiEncoding >>",
 	)
 }
 
@@ -47,17 +88,19 @@ func BuildPDFBomb(t *testing.T, decodedBytes int) []byte {
 		"<< /Length %d /Filter /FlateDecode >>\nstream\n%s\nendstream",
 		compressed.Len(),
 		compressed.String(),
-	))
+	), helveticaFont)
 }
 
-func assemblePDF(contents string) []byte {
+const helveticaFont = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+
+func assemblePDF(contents, font string) []byte {
 	objects := []string{
 		"<< /Type /Catalog /Pages 2 0 R >>",
 		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
 		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R " +
 			"/Resources << /Font << /F1 5 0 R >> >> >>",
 		contents,
-		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+		font,
 	}
 
 	document := bytes.Buffer{}

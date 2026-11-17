@@ -59,6 +59,8 @@ type documentConstants struct {
 	docxMaxBodyBytes   int64
 	pdfMaxPages        int
 	pdfMaxDecodedBytes int64
+	pdfWordGapRatio    float64
+	pdfLineShiftRatio  float64
 }
 
 type calibrationConstants struct {
@@ -144,6 +146,8 @@ var documentConstI = documentConstants{
 	docxMaxBodyBytes:   64 << 20,
 	pdfMaxPages:        50,
 	pdfMaxDecodedBytes: 32 << 20,
+	pdfWordGapRatio:    0.15,
+	pdfLineShiftRatio:  0.5,
 }
 
 var calibrationConstI = calibrationConstants{
@@ -255,6 +259,12 @@ func GetDocumentReadFactor() int   { return documentConstI.documentReadFactor }
 func GetDocxMaxBodyBytes() int64   { return documentConstI.docxMaxBodyBytes }
 func GetPDFMaxPages() int          { return documentConstI.pdfMaxPages }
 func GetPDFMaxDecodedBytes() int64 { return documentConstI.pdfMaxDecodedBytes }
+
+// A gap wider than this share of the font size between two glyphs is a space between words.
+func GetPDFWordGapRatio() float64 { return documentConstI.pdfWordGapRatio }
+
+// A vertical move larger than this share of the font size starts a new line.
+func GetPDFLineShiftRatio() float64 { return documentConstI.pdfLineShiftRatio }
 
 func GetCalibrationBadPercentile() float64  { return calibrationConstI.badPercentile }
 func GetCalibrationGoodPercentile() float64 { return calibrationConstI.goodPercentile }

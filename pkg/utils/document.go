@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/ledongthuc/pdf"
@@ -40,25 +41,17 @@ func ExtractPDFText(content []byte, maxChars int) (text string, err error) {
 			continue
 		}
 
-		fonts := map[string]*pdf.Font{}
 		streams := []pdf.Value{page.V.Key("Contents")}
 
 		for _, name := range page.Fonts() {
-			font := page.Font(name)
-			fonts[name] = &font
-			streams = append(streams, font.V.Key("ToUnicode"))
+			streams = append(streams, page.Font(name).V.Key("ToUnicode"))
 		}
 
 		if budget, err = spendDecodedBytes(streams, budget); err != nil {
 			return "", fmt.Errorf("extract pdf text: %w", err)
 		}
 
-		pageText, err := page.GetPlainText(fonts)
-		if err != nil {
-			return "", fmt.Errorf("extract pdf text: %w: %w", config.ErrUnreadableDocument, err)
-		}
-
-		builder.WriteString(pageText)
+		builder.WriteString(positionedText(page.Content().Text))
 
 		if builder.Len() > maxChars*config.GetDocumentReadFactor() {
 			break
@@ -66,6 +59,49 @@ func ExtractPDFText(content []byte, maxChars int) (text string, err error) {
 	}
 
 	return truncateText(builder.String(), maxChars), nil
+}
+
+// Words are rebuilt from glyph positions: many PDFs (LaTeX among them) place words apart without
+// storing a space, and some add invisible zero-width marker glyphs.
+func positionedText(glyphs []pdf.Text) string {
+	measuredFonts := map[string]bool{}
+
+	for _, glyph := range glyphs {
+		if glyph.W > 0 {
+			measuredFonts[glyph.Font] = true
+		}
+	}
+
+	builder := strings.Builder{}
+
+	var previous *pdf.Text
+
+	for index := range glyphs {
+		glyph := &glyphs[index]
+		if glyph.W <= 0 && measuredFonts[glyph.Font] {
+			continue
+		}
+
+		if previous != nil {
+			size := math.Max(glyph.FontSize, 1)
+			gap := glyph.X - (previous.X + previous.W)
+
+			switch {
+			case math.Abs(glyph.Y-previous.Y) > size*config.GetPDFLineShiftRatio():
+				builder.WriteString("\n")
+			case previous.W > 0 && gap > size*config.GetPDFWordGapRatio() &&
+				!strings.HasSuffix(previous.S, " ") && !strings.HasPrefix(glyph.S, " "):
+				builder.WriteString(" ")
+			}
+		}
+
+		builder.WriteString(glyph.S)
+		previous = glyph
+	}
+
+	builder.WriteString("\n")
+
+	return builder.String()
 }
 
 func spendDecodedBytes(values []pdf.Value, budget int64) (int64, error) {

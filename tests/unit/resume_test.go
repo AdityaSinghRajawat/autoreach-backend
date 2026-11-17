@@ -29,6 +29,18 @@ func TestPDFTextIsExtracted(t *testing.T) {
 	assert.Contains(t, text, "Senior Go Engineer (Kubernetes)")
 }
 
+func TestPDFWordsPlacedByPositionAreSeparatedAndInvisibleMarkersDropped(t *testing.T) {
+	document := helpers.BuildSpacelessPDF(t,
+		[]string{"Senior", "Go", "Engineer"},
+		[]string{"Kafka", "and", "Kubernetes"},
+	)
+
+	text, err := utils.ExtractPDFText(document, 10_000)
+
+	require.NoError(t, err)
+	assert.Equal(t, "Senior Go Engineer\nKafka and Kubernetes", strings.TrimSpace(text))
+}
+
 func TestDocxTextIsExtractedParagraphByParagraph(t *testing.T) {
 	document := helpers.BuildDocx(t, "Alex Candidate", "Go & Kubernetes <platform>")
 
