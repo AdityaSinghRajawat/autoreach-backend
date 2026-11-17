@@ -86,6 +86,7 @@ type vendorConstants struct {
 	signalHireChannelPhone   string
 	signalHireSubTypeWork    string
 	signalHireVerifiedRating map[string]struct{}
+	signalHireMaxSearchSize  int
 	reasonNoContactReturned  string
 }
 
@@ -200,6 +201,7 @@ var vendorConstI = vendorConstants{
 	signalHireChannelPhone:   "phone",
 	signalHireSubTypeWork:    "work",
 	signalHireVerifiedRating: map[string]struct{}{"100": {}, "verified": {}},
+	signalHireMaxSearchSize:  100,
 	reasonNoContactReturned:  "provider returned no contact",
 }
 
@@ -283,6 +285,7 @@ func GetSignalHireStatusSuccess() string   { return vendorConstI.signalHireStatu
 func GetSignalHireChannelEmail() string    { return vendorConstI.signalHireChannelEmail }
 func GetSignalHireChannelPhone() string    { return vendorConstI.signalHireChannelPhone }
 func GetSignalHireSubTypeWork() string     { return vendorConstI.signalHireSubTypeWork }
+func GetSignalHireMaxSearchSize() int      { return vendorConstI.signalHireMaxSearchSize }
 func GetReasonNoContactReturned() string   { return vendorConstI.reasonNoContactReturned }
 
 func IsSignalHireVerifiedRating(rating string) bool {

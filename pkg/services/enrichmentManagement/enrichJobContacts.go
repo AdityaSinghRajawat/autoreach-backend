@@ -121,6 +121,7 @@ func (s *EnrichmentService) discoverPeople(
 ) ([]enrichmentTypes.Person, string, *config.CustomError) {
 	query := enrichmentTypes.DiscoveryQuery{
 		CompanyDomain: job.CompanyDomain,
+		CompanyName:   job.CompanyName,
 		Titles:        config.GetSearchTitles(roles),
 		Limit:         config.GetEnrichmentPeoplePerSearch(),
 	}
@@ -267,11 +268,17 @@ func (s *EnrichmentService) resolveContact(
 		contact.ProviderPersonID = nil
 	}
 
-	if contact.WorkEmail == nil && contact.LinkedinURL == nil {
+	if contact.WorkEmail == nil && contact.LinkedinURL == nil && !s.canCompleteLater(contact) {
 		return nil
 	}
 
 	return contact
+}
+
+// A contact found without an email or LinkedIn URL is still kept when the provider that found it
+// can look up the email later by its own profile ID.
+func (s *EnrichmentService) canCompleteLater(contact *enrichmentModel.CompanyContact) bool {
+	return contact.ProviderPersonID != nil && s.asyncFinder(contact.EnrichmentProvider) != nil
 }
 
 func (s *EnrichmentService) findContactDetails(
@@ -391,15 +398,13 @@ func (s *EnrichmentService) requestAsyncContact(
 	contact *enrichmentModel.CompanyContact,
 	person enrichmentTypes.Person,
 ) bool {
-	if contact.LinkedinURL == nil {
-		return false
+	if contact.LinkedinURL != nil {
+		person.LinkedinURL = *contact.LinkedinURL
 	}
-
-	person.LinkedinURL = *contact.LinkedinURL
 
 	for _, provider := range s.providers {
 		finder, capable := provider.(providers.AsyncContactFinder)
-		if !capable {
+		if !capable || person.LookupIdentifier(provider.Code()) == "" {
 			continue
 		}
 

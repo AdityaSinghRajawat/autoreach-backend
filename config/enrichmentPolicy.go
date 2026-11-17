@@ -168,3 +168,24 @@ func GetPublicBaseURL() string { return enrichmentConfigI.publicBaseURL }
 
 // Task time kept for saving contacts already paid for.
 func GetEnrichmentSaveReserve() time.Duration { return enrichmentSaveReserve }
+
+// Legal suffixes left out of company-name searches, since profiles often omit them.
+var companyLegalSuffixesI = map[string]struct{}{
+	"inc": {}, "llc": {}, "ltd": {}, "limited": {}, "corp": {}, "corporation": {}, "co": {},
+	"company": {}, "gmbh": {}, "plc": {}, "pvt": {}, "private": {}, "sa": {}, "ag": {}, "bv": {},
+}
+
+// Words that are operators in a provider's boolean query syntax.
+var booleanOperatorsI = map[string]struct{}{"and": {}, "or": {}, "not": {}}
+
+func IsCompanyLegalSuffix(word string) bool {
+	_, suffix := companyLegalSuffixesI[strings.ToLower(word)]
+
+	return suffix
+}
+
+func IsBooleanOperator(word string) bool {
+	_, operator := booleanOperatorsI[strings.ToLower(word)]
+
+	return operator
+}

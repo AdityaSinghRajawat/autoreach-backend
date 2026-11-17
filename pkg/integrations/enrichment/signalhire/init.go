@@ -17,6 +17,27 @@ type (
 		RequestID json.RawMessage `json:"requestId"`
 	}
 
+	searchByQueryRequest struct {
+		CurrentCompany string `json:"currentCompany"`
+		CurrentTitle   string `json:"currentTitle,omitempty"`
+		Size           int    `json:"size"`
+	}
+
+	SearchByQueryResponse struct {
+		Profiles []Profile `json:"profiles"`
+	}
+
+	Profile struct {
+		UID        string       `json:"uid"`
+		FullName   string       `json:"fullName"`
+		Experience []Experience `json:"experience"`
+	}
+
+	Experience struct {
+		Company string `json:"company"`
+		Title   string `json:"title"`
+	}
+
 	CallbackItem struct {
 		Item      string     `json:"item"`
 		Status    string     `json:"status"`

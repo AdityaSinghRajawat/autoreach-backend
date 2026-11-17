@@ -23,13 +23,16 @@ type EnrichmentStub struct {
 	MatchStatus        int
 	ContactOutStatus   int
 	SignalHireStatus   int
+	SignalHireSearch   int
 	People             []map[string]any
 	Matches            map[string]map[string]any
 	Profiles           map[string]map[string]any
 	Organizations      map[string][]map[string]any
+	SignalHireProfiles []map[string]any
 	calls              map[string]int
 	signalHireItems    []string
 	signalHireRequests int
+	signalHireQueries  []map[string]any
 }
 
 func NewEnrichmentStub(t *testing.T) *EnrichmentStub {
@@ -48,6 +51,7 @@ func NewEnrichmentStub(t *testing.T) *EnrichmentStub {
 	mux.HandleFunc("POST /apollo/mixed_companies/search", stub.handleOrganizations)
 	mux.HandleFunc("GET /contactout/linkedin/enrich", stub.handleContactOut)
 	mux.HandleFunc("POST /signalhire/candidate/search", stub.handleSignalHire)
+	mux.HandleFunc("POST /signalhire/candidate/searchByQuery", stub.handleSignalHireSearch)
 
 	stub.Server = httptest.NewServer(mux)
 	t.Cleanup(stub.Server.Close)
@@ -87,6 +91,13 @@ func (s *EnrichmentStub) SignalHireItems() []string {
 	defer s.mutex.Unlock()
 
 	return append([]string(nil), s.signalHireItems...)
+}
+
+func (s *EnrichmentStub) SignalHireQueries() []map[string]any {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	return append([]map[string]any(nil), s.signalHireQueries...)
 }
 
 func (s *EnrichmentStub) Set(change func(stub *EnrichmentStub)) {
@@ -183,6 +194,32 @@ func (s *EnrichmentStub) handleSignalHire(writer http.ResponseWriter, request *h
 	s.signalHireRequests++
 
 	writeJSON(writer, status, map[string]any{"requestId": s.signalHireRequests})
+}
+
+func (s *EnrichmentStub) handleSignalHireSearch(writer http.ResponseWriter, request *http.Request) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	body := map[string]any{}
+	_ = json.NewDecoder(request.Body).Decode(&body)
+
+	status := s.record("signalhire.search", s.SignalHireSearch)
+	if request.Header.Get("apikey") == "" {
+		status = http.StatusUnauthorized
+	}
+
+	s.signalHireQueries = append(s.signalHireQueries, body)
+
+	profiles := s.SignalHireProfiles
+	if profiles == nil {
+		profiles = []map[string]any{}
+	}
+
+	writeJSON(
+		writer,
+		status,
+		map[string]any{"requestId": 1, "total": len(profiles), "profiles": profiles},
+	)
 }
 
 func SignalHireRequestID(sequence int) string {

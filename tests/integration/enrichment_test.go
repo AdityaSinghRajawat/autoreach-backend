@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -238,9 +239,10 @@ func TestEnrichmentFallsBackToTheNextProviderWhenThePrimaryCannotFindAnEmail(t *
 
 func TestRateLimitedDiscoveryOpensTheCircuitAndIsRetriedLater(t *testing.T) {
 	fixture := newEnrichmentFixture(t)
-	fixture.stub.Set(
-		func(stub *helpers.EnrichmentStub) { stub.SearchStatus = http.StatusTooManyRequests },
-	)
+	fixture.stub.Set(func(stub *helpers.EnrichmentStub) {
+		stub.SearchStatus = http.StatusTooManyRequests
+		stub.SignalHireSearch = http.StatusTooManyRequests
+	})
 
 	_, rateLimited := fixture.deps.Services.Enrichment.EnrichJobContacts(
 		context.Background(),
@@ -264,8 +266,12 @@ func TestRateLimitedDiscoveryOpensTheCircuitAndIsRetriedLater(t *testing.T) {
 		fixture.stub.Calls("apollo.search"),
 		"an open circuit must not call the provider",
 	)
+	assert.Equal(t, 1, fixture.stub.Calls("signalhire.search"))
 
-	fixture.stub.Set(func(stub *helpers.EnrichmentStub) { stub.SearchStatus = http.StatusOK })
+	fixture.stub.Set(func(stub *helpers.EnrichmentStub) {
+		stub.SearchStatus = http.StatusOK
+		stub.SignalHireSearch = http.StatusOK
+	})
 	time.Sleep(config.GetBreakerCooldown() + 100*time.Millisecond)
 
 	assert.Equal(t, 2, fixture.enrich(t).Saved)
@@ -346,6 +352,69 @@ func TestContactWithoutAnEmailIsCompletedLaterByTheSignalHireCallback(t *testing
 		"sarah@acme.com",
 		*contactByName(t, fixture.jobContacts(t), "Sarah Li").WorkEmail,
 	)
+}
+
+func TestSignalHireFindsPeopleWhenApolloSearchIsUnavailable(t *testing.T) {
+	fixture := newEnrichmentFixture(t)
+	priyaUID := strings.Repeat("a", 32)
+
+	fixture.stub.Set(func(stub *helpers.EnrichmentStub) {
+		stub.SearchStatus = http.StatusForbidden
+		stub.SignalHireProfiles = []map[string]any{
+			{"uid": priyaUID, "fullName": "Priya Nair", "experience": []map[string]any{
+				{"company": "Globex", "title": "Sales Lead"},
+				{"company": "Acme", "title": "Technical Recruiter"},
+			}},
+			{"uid": "", "fullName": "No Identifier", "experience": []map[string]any{
+				{"company": "Acme", "title": "Recruiter"},
+			}},
+			{"uid": strings.Repeat("b", 32), "fullName": "Lee Park", "experience": []map[string]any{
+				{"company": "Acme", "title": "Software Engineer"},
+			}},
+		}
+	})
+
+	result := fixture.enrich(t)
+
+	assert.Equal(t, 1, result.Saved, "only a decision maker with a SignalHire profile ID is kept")
+	assert.Equal(t, 1, result.PendingAsync)
+	assert.Zero(t, fixture.stub.Calls("apollo.match"), "Apollo is never asked about others' people")
+
+	queries := fixture.stub.SignalHireQueries()
+	require.Len(t, queries, 1)
+	assert.Equal(t, "Acme", queries[0]["currentCompany"], "the legal suffix is left out")
+	assert.Contains(t, queries[0]["currentTitle"], "(engineering AND manager)")
+	assert.Contains(t, queries[0]["currentTitle"], " OR recruiter")
+	assert.Equal(
+		t,
+		[]string{priyaUID},
+		fixture.stub.SignalHireItems(),
+		"the email is looked up by ID",
+	)
+
+	pending := contactByName(t, fixture.jobContacts(t), "Priya Nair")
+	assert.Nil(t, pending.WorkEmail)
+	assert.Nil(t, pending.LinkedinURL)
+	assert.Equal(t, "Technical Recruiter", pending.Title, "the title held at the job's company")
+	assert.Equal(t, config.ProviderSignalHire, pending.EnrichmentProvider)
+
+	callback := `[{"item":"` + priyaUID + `","status":"success","candidate":{"fullName":"Priya Nair",
+		"contacts":[{"type":"email","value":"priya@acme.com","rating":"100","subType":"work"}]}}]`
+	accepted := helpers.Do(
+		t,
+		fixture.router,
+		http.MethodPost,
+		config.GetAPIBasePath()+config.GetSignalHireWebhookPath()+
+			"?token="+config.GetSignalHireWebhookSecret(),
+		callback,
+		map[string]string{config.GetSignalHireRequestIDHeader(): helpers.SignalHireRequestID(1)},
+	)
+	require.Equal(t, http.StatusOK, accepted.Recorder.Code, string(accepted.Body))
+
+	completed := contactByName(t, fixture.jobContacts(t), "Priya Nair")
+	require.NotNil(t, completed.WorkEmail)
+	assert.Equal(t, "priya@acme.com", *completed.WorkEmail)
+	assert.Equal(t, pending.ID, completed.ID, "the callback completes the same contact")
 }
 
 func TestKnownCompanyContactsAreReusedWithoutCallingAnyProvider(t *testing.T) {
