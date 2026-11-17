@@ -16,8 +16,8 @@ func (s *AuthService) VerifyEmail(
 ) *config.CustomError {
 	now := utils.GetCurrTimeStamp()
 
-	userID, valid := parseVerificationToken(request.Token, now)
-	if !valid {
+	userID, valid := accountTokenUser(request.Token, now)
+	if !valid || !verifyAccountToken(config.GetEmailVerificationKeyLabel(), request.Token, "") {
 		return config.NewCustomError(
 			fmt.Errorf("verify email: %w", config.ErrVerificationLinkInvalid),
 			config.GetErrCodeBadRequest(),
