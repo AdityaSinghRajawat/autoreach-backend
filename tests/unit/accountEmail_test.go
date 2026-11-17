@@ -34,3 +34,18 @@ func TestAccountExistsEmailRevealsNothingAboutTheAccount(t *testing.T) {
 	assert.NotEmpty(t, email.Text)
 	assert.NotEmpty(t, email.HTML)
 }
+
+func TestPasswordResetEmailCarriesTheLinkAndItsLifetime(t *testing.T) {
+	link := "https://app.autoreach.test/reset-password?token=abc.123"
+
+	email, err := emailTemplates.GetPasswordResetEmail(emailTemplates.PasswordResetEmailData{
+		ResetURL:        link,
+		ValidForMinutes: 60,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, emailTemplates.PasswordResetEmailSubject, email.Subject)
+	assert.Contains(t, email.Text, link)
+	assert.Contains(t, email.Text, "60 minutes")
+	assert.Contains(t, email.HTML, "token=abc.123")
+}

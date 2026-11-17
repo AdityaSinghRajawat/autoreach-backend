@@ -7,6 +7,7 @@ import (
 
 const (
 	emailVerificationKeyLabel  = "email-verification"
+	passwordResetKeyLabel      = "password-reset"
 	verificationTokenSeparator = "."
 	verificationTokenParam     = "token"
 	verificationTokenParts     = 3
@@ -16,6 +17,8 @@ type signupConfig struct {
 	requireVerification bool
 	verificationTTL     time.Duration
 	verificationURL     string
+	resetTTL            time.Duration
+	resetURL            string
 	senderAddress       string
 	senderName          string
 	smtpHost            string
@@ -38,6 +41,8 @@ func loadSignupConfig() {
 			48*time.Hour,
 		),
 		verificationURL: getEnvWithDefault("AUTH_EMAIL_VERIFICATION_URL", ""),
+		resetTTL:        getEnvDurationWithDefault("AUTH_PASSWORD_RESET_TTL", time.Hour),
+		resetURL:        getEnvWithDefault("AUTH_PASSWORD_RESET_URL", ""),
 		senderAddress:   getEnvWithDefault("SYSTEM_MAIL_ADDRESS", ""),
 		senderName:      getEnvWithDefault("SYSTEM_MAIL_NAME", "AutoReach"),
 		smtpHost:        getEnvWithDefault("SYSTEM_SMTP_HOST", ""),
@@ -47,9 +52,10 @@ func loadSignupConfig() {
 		smtpPassword:    getEnvWithDefault("SYSTEM_SMTP_PASSWORD", ""),
 	}
 
-	if signupConfigI.requireVerification && !IsSystemMailConfigured() {
+	if signupConfigI.requireVerification &&
+		(!IsSystemMailConfigured() || signupConfigI.resetURL == "") {
 		log.Fatalf("AUTH_REQUIRE_EMAIL_VERIFICATION needs AUTH_EMAIL_VERIFICATION_URL, " +
-			"SYSTEM_MAIL_ADDRESS and SYSTEM_SMTP_HOST")
+			"AUTH_PASSWORD_RESET_URL, SYSTEM_MAIL_ADDRESS and SYSTEM_SMTP_HOST")
 	}
 }
 
@@ -75,3 +81,6 @@ func GetSystemSMTPPassword() string          { return signupConfigI.smtpPassword
 func GetVerificationTokenSeparator() string  { return verificationTokenSeparator }
 func GetVerificationTokenParam() string      { return verificationTokenParam }
 func GetVerificationTokenParts() int         { return verificationTokenParts }
+func GetPasswordResetKeyLabel() string       { return passwordResetKeyLabel }
+func GetPasswordResetTTL() time.Duration     { return signupConfigI.resetTTL }
+func GetPasswordResetURL() string            { return signupConfigI.resetURL }

@@ -87,6 +87,18 @@ func (r *RefreshTokenRepo) MarkFamilyRevoked(
 	return nil
 }
 
+func (r *RefreshTokenRepo) MarkUserRevoked(
+	ctx context.Context,
+	userID string,
+	revokedAt time.Time,
+) error {
+	if _, err := r.markRevoked(ctx, `user_id = $1`, userID, revokedAt); err != nil {
+		return fmt.Errorf("revoke refresh tokens of user: %w", err)
+	}
+
+	return nil
+}
+
 func (r *RefreshTokenRepo) markRevoked(
 	ctx context.Context,
 	condition string,

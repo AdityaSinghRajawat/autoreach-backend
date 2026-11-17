@@ -52,6 +52,7 @@ var (
 	ErrSystemMailNotConfigured = errors.New("system mail is not configured")
 	ErrEmailNotVerified        = errors.New("email address not verified yet")
 	ErrVerificationLinkInvalid = errors.New("verification link is invalid or expired")
+	ErrResetLinkInvalid        = errors.New("password reset link is invalid, used or expired")
 	ErrTooManyStreams          = errors.New("too many open activity streams")
 	ErrContactSignalNotFound   = errors.New("contact signal not found")
 	ErrJobNotMatched           = errors.New("job is not matched to the candidate")

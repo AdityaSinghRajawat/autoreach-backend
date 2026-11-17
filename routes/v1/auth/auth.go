@@ -21,6 +21,8 @@ func LoadAuthRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 		handler.Login,
 	)
 	authGroup.POST("/verify-email", attemptLimit, handler.VerifyEmail)
+	authGroup.POST("/forgot-password", attemptLimit, handler.ForgotPassword)
+	authGroup.POST("/reset-password", attemptLimit, handler.ResetPassword)
 	authGroup.POST("/refresh", attemptLimit, handler.Refresh)
 	authGroup.POST("/logout", handler.Logout)
 	authGroup.GET(

@@ -31,12 +31,21 @@ var verificationTokenPattern = regexp.MustCompile(`token=([^\s]+)`)
 func verifyingRouter(t *testing.T) (http.Handler, *mocks.SystemMailer, *dependencies.Dependencies) {
 	t.Helper()
 
+	return mailingRouter(t, true)
+}
+
+func mailingRouter(
+	t *testing.T,
+	requireVerification bool,
+) (http.Handler, *mocks.SystemMailer, *dependencies.Dependencies) {
+	t.Helper()
+
 	deps := setup.Dependencies(t)
 	original := deps.SystemMailer
 	mailer := &mocks.SystemMailer{}
 
 	deps.SystemMailer = mailer
-	deps.RequireEmailVerification = true
+	deps.RequireEmailVerification = requireVerification
 	require.NoError(t, deps.Wire())
 
 	t.Cleanup(func() {

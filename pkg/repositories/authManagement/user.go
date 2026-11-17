@@ -106,3 +106,22 @@ func (r *UserRepo) MarkEmailVerified(
 
 	return tag.RowsAffected() == 1, nil
 }
+
+// ResetPassword stores a new password; it also marks the email verified, because the reset link
+// reached that inbox.
+func (r *UserRepo) ResetPassword(
+	ctx context.Context,
+	userID, passwordHash string,
+	now time.Time,
+) (bool, error) {
+	tag, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.usersTable+`
+		SET password_hash = $2, email_verified_at = COALESCE(email_verified_at, $3), updated_at = $3
+		WHERE id = $1
+	`, userID, passwordHash, now)
+	if err != nil {
+		return false, fmt.Errorf("reset password: %w", err)
+	}
+
+	return tag.RowsAffected() == 1, nil
+}

@@ -27,6 +27,19 @@ type VerifyEmailRequest struct {
 	Token string `json:"token" validate:"required,max=256"`
 }
 
+type ForgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email,max=255"`
+}
+
+type ResetPasswordRequest struct {
+	Token    string `json:"token"    validate:"required,max=256"`
+	Password string `json:"password" validate:"required,min=10,max=128"`
+}
+
+type PasswordResetPendingResponse struct {
+	ResetEmailSent bool `json:"resetEmailSent"`
+}
+
 type RegistrationPendingResponse struct {
 	VerificationRequired bool `json:"verificationRequired"`
 }
@@ -64,6 +77,10 @@ func (r *RegisterRequest) ToCandidateModel(user *authModel.User) *candidateModel
 	candidate.FullName = strings.TrimSpace(r.FullName)
 
 	return candidate
+}
+
+func (r *ForgotPasswordRequest) NormalizedEmail() string {
+	return modelHelpers.NormalizeEmail(r.Email)
 }
 
 func (r *LoginRequest) NormalizedEmail() string {
