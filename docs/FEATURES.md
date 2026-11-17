@@ -106,6 +106,13 @@ Requests to each application site are rate limited; transient failures while rea
 
 `POST /auth/register` creates the account and its candidate profile. With `AUTH_REQUIRE_EMAIL_VERIFICATION` on (the default in production) it answers `202` for any address: a new or unverified address is emailed a verification link (valid for `AUTH_EMAIL_VERIFICATION_TTL`), a verified one is emailed a notice that someone tried to sign up, and the existing account is never changed. The link opens the frontend page at `AUTH_EMAIL_VERIFICATION_URL`, which posts its token to `POST /auth/verify-email`; signing in before that answers `403`. Account emails go out from `SYSTEM_MAIL_ADDRESS` through `SYSTEM_SMTP_*`. With verification off, signup returns a session at once (`201`) and an address in use answers `409`.
 
+**Your account** (signed in):
+
+- `PUT /users/me/password` changes the password after checking the current one and ends every session; sign in again with the new password.
+- `POST /users/me/email` (with the password) emails a link to the new address; opening it while signed in (`POST /users/me/email/confirm`) moves the account, marks the address verified and tells the old address. An address already in use gets nothing and the same answer.
+- `GET /users/me/export` returns everything held about you: account, profile, resumes (parsed details), matches, applications, mailboxes (without credentials), templates, campaigns, messages, suppressions and contact signals.
+- `DELETE /users/me` (with the password) deletes the account and everything the candidate owns, including stored resume files. Shared contacts and global suppressions stay, because they protect the people contacted. Administrators cannot delete themselves.
+
 **Password reset.** `POST /auth/forgot-password` always answers `202`; an active account is emailed a link to `AUTH_PASSWORD_RESET_URL` that works for `AUTH_PASSWORD_RESET_TTL` (1 hour by default). The page posts the link's token and the new password to `POST /auth/reset-password`. The link is tied to the password it was issued for, so it works once; resetting marks the email verified and ends every existing session.
 
 Expired sessions are deleted `REFRESH_TOKEN_RETENTION` after they expire by the daily retention job, which also anonymizes stale contacts (`CONTACT_RETENTION_PERIOD`) and, when `OUTREACH_EVENT_RETENTION` is set, deletes old opens, clicks and other events.
