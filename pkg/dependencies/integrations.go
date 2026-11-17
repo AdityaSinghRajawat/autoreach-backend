@@ -2,7 +2,7 @@ package dependencies
 
 import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
-	openaiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/openai"
+	aiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ai"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/applicationManagement/appliers"
 	enrichmentProviders "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement/jobBoards"
@@ -12,7 +12,7 @@ import (
 
 func (d *Dependencies) initIntegrations() error {
 	if d.Embedder == nil || d.ChatCompleter == nil {
-		openAI := openaiIntegration.NewOpenAIIntegration(config.GetOpenAIBaseURL())
+		openAI := aiIntegration.NewAIIntegration(config.GetAIBaseURL())
 		if d.Embedder == nil {
 			d.Embedder = openAI
 		}

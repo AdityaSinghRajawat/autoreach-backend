@@ -13,7 +13,7 @@ Operating the production stack in `docker-compose.yml`: API server, worker, Post
    | `INTERNAL_SHARED_SECRET` | `openssl rand -hex 24`; protects `/metrics` and Swagger |
    | `CHANNEL_CREDENTIAL_KEYS` | `1:$(openssl rand -base64 32)` with `CHANNEL_CREDENTIAL_KEY_VERSION=1` |
    | `PUBLIC_BASE_URL` | the public address of the API; tracking and unsubscribe links in emails point at it |
-   | `OPENAI_API_KEY`, provider keys | from each vendor |
+   | `AI_API_KEY`, provider keys | from each vendor |
    | `AUTH_EMAIL_VERIFICATION_URL`, `AUTH_PASSWORD_RESET_URL`, `AUTH_EMAIL_CHANGE_URL`, `SYSTEM_MAIL_ADDRESS`, `SYSTEM_SMTP_*` | the frontend's verify, reset and email change pages and an SMTP relay for account emails; production refuses to start without them while `AUTH_REQUIRE_EMAIL_VERIFICATION` is on (its default) |
 
    Compose refuses to start without the variables in the first four rows, and so does the app in production. `APP_ENV` must be `local`, `test` or `production`; any other value stops startup, so a typo cannot switch the production checks off. `OUTREACH_ALLOW_INSECURE_MAIL` and `OUTREACH_ALLOW_PRIVATE_MAIL_HOSTS` are for local test mail servers and are refused in production.
@@ -93,7 +93,7 @@ All under `/api/v1/admin`, with an admin token.
 | Enrichment stops finding contacts | provider credit budget used up, rate limited or circuit open | `GET /providers`; raise `<PROVIDER>_DAILY_CREDITS` or wait for the daily reset; check the vendor's status page |
 | Bounce rate jumps | bad contact data or a burned mailbox | pause campaigns (`PATCH` campaign `status: PAUSED`), check `GET /providers` deliverability, review the mailbox in the provider's console |
 | `outreach_queue` backlog | send windows or daily caps holding messages | expected outside send hours; check `OUTREACH_SEND_WINDOW_*` and the 30/day cap |
-| `embedding_queue` dead tasks | OpenAI key, quota or outage | fix the key or wait, then retry the dead tasks |
+| `embedding_queue` dead tasks | AI provider key, quota or outage | fix the key or wait, then retry the dead tasks |
 | Worker restarts in a loop | missing production setting | `docker compose logs worker`; the first line names the missing variable |
 | Applications stuck in `QUEUED` | prepare tasks exhausted their retries while an ATS was down | the stuck-work reconciler re-queues them; or retry the dead tasks |
 | Redis lost | volume loss | start Redis empty, then restart server and worker so the queues are listed again in `GET /admin/queues` (tasks are processed either way); the reconciler and cron jobs rebuild queued work from Postgres |

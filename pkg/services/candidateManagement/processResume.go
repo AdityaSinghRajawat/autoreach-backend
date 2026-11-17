@@ -54,7 +54,7 @@ func (s *CandidateService) ProcessResume(
 
 	embeddings, err := s.embedder.CreateEmbeddings(
 		ctx,
-		[]string{truncateRunes(resume.RawText, config.GetOpenAIEmbeddingMaxInputChars())},
+		[]string{truncateRunes(resume.RawText, config.GetAIEmbeddingMaxInputChars())},
 	)
 	if err != nil {
 		return s.handleEmbeddingFailure(ctx, resume, err)

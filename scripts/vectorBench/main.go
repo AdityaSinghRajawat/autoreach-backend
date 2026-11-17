@@ -135,7 +135,7 @@ func prepareTable(ctx context.Context, conn *pgx.Conn) error {
 		`CREATE TABLE ` + benchTable + ` (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			status job_status NOT NULL DEFAULT 'ACTIVE',
-			embedding vector(` + strconv.Itoa(config.GetOpenAIEmbeddingDimensions()) + `)
+			embedding vector(` + strconv.Itoa(config.GetAIEmbeddingDimensions()) + `)
 		)`,
 	}
 	for _, statement := range statements {
@@ -149,7 +149,7 @@ func prepareTable(ctx context.Context, conn *pgx.Conn) error {
 
 func loadVectors(ctx context.Context, conn *pgx.Conn, settings options) (time.Duration, error) {
 	startedAt := time.Now()
-	dimensions := config.GetOpenAIEmbeddingDimensions()
+	dimensions := config.GetAIEmbeddingDimensions()
 
 	if err := prepareCentres(ctx, conn, dimensions); err != nil {
 		return 0, err
@@ -394,7 +394,7 @@ func nearest(
 }
 
 func randomVector(base []float32, spread float32) string {
-	vector := make([]float32, config.GetOpenAIEmbeddingDimensions())
+	vector := make([]float32, config.GetAIEmbeddingDimensions())
 	for index := range vector {
 		vector[index] = (rand.Float32()*2 - 1) * spread
 		if base != nil {
@@ -406,7 +406,7 @@ func randomVector(base []float32, spread float32) string {
 }
 
 func printReport(settings options, result report) {
-	dimensions := config.GetOpenAIEmbeddingDimensions()
+	dimensions := config.GetAIEmbeddingDimensions()
 
 	fmt.Println()
 	fmt.Println("Vector search benchmark")

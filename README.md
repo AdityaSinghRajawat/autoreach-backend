@@ -15,7 +15,7 @@ This repository is the Go backend: a REST API and a background worker built from
         │  polled by the worker                      │
         └──────────────────────┬─────────────────────┘
                                ▼
-                         job postings ──► embeddings (OpenAI) ◄── resumes (PDF/DOCX)
+                         job postings ──► embeddings (AI)     ◄── resumes (PDF/DOCX)
                                │                                      │
                                └──────────► matching (pgvector) ◄─────┘
                                                   │
@@ -48,7 +48,7 @@ The API only records work and queues tasks; the worker does everything slow or e
 | HTTP | gin, with an OpenAPI 3 spec in `docs/swagger/openapi.json` |
 | Database | PostgreSQL 16 with pgvector, accessed with pgx and plain SQL; migrations with golang-migrate |
 | Queue and cache | Redis 7; tasks with asynq; rate limits, locks and counters in Redis |
-| AI | OpenAI embeddings (`text-embedding-3-small`) and a chat model for resume parsing |
+| AI | Any OpenAI-compatible API (OpenAI by default, or Gemini and others): embeddings for matching and a chat model for resume parsing |
 | Files | Local disk or S3-compatible storage |
 | Observability | Structured JSON logs (slog) and Prometheus metrics |
 
@@ -59,7 +59,7 @@ The API only records work and queues tasks; the worker does everything slow or e
 - **Go 1.26 or newer**: <https://go.dev/dl/>
 - **Docker** with Compose (Docker Desktop on Windows and macOS)
 - **make**: preinstalled on Linux and macOS. On Windows, use Git Bash with make installed (`choco install make` or `winget install GnuWin32.Make`), or run the commands each target prints with `make -n <target>`.
-- **An OpenAI API key** if you want matching to work (see step 2).
+- **An AI provider API key** (OpenAI, Gemini or another OpenAI-compatible API) if you want matching to work (see step 2).
 
 ### 2. Configure
 
@@ -70,7 +70,7 @@ cp .env.example .env
 Open `.env` and set:
 
 - `JWT_SECRET`: any random string of at least 32 characters, for example the output of `openssl rand -base64 48`. The app refuses to start without it.
-- `OPENAI_API_KEY`: without it everything runs, but jobs and resumes cannot be embedded, so no matches appear.
+- `AI_API_KEY`: without it everything runs, but jobs and resumes cannot be embedded, so no matches appear.
 
 The database and Redis defaults already match the local containers. Every other setting is optional and documented in place in [`.env.example`](.env.example); see [Configuration](#configuration).
 
@@ -131,7 +131,7 @@ What you need to set depends on what you want to use:
 | To use | Set (section in `.env.example`) |
 |---|---|
 | Anything at all | `JWT_SECRET` (6) |
-| Matching resumes to jobs | `OPENAI_API_KEY` (9) |
+| Matching resumes to jobs | `AI_API_KEY` (9) |
 | Finding recruiters and hiring managers | At least one of `APOLLO_API_KEY`, `SIGNALHIRE_API_KEY` (plus `PUBLIC_BASE_URL` and `SIGNALHIRE_WEBHOOK_SECRET`), `CONTACTOUT_API_KEY` (12) |
 | Connecting a candidate's mailbox for email outreach | `CHANNEL_CREDENTIAL_KEYS` (13); `PUBLIC_BASE_URL` (1) for one-click unsubscribe and tracking links |
 | Adzuna job searches | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` (11) and an Apollo key for company domains |
@@ -189,7 +189,7 @@ pkg/services         use cases; one per file
 pkg/repositories     SQL, one file per table
 pkg/models           database entities and their enums (pkg/models/helpers)
 pkg/customtypes      request, response and other non-entity shapes
-pkg/integrations     clients for third-party HTTP APIs (OpenAI, enrichment providers, ATS and job boards)
+pkg/integrations     clients for third-party HTTP APIs (AI provider, enrichment providers, ATS and job boards)
 pkg/storage          file storage: local disk or S3
 pkg/emailTemplates   HTML templates for outgoing email
 pkg/db               connection pools and transactions
@@ -223,7 +223,7 @@ A request flows `routes` → `middlewares` → `pkg/handlers` → `pkg/services`
 | `JWT_SECRET must be at least 32 characters` | Set `JWT_SECRET` in `.env` |
 | The worker exits because it cannot listen on port 8080 | The API already uses it; start the worker with `PORT=8081` |
 | `connect postgres` or `connect redis` errors | Run `make dev-up` and check `docker ps`; the defaults expect ports 5432 and 6379 to be free |
-| Resumes and jobs stay unmatched | Set `OPENAI_API_KEY`, then retry the failed tasks (`POST /api/v1/admin/queues/{queue}/dead/{taskId}/retry`) or upload again |
+| Resumes and jobs stay unmatched | Set `AI_API_KEY`, then retry the failed tasks (`POST /api/v1/admin/queues/{queue}/dead/{taskId}/retry`) or upload again |
 | Enrichment finds no contacts | No provider key is set, or a provider's daily credit budget is used up (`GET /api/v1/admin/providers`) |
 | Connecting a mailbox fails | Set `CHANNEL_CREDENTIAL_KEYS` |
 | Migrations report a "dirty" database, or the schema changed under you | A migration failed half way, or an existing migration was edited. During development, reset the local database: `docker compose -f docker-compose.dev.yml down -v` then `make dev-up` (this deletes local data). In production, follow docs/RUNBOOK.md |

@@ -43,7 +43,7 @@ func matchedJobsPath(candidateID, query string) string {
 }
 
 func directionVector(components map[int]float64) []float32 {
-	vector := make([]float32, config.GetOpenAIEmbeddingDimensions())
+	vector := make([]float32, config.GetAIEmbeddingDimensions())
 
 	norm := 0.0
 	for _, value := range components {
@@ -193,7 +193,7 @@ func TestUploadedPDFResumeIsStoredParsedEmbeddedAndActivated(t *testing.T) {
 		context.Background(),
 		`SELECT vector_dims(embedding) FROM candidate_resumes WHERE id = $1`, resume.ID,
 	).Scan(&dimensions))
-	assert.Equal(t, config.GetOpenAIEmbeddingDimensions(), dimensions)
+	assert.Equal(t, config.GetAIEmbeddingDimensions(), dimensions)
 }
 
 func TestUploadedDocxResumeIsProcessed(t *testing.T) {

@@ -29,7 +29,7 @@ func (s *JobService) EmbedJobs(
 		return result, nil
 	}
 
-	maxChars := config.GetOpenAIEmbeddingMaxInputChars()
+	maxChars := config.GetAIEmbeddingMaxInputChars()
 
 	inputs := make([]string, 0, len(sources))
 	for _, source := range sources {

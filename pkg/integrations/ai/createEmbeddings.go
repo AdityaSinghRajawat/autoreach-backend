@@ -1,4 +1,4 @@
-package openai
+package ai
 
 import (
 	"context"
@@ -7,12 +7,12 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
-func (i *OpenAIIntegration) CreateEmbeddings(
+func (i *AIIntegration) CreateEmbeddings(
 	ctx context.Context,
 	inputs []string,
 ) ([][]float32, error) {
 	if i.apiKey == "" {
-		return nil, fmt.Errorf("%w: OPENAI_API_KEY", config.ErrMissingCredential)
+		return nil, fmt.Errorf("%w: AI_API_KEY", config.ErrMissingCredential)
 	}
 
 	if len(inputs) == 0 {

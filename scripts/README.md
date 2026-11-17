@@ -22,7 +22,7 @@ Random vectors are close to a worst case for an approximate index (no cluster st
 Derives `MATCH_CALIBRATION_LOW` and `MATCH_CALIBRATION_HIGH` from resume and job pairs you have judged yourself.
 
 ```bash
-OPENAI_API_KEY=... make calibrate PAIRS=pairs.jsonl
+AI_API_KEY=... make calibrate PAIRS=pairs.jsonl
 ```
 
 `pairs.jsonl` holds one JSON object per line:

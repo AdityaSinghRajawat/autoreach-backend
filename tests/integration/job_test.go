@@ -472,7 +472,7 @@ func TestEmbedJobsStoresVectorsAndIsIdempotent(t *testing.T) {
 		context.Background(),
 		`SELECT vector_dims(embedding), embedding_model FROM job_postings WHERE id = $1`, jobIDs[0],
 	).Scan(&dimensions, &model))
-	assert.Equal(t, config.GetOpenAIEmbeddingDimensions(), dimensions)
+	assert.Equal(t, config.GetAIEmbeddingDimensions(), dimensions)
 	assert.Equal(t, mocks.EmbedderModel, model)
 }
 

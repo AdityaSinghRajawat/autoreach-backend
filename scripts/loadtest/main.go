@@ -324,7 +324,7 @@ func register(ctx context.Context, baseURL string) (session, error) {
 }
 
 // prepareCandidate turns on automatic applying, saves an application profile and stores a resume,
-// which is marked ready directly because resume embedding needs an OpenAI key.
+// which is marked ready directly because resume embedding needs an AI provider key.
 func prepareCandidate(
 	ctx context.Context,
 	baseURL string,

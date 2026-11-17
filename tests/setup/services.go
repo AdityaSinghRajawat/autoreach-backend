@@ -56,7 +56,7 @@ func Dependencies(t *testing.T) *dependencies.Dependencies {
 			return
 		}
 
-		embedderI = mocks.NewEmbedder(config.GetOpenAIEmbeddingDimensions())
+		embedderI = mocks.NewEmbedder(config.GetAIEmbeddingDimensions())
 
 		dependenciesI.Embedder = embedderI
 

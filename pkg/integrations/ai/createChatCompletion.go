@@ -1,4 +1,4 @@
-package openai
+package ai
 
 import (
 	"context"
@@ -8,12 +8,12 @@ import (
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 )
 
-func (i *OpenAIIntegration) CreateChatCompletion(
+func (i *AIIntegration) CreateChatCompletion(
 	ctx context.Context,
 	request sharedTypes.ChatCompletionRequest,
 ) (string, error) {
 	if i.apiKey == "" {
-		return "", fmt.Errorf("%w: OPENAI_API_KEY", config.ErrMissingCredential)
+		return "", fmt.Errorf("%w: AI_API_KEY", config.ErrMissingCredential)
 	}
 
 	response := chatResponse{}
@@ -45,7 +45,7 @@ func (i *OpenAIIntegration) CreateChatCompletion(
 	return choice.Message.Content, nil
 }
 
-func (i *OpenAIIntegration) toChatRequest(request sharedTypes.ChatCompletionRequest) chatRequest {
+func (i *AIIntegration) toChatRequest(request sharedTypes.ChatCompletionRequest) chatRequest {
 	wire := chatRequest{Model: i.chatModel, Messages: make([]chatMessage, 0, len(request.Messages))}
 
 	for _, message := range request.Messages {

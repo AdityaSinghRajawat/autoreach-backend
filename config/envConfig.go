@@ -79,7 +79,7 @@ type workerConfig struct {
 	reconcilerBatchSize  int
 }
 
-type openAIConfig struct {
+type aiConfig struct {
 	apiKey             string
 	baseURL            string
 	embeddingModel     string
@@ -103,7 +103,7 @@ type envConfig struct {
 	match       matchConfig
 	concurrency concurrencyConfig
 	worker      workerConfig
-	openAI      openAIConfig
+	ai          aiConfig
 	app         appConfig
 	http        httpConfig
 	db          dbConfig
@@ -196,17 +196,17 @@ func loadEnvConfig() envConfig {
 			),
 			reconcilerBatchSize: getEnvIntWithDefault("RECONCILER_BATCH_SIZE", 500),
 		},
-		openAI: openAIConfig{
-			apiKey:  getEnvWithDefault("OPENAI_API_KEY", ""),
-			baseURL: getEnvWithDefault("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+		ai: aiConfig{
+			apiKey:  getEnvWithDefault("AI_API_KEY", ""),
+			baseURL: getEnvWithDefault("AI_BASE_URL", "https://api.openai.com/v1"),
 			embeddingModel: getEnvWithDefault(
-				"OPENAI_EMBEDDING_MODEL",
+				"AI_EMBEDDING_MODEL",
 				"text-embedding-3-small",
 			),
-			embeddingDimension: getEnvIntWithDefault("OPENAI_EMBEDDING_DIMENSIONS", 1536),
-			timeout:            getEnvDurationWithDefault("OPENAI_TIMEOUT", 30*time.Second),
-			maxInputChars:      getEnvIntWithDefault("OPENAI_EMBEDDING_MAX_INPUT_CHARS", 24000),
-			chatModel:          getEnvWithDefault("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+			embeddingDimension: getEnvIntWithDefault("AI_EMBEDDING_DIMENSIONS", 1536),
+			timeout:            getEnvDurationWithDefault("AI_TIMEOUT", 30*time.Second),
+			maxInputChars:      getEnvIntWithDefault("AI_EMBEDDING_MAX_INPUT_CHARS", 24000),
+			chatModel:          getEnvWithDefault("AI_CHAT_MODEL", "gpt-4o-mini"),
 		},
 		app: appConfig{
 			env:      getEnvWithDefault("APP_ENV", constI.app.envLocal),
@@ -413,13 +413,13 @@ func GetReconcilerInterval() time.Duration    { return envConfigI.worker.reconci
 func GetReconcilerStaleAfter() time.Duration  { return envConfigI.worker.reconcilerStaleAfter }
 func GetReconcilerBatchSize() int             { return envConfigI.worker.reconcilerBatchSize }
 
-func GetOpenAIAPIKey() string              { return envConfigI.openAI.apiKey }
-func GetOpenAIBaseURL() string             { return envConfigI.openAI.baseURL }
-func GetOpenAIEmbeddingModel() string      { return envConfigI.openAI.embeddingModel }
-func GetOpenAIEmbeddingDimensions() int    { return envConfigI.openAI.embeddingDimension }
-func GetOpenAITimeout() time.Duration      { return envConfigI.openAI.timeout }
-func GetOpenAIEmbeddingMaxInputChars() int { return envConfigI.openAI.maxInputChars }
-func GetOpenAIChatModel() string           { return envConfigI.openAI.chatModel }
+func GetAIAPIKey() string              { return envConfigI.ai.apiKey }
+func GetAIBaseURL() string             { return envConfigI.ai.baseURL }
+func GetAIEmbeddingModel() string      { return envConfigI.ai.embeddingModel }
+func GetAIEmbeddingDimensions() int    { return envConfigI.ai.embeddingDimension }
+func GetAITimeout() time.Duration      { return envConfigI.ai.timeout }
+func GetAIEmbeddingMaxInputChars() int { return envConfigI.ai.maxInputChars }
+func GetAIChatModel() string           { return envConfigI.ai.chatModel }
 
 func GetBackgroundMaxGoroutines() int { return envConfigI.concurrency.backgroundMaxGoroutines }
 

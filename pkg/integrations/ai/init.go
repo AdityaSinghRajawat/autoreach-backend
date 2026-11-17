@@ -1,4 +1,4 @@
-package openai
+package ai
 
 import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
@@ -56,7 +56,7 @@ type (
 	}
 )
 
-type OpenAIIntegration struct {
+type AIIntegration struct {
 	httpClient *utils.HTTPClient
 	apiKey     string
 	model      string
@@ -64,24 +64,24 @@ type OpenAIIntegration struct {
 	chatModel  string
 }
 
-func NewOpenAIIntegration(baseURL string) *OpenAIIntegration {
-	return &OpenAIIntegration{
-		httpClient: utils.NewHTTPClient(baseURL, config.GetOpenAITimeout()),
-		apiKey:     config.GetOpenAIAPIKey(),
-		model:      config.GetOpenAIEmbeddingModel(),
-		dimensions: config.GetOpenAIEmbeddingDimensions(),
-		chatModel:  config.GetOpenAIChatModel(),
+func NewAIIntegration(baseURL string) *AIIntegration {
+	return &AIIntegration{
+		httpClient: utils.NewHTTPClient(baseURL, config.GetAITimeout()),
+		apiKey:     config.GetAIAPIKey(),
+		model:      config.GetAIEmbeddingModel(),
+		dimensions: config.GetAIEmbeddingDimensions(),
+		chatModel:  config.GetAIChatModel(),
 	}
 }
 
-func (i *OpenAIIntegration) Model() string {
+func (i *AIIntegration) Model() string {
 	return i.model
 }
 
-func (i *OpenAIIntegration) ChatModel() string {
+func (i *AIIntegration) ChatModel() string {
 	return i.chatModel
 }
 
-func (i *OpenAIIntegration) authorizationHeaders() map[string]string {
+func (i *AIIntegration) authorizationHeaders() map[string]string {
 	return map[string]string{config.GetAuthorizationHeader(): config.GetBearerPrefix() + i.apiKey}
 }
