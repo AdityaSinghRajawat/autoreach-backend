@@ -9,15 +9,14 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// ResetPassword sets a new password from an emailed link and ends every session, so whoever knew
-// the old password is signed out. The link is bound to the old password, so it works once.
+// Signed for the old password hash, so the link works once.
 func (s *AuthService) ResetPassword(
 	ctx context.Context,
 	request authTypes.ResetPasswordRequest,
 ) *config.CustomError {
 	now := utils.GetCurrTimeStamp()
 
-	userID, valid := accountTokenUser(request.Token, now)
+	userID, valid := utils.AccountTokenUserID(request.Token, now)
 	if !valid {
 		return invalidResetLink()
 	}
@@ -31,7 +30,11 @@ func (s *AuthService) ResetPassword(
 	}
 
 	if user == nil || !user.IsActive ||
-		!verifyAccountToken(config.GetPasswordResetKeyLabel(), request.Token, user.PasswordHash) {
+		!utils.IsAccountTokenSigned(
+			config.GetPasswordResetKeyLabel(),
+			request.Token,
+			user.PasswordHash,
+		) {
 		return invalidResetLink()
 	}
 

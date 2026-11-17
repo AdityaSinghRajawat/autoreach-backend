@@ -83,6 +83,13 @@ func SetPrincipal(c *gin.Context, principal sharedTypes.Principal) {
 	c.Set(config.GetPrincipalContextKey(), principal)
 }
 
+// AuthenticatedPrincipal is for routes behind AuthenticateUser, which guarantees the principal.
+func AuthenticatedPrincipal(c *gin.Context) sharedTypes.Principal {
+	principal, _ := GetPrincipal(c)
+
+	return principal
+}
+
 func GetPrincipal(c *gin.Context) (sharedTypes.Principal, bool) {
 	value, found := c.Get(config.GetPrincipalContextKey())
 	if !found {

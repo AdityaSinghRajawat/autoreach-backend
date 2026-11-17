@@ -6,15 +6,15 @@ import (
 	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
-	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+	userModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/userManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 func (s *AuthService) CreateAdmin(
 	ctx context.Context,
 	email, password string,
-) (*authModel.User, *config.CustomError) {
+) (*userModel.User, *config.CustomError) {
 	if len(password) < config.GetMinPasswordLength() {
 		return nil, config.NewCustomError(
 			fmt.Errorf(
@@ -34,7 +34,7 @@ func (s *AuthService) CreateAdmin(
 		)
 	}
 
-	user := authModel.NewUser()
+	user := userModel.NewUser()
 	user.Email = modelHelpers.NormalizeEmail(email)
 	user.PasswordHash = passwordHash
 	user.Roles = []string{config.RoleAdmin}

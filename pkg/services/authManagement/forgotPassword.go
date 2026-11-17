@@ -10,8 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// ForgotPassword emails a reset link to an active account and does nothing otherwise; the answer
-// is the same either way, so it cannot be used to find out who is registered.
+// Unknown addresses get the same answer and no email.
 func (s *AuthService) ForgotPassword(
 	ctx context.Context,
 	request authTypes.ForgotPasswordRequest,
@@ -24,19 +23,24 @@ func (s *AuthService) ForgotPassword(
 		)
 	}
 
-	if user == nil || !user.IsActive || s.systemMailer == nil {
+	if user == nil || !user.IsActive {
 		return nil
 	}
 
 	ttl := config.GetPasswordResetTTL()
-	token := accountToken(config.GetPasswordResetKeyLabel(), user.ID,
-		utils.GetCurrTimeStamp().Add(ttl), user.PasswordHash)
+	token := utils.NewAccountToken(
+		config.GetPasswordResetKeyLabel(),
+		user.ID,
+		utils.GetCurrTimeStamp().Add(ttl),
+		user.PasswordHash,
+	)
 
-	link, err := accountLink(config.GetPasswordResetURL(), token)
+	link, err := utils.AccountLink(config.GetPasswordResetURL(), token, nil)
 	if err != nil {
-		utils.LogError(ctx, err)
-
-		return nil
+		return config.NewCustomError(
+			fmt.Errorf("forgot password: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
 	}
 
 	email, err := emailTemplates.GetPasswordResetEmail(emailTemplates.PasswordResetEmailData{
@@ -44,25 +48,13 @@ func (s *AuthService) ForgotPassword(
 		ValidForMinutes: int(ttl.Minutes()),
 	})
 	if err != nil {
-		utils.LogError(ctx, err)
-
-		return nil
+		return config.NewCustomError(
+			fmt.Errorf("forgot password: %w", err),
+			config.GetErrCodeInternalServerError(),
+		)
 	}
 
-	address, userID := user.Email, user.ID
-
-	utils.RunInBackground(ctx, "send password reset email", func(ctx context.Context) {
-		if err := s.systemMailer.Send(ctx, address, email); err != nil {
-			utils.LogWarn(
-				ctx,
-				"password reset email not sent",
-				"user_id",
-				userID,
-				"error",
-				err.Error(),
-			)
-		}
-	})
+	utils.SendAccountEmailInBackground(ctx, s.systemMailer, user.ID, user.Email, email)
 
 	return nil
 }

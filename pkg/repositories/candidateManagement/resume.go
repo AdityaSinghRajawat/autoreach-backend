@@ -259,3 +259,19 @@ func scanResumeEmbedding(row db.RowScanner) (*matchingTypes.ResumeEmbedding, err
 
 	return &embedding, nil
 }
+
+func (r *ResumeRepo) ListStorageKeys(ctx context.Context, candidateID string) ([]string, error) {
+	rows, err := r.postgres.Executor(ctx).Query(ctx, `
+		SELECT storage_key FROM `+r.resumesTable+` WHERE candidate_id = $1
+	`, candidateID)
+	if err != nil {
+		return nil, fmt.Errorf("list resume storage keys: %w", err)
+	}
+
+	keys, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("list resume storage keys: %w", err)
+	}
+
+	return keys, nil
+}

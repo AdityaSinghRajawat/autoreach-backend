@@ -3,6 +3,7 @@ package candidateManagement
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
@@ -127,4 +128,23 @@ func scanCandidate(row db.RowScanner) (*candidateModel.Candidate, error) {
 	candidate.Settings = settings
 
 	return &candidate, nil
+}
+
+func (r *CandidateRepo) UpdateEmailForUser(
+	ctx context.Context,
+	userID, email string,
+	now time.Time,
+) error {
+	_, err := r.postgres.Executor(ctx).Exec(ctx, `
+		UPDATE `+r.candidatesTable+` SET email = $2, updated_at = $3 WHERE user_id = $1
+	`, userID, email, now)
+	if db.IsUniqueViolation(err) {
+		return fmt.Errorf("update candidate email: %w", config.ErrDuplicateRecord)
+	}
+
+	if err != nil {
+		return fmt.Errorf("update candidate email: %w", err)
+	}
+
+	return nil
 }

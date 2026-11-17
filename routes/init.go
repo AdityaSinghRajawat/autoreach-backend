@@ -17,6 +17,7 @@ import (
 	candidateRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/candidates"
 	dashboardRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/dashboard"
 	jobRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/jobs"
+	userRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/users"
 	webhookRoutes "github.com/AdityaSinghRajawat/autoreach-backend/routes/v1/webhooks"
 )
 
@@ -89,6 +90,7 @@ func loadAPIRoutes(router *gin.Engine, deps *dependencies.Dependencies) {
 	), middlewares.ValidateIDParams())
 
 	authRoutes.LoadAuthRoutes(api, deps)
+	userRoutes.LoadUserRoutes(api, deps)
 	candidateRoutes.LoadCandidateRoutes(api, deps)
 	dashboardRoutes.LoadDashboardRoutes(api, deps)
 	jobRoutes.LoadJobRoutes(api, deps)

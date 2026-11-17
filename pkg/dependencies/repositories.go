@@ -9,6 +9,7 @@ import (
 	jobRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/jobManagement"
 	matchingRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/matchingManagement"
 	outreachRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/outreachManagement"
+	userRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/userManagement"
 )
 
 type Repositories struct {
@@ -17,7 +18,7 @@ type Repositories struct {
 	CompanyDomain     *enrichmentRepo.CompanyDomainRepo
 	JobSource         *jobRepo.JobSourceRepo
 	Application       *applicationRepo.ApplicationRepo
-	User              *authRepo.UserRepo
+	User              *userRepo.UserRepo
 	RefreshToken      *authRepo.RefreshTokenRepo
 	APIClient         *authRepo.APIClientRepo
 	Candidate         *candidateRepo.CandidateRepo
@@ -25,6 +26,7 @@ type Repositories struct {
 	JobPosting        *jobRepo.JobPostingRepo
 	JobMatch          *matchingRepo.JobMatchRepo
 	CompanyContact    *enrichmentRepo.CompanyContactRepo
+	UserDataExport    *userRepo.UserDataExportRepo
 	ContactSignal     *enrichmentRepo.ContactSignalRepo
 	EnrichmentRequest *enrichmentRepo.EnrichmentRequestRepo
 	ChannelAccount    *outreachRepo.ChannelAccountRepo
@@ -36,7 +38,7 @@ type Repositories struct {
 }
 
 func (d *Dependencies) initRepositories() error {
-	userRepo, err := authRepo.NewUserRepo(d.Postgres)
+	userRepository, err := userRepo.NewUserRepo(d.Postgres)
 	if err != nil {
 		return err
 	}
@@ -72,6 +74,11 @@ func (d *Dependencies) initRepositories() error {
 	}
 
 	companyContactRepo, err := enrichmentRepo.NewCompanyContactRepo(d.Postgres)
+	if err != nil {
+		return err
+	}
+
+	userDataExportRepo, err := userRepo.NewUserDataExportRepo(d.Postgres)
 	if err != nil {
 		return err
 	}
@@ -154,9 +161,10 @@ func (d *Dependencies) initRepositories() error {
 		OutreachEvent:     eventRepo,
 		Suppression:       suppressionRepo,
 		CompanyContact:    companyContactRepo,
+		UserDataExport:    userDataExportRepo,
 		ContactSignal:     contactSignalRepo,
 		EnrichmentRequest: enrichmentRequestRepo,
-		User:              userRepo,
+		User:              userRepository,
 		RefreshToken:      refreshTokenRepo,
 		APIClient:         apiClientRepo,
 		Candidate:         candidateRepository,

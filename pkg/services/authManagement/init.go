@@ -8,11 +8,12 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	authRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/authManagement"
 	candidateRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/candidateManagement"
+	userRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/userManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type AuthServiceDependencies struct {
-	UserRepo           *authRepo.UserRepo
+	UserRepo           *userRepo.UserRepo
 	RefreshTokenRepo   *authRepo.RefreshTokenRepo
 	APIClientRepo      *authRepo.APIClientRepo
 	CandidateRepo      *candidateRepo.CandidateRepo
@@ -23,7 +24,7 @@ type AuthServiceDependencies struct {
 }
 
 type AuthService struct {
-	userRepo            *authRepo.UserRepo
+	userRepo            *userRepo.UserRepo
 	refreshTokenRepo    *authRepo.RefreshTokenRepo
 	apiClientRepo       *authRepo.APIClientRepo
 	candidateRepo       *candidateRepo.CandidateRepo

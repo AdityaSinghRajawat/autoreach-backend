@@ -8,8 +8,7 @@ import (
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 )
 
-// SystemMailer sends AutoReach's own account emails, such as signup verification, from the address
-// configured for the service rather than from a candidate's mailbox.
+// Sends from AutoReach's own address, not a candidate's mailbox.
 type SystemMailer struct {
 	emailUtil *EmailUtil
 }
@@ -54,5 +53,23 @@ func (m *SystemMailer) Send(
 		HTMLBody:    email.HTML,
 		MessageID:   NewEmailMessageID(config.GetSystemMailAddress()),
 		Date:        GetCurrTimeStamp(),
+	})
+}
+
+// SendAccountEmailInBackground keeps response time from revealing whether an account exists.
+func SendAccountEmailInBackground(
+	ctx context.Context,
+	mailer sharedTypes.SystemMailer,
+	userID, address string,
+	email sharedTypes.AccountEmail,
+) {
+	if mailer == nil {
+		return
+	}
+
+	RunInBackground(ctx, "send account email", func(ctx context.Context) {
+		if err := mailer.Send(ctx, address, email); err != nil {
+			LogWarn(ctx, "account email not sent", "user_id", userID, "error", err.Error())
+		}
 	})
 }

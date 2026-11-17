@@ -12,6 +12,7 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	authTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/authManagement"
+	userTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/userManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/routes"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
@@ -22,7 +23,7 @@ const (
 	loginPath    = "/api/v1/auth/login"
 	refreshPath  = "/api/v1/auth/refresh"
 	logoutPath   = "/api/v1/auth/logout"
-	mePath       = "/api/v1/auth/me"
+	mePath       = "/api/v1/users/me"
 	testPassword = "correct-horse-battery"
 )
 
@@ -67,7 +68,7 @@ func TestRegisterCreatesAUserACandidateAndASession(t *testing.T) {
 	me := helpers.Do(t, router, http.MethodGet, mePath, nil, bearer(session.AccessToken))
 	require.Equal(t, http.StatusOK, me.Recorder.Code)
 	helpers.AssertMatchesSpec(t, me)
-	assert.Equal(t, session.User, helpers.DecodeData[authTypes.UserResponse](t, me))
+	assert.Equal(t, session.User, helpers.DecodeData[userTypes.UserResponse](t, me))
 }
 
 func TestRegisterRejectsADuplicateEmailRegardlessOfCase(t *testing.T) {

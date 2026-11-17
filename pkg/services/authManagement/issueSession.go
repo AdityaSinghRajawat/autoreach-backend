@@ -6,13 +6,15 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	authTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/authManagement"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
+	userTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/userManagement"
 	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
+	userModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/userManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 func (s *AuthService) issueSession(
 	ctx context.Context,
-	user *authModel.User,
+	user *userModel.User,
 	candidateID, familyID string,
 ) (*authTypes.SessionResponse, error) {
 	now := utils.GetCurrTimeStamp()
@@ -45,7 +47,7 @@ func (s *AuthService) issueSession(
 	}
 
 	return &authTypes.SessionResponse{
-		User:         authTypes.NewUserResponse(user, candidateID),
+		User:         userTypes.NewUserResponse(user, candidateID),
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		TokenType:    config.GetTokenTypeBearer(),
@@ -56,9 +58,9 @@ func (s *AuthService) issueSession(
 func (s *AuthService) findActiveUserWithCandidate(
 	ctx context.Context,
 	userID string,
-) (*authModel.User, string, error) {
+) (*userModel.User, string, error) {
 	var (
-		user        *authModel.User
+		user        *userModel.User
 		candidateID string
 	)
 

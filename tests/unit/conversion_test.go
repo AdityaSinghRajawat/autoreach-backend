@@ -17,6 +17,7 @@ import (
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	userModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/userManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
 )
@@ -52,7 +53,7 @@ func existingCandidate() *candidateModel.Candidate {
 func TestConstructorsStampIdentityTimestampsAndDefaults(t *testing.T) {
 	setup.Config(t)
 
-	user := authModel.NewUser()
+	user := userModel.NewUser()
 	candidate := candidateModel.NewCandidate()
 	job := jobModel.NewJobPosting()
 	client := authModel.NewAPIClient()
@@ -63,7 +64,7 @@ func TestConstructorsStampIdentityTimestampsAndDefaults(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	assert.NotEqual(t, authModel.NewUser().ID, user.ID)
+	assert.NotEqual(t, userModel.NewUser().ID, user.ID)
 	assert.True(t, user.IsActive)
 	assert.Equal(t, []string{config.RoleCandidate}, user.Roles)
 	assert.Equal(t, user.CreatedAt, user.UpdatedAt)
@@ -166,7 +167,7 @@ func TestTheModelRejectsWhatConversionDoesNotCheck(t *testing.T) {
 	notAnObject := candidateTypes.UpdateCandidateRequest{Settings: json.RawMessage(`[1,2]`)}
 	require.Error(t, notAnObject.ToCandidateModel(existingCandidate()).Validate())
 
-	unknownRole := authModel.NewUser()
+	unknownRole := userModel.NewUser()
 	unknownRole.Email = "alex@example.com"
 	unknownRole.PasswordHash = "hash"
 	unknownRole.Roles = []string{"SUPERUSER"}
@@ -248,7 +249,7 @@ func TestCreateAPIClientRequestConvertsToAnAPIClientAwaitingItsKey(t *testing.T)
 func TestUpdateTimestampAdvancesOnlyUpdatedAt(t *testing.T) {
 	setup.Config(t)
 
-	user := authModel.NewUser()
+	user := userModel.NewUser()
 	candidate := candidateModel.NewCandidate()
 	job := jobModel.NewJobPosting()
 	client := authModel.NewAPIClient()

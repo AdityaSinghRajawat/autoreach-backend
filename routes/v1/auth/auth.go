@@ -25,10 +25,4 @@ func LoadAuthRoutes(group *gin.RouterGroup, deps *dependencies.Dependencies) {
 	authGroup.POST("/reset-password", attemptLimit, handler.ResetPassword)
 	authGroup.POST("/refresh", attemptLimit, handler.Refresh)
 	authGroup.POST("/logout", handler.Logout)
-	authGroup.GET(
-		"/me",
-		middlewares.AuthenticateUser(),
-		middlewares.RateLimit(deps.RateLimiter, config.RateLimitPolicyUser),
-		handler.Me,
-	)
 }

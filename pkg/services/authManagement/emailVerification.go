@@ -6,42 +6,35 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/emailTemplates"
-	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
+	userModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/userManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// sendSignupEmail mails the verification link, or a notice when the address already has a
-// verified account. It runs in the background so both cases answer the request equally fast.
-func (s *AuthService) sendSignupEmail(ctx context.Context, user *authModel.User, verified bool) {
-	email, err := s.signupEmail(user, verified)
+func (s *AuthService) sendSignupEmail(ctx context.Context, user *userModel.User) {
+	email, err := signupEmail(user)
 	if err != nil {
 		utils.LogError(ctx, err)
 
 		return
 	}
 
-	address := user.Email
-
-	utils.RunInBackground(ctx, "send signup email", func(ctx context.Context) {
-		if err := s.systemMailer.Send(ctx, address, email); err != nil {
-			utils.LogWarn(ctx, "signup email not sent", "user_id", user.ID, "error", err.Error())
-		}
-	})
+	utils.SendAccountEmailInBackground(ctx, s.systemMailer, user.ID, user.Email, email)
 }
 
-func (s *AuthService) signupEmail(
-	user *authModel.User,
-	verified bool,
-) (sharedTypes.AccountEmail, error) {
-	if verified {
+func signupEmail(user *userModel.User) (sharedTypes.AccountEmail, error) {
+	if user.EmailVerifiedAt != nil {
 		return emailTemplates.GetAccountExistsEmail()
 	}
 
 	ttl := config.GetEmailVerificationTTL()
+	token := utils.NewAccountToken(
+		config.GetEmailVerificationKeyLabel(),
+		user.ID,
+		utils.GetCurrTimeStamp().Add(ttl),
+		"",
+	)
 
-	link, err := accountLink(config.GetEmailVerificationURL(), accountToken(
-		config.GetEmailVerificationKeyLabel(), user.ID, utils.GetCurrTimeStamp().Add(ttl), "",
-	))
+	link, err := utils.AccountLink(config.GetEmailVerificationURL(), token, nil)
 	if err != nil {
 		return sharedTypes.AccountEmail{}, err
 	}

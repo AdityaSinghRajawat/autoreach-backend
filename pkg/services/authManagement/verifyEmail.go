@@ -9,15 +9,15 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// VerifyEmail confirms the address from an emailed link; the user then signs in as usual.
 func (s *AuthService) VerifyEmail(
 	ctx context.Context,
 	request authTypes.VerifyEmailRequest,
 ) *config.CustomError {
 	now := utils.GetCurrTimeStamp()
 
-	userID, valid := accountTokenUser(request.Token, now)
-	if !valid || !verifyAccountToken(config.GetEmailVerificationKeyLabel(), request.Token, "") {
+	userID, valid := utils.AccountTokenUserID(request.Token, now)
+	if !valid ||
+		!utils.IsAccountTokenSigned(config.GetEmailVerificationKeyLabel(), request.Token, "") {
 		return config.NewCustomError(
 			fmt.Errorf("verify email: %w", config.ErrVerificationLinkInvalid),
 			config.GetErrCodeBadRequest(),

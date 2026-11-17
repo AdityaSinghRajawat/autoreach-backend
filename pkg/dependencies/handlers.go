@@ -10,6 +10,7 @@ import (
 	jobHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/jobManagement"
 	matchingHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/matchingManagement"
 	outreachHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/outreachManagement"
+	userHandler "github.com/AdityaSinghRajawat/autoreach-backend/pkg/handlers/userManagement"
 )
 
 type Handlers struct {
@@ -17,6 +18,7 @@ type Handlers struct {
 	Dashboard   *dashboardHandler.DashboardHandler
 	Application *applicationHandler.ApplicationHandler
 	Auth        *authHandler.AuthHandler
+	User        *userHandler.UserHandler
 	Candidate   *candidateHandler.CandidateHandler
 	Job         *jobHandler.JobHandler
 	Matching    *matchingHandler.MatchingHandler
@@ -26,6 +28,11 @@ type Handlers struct {
 
 func (d *Dependencies) initHandlers() error {
 	auth, err := authHandler.NewAuthHandler(d.Services.Auth)
+	if err != nil {
+		return err
+	}
+
+	user, err := userHandler.NewUserHandler(d.Services.User)
 	if err != nil {
 		return err
 	}
@@ -77,6 +84,7 @@ func (d *Dependencies) initHandlers() error {
 		Outreach:    outreach,
 		Enrichment:  enrichment,
 		Auth:        auth,
+		User:        user,
 		Candidate:   candidate,
 		Job:         job,
 		Matching:    matching,

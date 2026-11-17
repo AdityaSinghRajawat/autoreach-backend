@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
-	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
+	userModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/userManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
@@ -205,7 +205,7 @@ func TestTransactionRollsBackEveryWriteWhenTheWorkFails(t *testing.T) {
 	ctx := context.Background()
 	failure := errors.New("abort after first write")
 
-	user := authModel.NewUser()
+	user := userModel.NewUser()
 	user.Email = "rollback@example.com"
 	user.PasswordHash = "hash"
 
@@ -236,7 +236,7 @@ func TestUpsertReturnsTheSameModelThatASubsequentReadReturns(t *testing.T) {
 	deps := setup.Dependencies(t)
 	ctx := context.Background()
 
-	user := authModel.NewUser()
+	user := userModel.NewUser()
 	user.Email = "roundtrip@example.com"
 	user.PasswordHash = "hash"
 

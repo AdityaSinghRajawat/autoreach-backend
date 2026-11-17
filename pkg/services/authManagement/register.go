@@ -7,16 +7,14 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	authTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/authManagement"
-	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
+	userModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/userManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
-// Register returns no session when email verification is required: the account works once the
-// emailed link is opened.
 func (s *AuthService) Register(
 	ctx context.Context,
-	user *authModel.User,
+	user *userModel.User,
 	candidate *candidateModel.Candidate,
 	password string,
 ) (*authTypes.SessionResponse, *config.CustomError) {
@@ -75,12 +73,10 @@ func (s *AuthService) Register(
 	return session, nil
 }
 
-// registerPendingVerification answers alike whether or not the address is registered: a new
-// address gets a verification link, an unverified one gets a fresh link, and a verified one gets a
-// notice. The existing account is never changed, so signing up cannot take it over.
+// Answers alike for registered addresses and never changes their account.
 func (s *AuthService) registerPendingVerification(
 	ctx context.Context,
-	user *authModel.User,
+	user *userModel.User,
 	candidate *candidateModel.Candidate,
 ) *config.CustomError {
 	existing, err := s.userRepo.FindByEmail(ctx, user.Email)
@@ -92,7 +88,7 @@ func (s *AuthService) registerPendingVerification(
 	}
 
 	if existing != nil {
-		s.sendSignupEmail(ctx, existing, existing.EmailVerifiedAt != nil)
+		s.sendSignupEmail(ctx, existing)
 
 		return nil
 	}
@@ -117,7 +113,7 @@ func (s *AuthService) registerPendingVerification(
 		)
 	}
 
-	s.sendSignupEmail(ctx, user, false)
+	s.sendSignupEmail(ctx, user)
 
 	return nil
 }

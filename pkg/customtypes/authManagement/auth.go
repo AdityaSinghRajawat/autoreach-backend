@@ -3,9 +3,10 @@ package authManagement
 import (
 	"strings"
 
-	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
+	userTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/userManagement"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+	userModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/userManagement"
 )
 
 type RegisterRequest struct {
@@ -48,29 +49,22 @@ type LogoutRequest struct {
 	RefreshToken string `json:"refreshToken" validate:"required,max=512"`
 }
 
-type UserResponse struct {
-	UserID      string   `json:"userId"`
-	Email       string   `json:"email"`
-	Roles       []string `json:"roles"`
-	CandidateID *string  `json:"candidateId"`
-}
-
 type SessionResponse struct {
-	User         UserResponse `json:"user"`
-	AccessToken  string       `json:"accessToken"`
-	RefreshToken string       `json:"refreshToken"`
-	TokenType    string       `json:"tokenType"`
-	ExpiresIn    int          `json:"expiresIn"`
+	User         userTypes.UserResponse `json:"user"`
+	AccessToken  string                 `json:"accessToken"`
+	RefreshToken string                 `json:"refreshToken"`
+	TokenType    string                 `json:"tokenType"`
+	ExpiresIn    int                    `json:"expiresIn"`
 }
 
-func (r *RegisterRequest) ToUserModel() *authModel.User {
-	user := authModel.NewUser()
+func (r *RegisterRequest) ToUserModel() *userModel.User {
+	user := userModel.NewUser()
 	user.Email = modelHelpers.NormalizeEmail(r.Email)
 
 	return user
 }
 
-func (r *RegisterRequest) ToCandidateModel(user *authModel.User) *candidateModel.Candidate {
+func (r *RegisterRequest) ToCandidateModel(user *userModel.User) *candidateModel.Candidate {
 	candidate := candidateModel.NewCandidate()
 	candidate.UserID = user.ID
 	candidate.Email = user.Email
@@ -85,17 +79,4 @@ func (r *ForgotPasswordRequest) NormalizedEmail() string {
 
 func (r *LoginRequest) NormalizedEmail() string {
 	return modelHelpers.NormalizeEmail(r.Email)
-}
-
-func NewUserResponse(user *authModel.User, candidateID string) UserResponse {
-	response := UserResponse{
-		UserID: user.ID,
-		Email:  user.Email,
-		Roles:  user.Roles,
-	}
-	if candidateID != "" {
-		response.CandidateID = &candidateID
-	}
-
-	return response
 }

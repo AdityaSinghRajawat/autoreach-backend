@@ -21,6 +21,10 @@
       "description": "Registration, login and session management"
     },
     {
+      "name": "Users",
+      "description": "The signed-in user's own account: profile, password, email, data export and deletion"
+    },
+    {
       "name": "Candidates",
       "description": "Candidate profile and automation settings"
     },
@@ -353,10 +357,10 @@
         }
       }
     },
-    "/api/v1/auth/me": {
+    "/api/v1/users/me": {
       "get": {
         "tags": [
-          "Auth"
+          "Users"
         ],
         "operationId": "getCurrentUser",
         "summary": "Return the authenticated user",
@@ -393,6 +397,49 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "deleteAccount",
+        "summary": "Delete your account and everything it holds",
+        "description": "Needs the password. Deletes the user and the candidate profile with its resumes (and their files), mailboxes, templates, campaigns, messages, applications and matches. Administrator accounts answer 409. Shared contacts and suppressions that protect recipients stay.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Account deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
@@ -4919,6 +4966,210 @@
           }
         }
       }
+    },
+    "/api/v1/users/me/export": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "exportUserData",
+        "summary": "Download everything held about you",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Your data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/UserDataExport"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/password": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "changePassword",
+        "summary": "Change your password",
+        "description": "Needs the current password (403 when wrong). Ends every session; sign in again with the new password.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "204": {
+            "description": "Password changed; every session ended"
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/email": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "requestEmailChange",
+        "summary": "Start moving your account to a new email",
+        "description": "Needs the password. Emails a link to the new address (AUTH_EMAIL_CHANGE_URL); the page confirms it with POST /api/v1/users/me/email/confirm while signed in. An address that already has an account gets nothing, with the same answer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Confirmation sent to the new address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/EmailChangePending"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/email/confirm": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "confirmEmailChange",
+        "summary": "Confirm a new email address from the emailed link",
+        "description": "Signed in as the account the link was sent for. Moves the account to the new address, marks it verified and tells the old address. The link works once; 409 if the address was taken meanwhile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmEmailChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Email changed"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7838,6 +8089,319 @@
             ]
           }
         }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          }
+        }
+      },
+      "DeleteAccountRequest": {
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "ChangeEmailRequest": {
+        "type": "object",
+        "required": [
+          "newEmail",
+          "password"
+        ],
+        "properties": {
+          "newEmail": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "ConfirmEmailChangeRequest": {
+        "type": "object",
+        "required": [
+          "token",
+          "email"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "The token parameter from the emailed link"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255,
+            "description": "The email parameter from the emailed link"
+          }
+        }
+      },
+      "EmailChangePending": {
+        "type": "object",
+        "required": [
+          "confirmationSent"
+        ],
+        "properties": {
+          "confirmationSent": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "AccountUser": {
+        "type": "object",
+        "required": [
+          "userId",
+          "email",
+          "roles",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "JobMatch": {
+        "type": "object",
+        "required": [
+          "matchId",
+          "candidateId",
+          "jobId",
+          "resumeId",
+          "rawSimilarity",
+          "matchScore",
+          "fannedOutAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resumeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "null once the resume was deleted"
+          },
+          "rawSimilarity": {
+            "type": "number"
+          },
+          "matchScore": {
+            "type": "number"
+          },
+          "fannedOutAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UserDataExport": {
+        "type": "object",
+        "description": "Everything held about the signed-in user. Secrets (password hash, mailbox credentials, stored file keys, tracking tokens) are never included.",
+        "required": [
+          "exportedAt",
+          "user",
+          "candidate",
+          "resumes",
+          "jobMatches",
+          "applications",
+          "channelAccounts",
+          "outreachTemplates",
+          "outreachCampaigns",
+          "outreachMessages",
+          "suppressions",
+          "contactSignals"
+        ],
+        "properties": {
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AccountUser"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Candidate"
+          },
+          "resumes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Resume"
+            },
+            "nullable": true
+          },
+          "jobMatches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobMatch"
+            },
+            "nullable": true
+          },
+          "applications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Application"
+            },
+            "nullable": true
+          },
+          "channelAccounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChannelAccount"
+            },
+            "nullable": true
+          },
+          "outreachTemplates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutreachTemplate"
+            },
+            "nullable": true
+          },
+          "outreachCampaigns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CampaignRecord"
+            },
+            "nullable": true
+          },
+          "outreachMessages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutreachMessage"
+            },
+            "nullable": true
+          },
+          "suppressions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuppressionEntry"
+            },
+            "nullable": true
+          },
+          "contactSignals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactSignal"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "CampaignRecord": {
+        "type": "object",
+        "required": [
+          "campaignId",
+          "candidateId",
+          "channelAccountId",
+          "name",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channelAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED",
+              "ARCHIVED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "A campaign as stored; its steps are returned by the campaign endpoints."
       }
     },
     "responses": {

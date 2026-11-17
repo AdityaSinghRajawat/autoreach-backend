@@ -1,4 +1,4 @@
-package authManagement
+package userManagement
 
 import (
 	"fmt"

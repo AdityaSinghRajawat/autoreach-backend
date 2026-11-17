@@ -182,3 +182,15 @@ func scanCampaign(row db.RowScanner) (*outreachModel.Campaign, error) {
 
 	return &campaign, nil
 }
+
+// Runs before deleting a candidate: steps hold templates the cascade would delete first.
+func (r *CampaignRepo) DeleteByCandidate(ctx context.Context, candidateID string) error {
+	_, err := r.postgres.Executor(ctx).Exec(ctx, `
+		DELETE FROM `+r.campaignsTable+` WHERE candidate_id = $1
+	`, candidateID)
+	if err != nil {
+		return fmt.Errorf("delete campaigns of candidate: %w", err)
+	}
+
+	return nil
+}

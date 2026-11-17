@@ -10,6 +10,7 @@ import (
 	jobService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/jobManagement"
 	matchingService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/matchingManagement"
 	outreachService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/outreachManagement"
+	userService "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/userManagement"
 )
 
 type Services struct {
@@ -17,6 +18,7 @@ type Services struct {
 	Dashboard   *dashboardService.DashboardService
 	Application *applicationService.ApplicationService
 	Auth        *authService.AuthService
+	User        *userService.UserService
 	Candidate   *candidateService.CandidateService
 	Job         *jobService.JobService
 	Matching    *matchingService.MatchingService
@@ -34,6 +36,21 @@ func (d *Dependencies) initServices() error {
 		SystemMailer:       d.SystemMailer,
 
 		RequireEmailVerification: d.RequireEmailVerification,
+	})
+	if err != nil {
+		return err
+	}
+
+	user, err := userService.NewUserService(userService.UserServiceDependencies{
+		UserRepo:           d.Repositories.User,
+		UserDataExportRepo: d.Repositories.UserDataExport,
+		RefreshTokenRepo:   d.Repositories.RefreshToken,
+		CandidateRepo:      d.Repositories.Candidate,
+		ResumeRepo:         d.Repositories.Resume,
+		CampaignRepo:       d.Repositories.Campaign,
+		FileStore:          d.FileStore,
+		SystemMailer:       d.SystemMailer,
+		TransactionManager: d.TransactionManager,
 	})
 	if err != nil {
 		return err
@@ -168,6 +185,7 @@ func (d *Dependencies) initServices() error {
 		Outreach:    outreach,
 		Enrichment:  enrichment,
 		Auth:        auth,
+		User:        user,
 		Candidate:   candidate,
 		Job:         job,
 		Matching:    matching,
