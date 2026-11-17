@@ -63,7 +63,7 @@ func newJobMatch(candidateID, jobID, resumeID string, similarity float64) *match
 	match := matchingModel.NewJobMatch()
 	match.CandidateID = candidateID
 	match.JobID = jobID
-	match.ResumeID = resumeID
+	match.ResumeID = &resumeID
 	match.RawSimilarity = max(-1, min(1, similarity))
 	match.MatchScore = config.CalibrateMatchScore(similarity)
 
