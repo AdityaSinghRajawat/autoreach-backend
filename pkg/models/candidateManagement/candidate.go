@@ -33,8 +33,8 @@ func NewCandidate() *Candidate {
 	return &Candidate{
 		ID:                  uuid.NewString(),
 		MinMatchScore:       config.GetDefaultMinMatchScore(),
-		AutoApplyEnabled:    true,
-		AutoOutreachEnabled: true,
+		AutoApplyEnabled:    false,
+		AutoOutreachEnabled: false,
 		Timezone:            config.GetDefaultTimezone(),
 		Settings:            json.RawMessage(config.GetEmptyJSONObject()),
 		CreatedAt:           now,

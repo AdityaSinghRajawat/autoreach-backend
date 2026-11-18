@@ -72,8 +72,8 @@ func TestConstructorsStampIdentityTimestampsAndDefaults(t *testing.T) {
 		"timestamps must fit the database's microsecond precision so a stored row equals the model")
 
 	assert.InDelta(t, config.GetDefaultMinMatchScore(), candidate.MinMatchScore, 0.0001)
-	assert.True(t, candidate.AutoApplyEnabled)
-	assert.True(t, candidate.AutoOutreachEnabled)
+	assert.False(t, candidate.AutoApplyEnabled, "automatic applying is opt-in")
+	assert.False(t, candidate.AutoOutreachEnabled, "automatic outreach is opt-in")
 	assert.Equal(t, "UTC", candidate.Timezone)
 	assert.JSONEq(t, `{}`, string(candidate.Settings))
 
@@ -117,7 +117,7 @@ func TestUpdateCandidateRequestAppliesOnlySuppliedFieldsOntoTheExistingEntity(t 
 	request := candidateTypes.UpdateCandidateRequest{
 		FullName:         pointerTo("  Alex Updated  "),
 		MinMatchScore:    pointerTo(0.9),
-		AutoApplyEnabled: pointerTo(false),
+		AutoApplyEnabled: pointerTo(true),
 		Settings:         json.RawMessage(`{"theme":"dark"}`),
 	}
 
@@ -128,8 +128,8 @@ func TestUpdateCandidateRequestAppliesOnlySuppliedFieldsOntoTheExistingEntity(t 
 	assert.Equal(t, existing.CreatedAt, candidate.CreatedAt)
 	assert.Equal(t, "Alex Updated", candidate.FullName)
 	assert.InDelta(t, 0.9, candidate.MinMatchScore, 0.0001)
-	assert.False(t, candidate.AutoApplyEnabled)
-	assert.True(t, candidate.AutoOutreachEnabled, "a field that was not sent keeps its value")
+	assert.True(t, candidate.AutoApplyEnabled)
+	assert.False(t, candidate.AutoOutreachEnabled, "a field that was not sent keeps its value")
 	assert.Equal(t, existing.LinkedinProfileURL, candidate.LinkedinProfileURL)
 	assert.Equal(t, existing.Timezone, candidate.Timezone)
 	assert.JSONEq(t, `{"theme":"dark"}`, string(candidate.Settings))
@@ -141,7 +141,7 @@ func TestUpdateCandidateRequestAppliesOnlySuppliedFieldsOntoTheExistingEntity(t 
 		existing.FullName,
 		"conversion must not mutate the entity it read",
 	)
-	assert.True(t, existing.AutoApplyEnabled)
+	assert.False(t, existing.AutoApplyEnabled)
 }
 
 func TestUpdateCandidateRequestClearsTheLinkedinURLAndReportsEmptiness(t *testing.T) {

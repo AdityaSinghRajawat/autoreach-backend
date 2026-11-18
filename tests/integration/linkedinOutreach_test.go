@@ -29,6 +29,7 @@ func newLinkedinFixture(t *testing.T) linkedinFixture {
 	t.Helper()
 
 	fixture := newJobFixture(t)
+	fixture.enableAutomation(t)
 	jobID := fixture.ingest(t, withFields(validJob(), map[string]any{"companyDomain": "acme.test"})).
 		QueuedTasks[0].JobID
 

@@ -59,6 +59,15 @@ func newJobFixture(t *testing.T) jobFixture {
 	}
 }
 
+// enableAutomation turns on automatic applying and outreach, which candidates opt into.
+func (f jobFixture) enableAutomation(t *testing.T) {
+	t.Helper()
+
+	exchange := helpers.Do(t, f.router, http.MethodPatch, candidatePath(f.candidateID),
+		map[string]any{"autoApplyEnabled": true, "autoOutreachEnabled": true}, bearer(f.userToken))
+	require.Equal(t, http.StatusOK, exchange.Recorder.Code, string(exchange.Body))
+}
+
 func adminToken(t *testing.T, deps *dependencies.Dependencies, router http.Handler) string {
 	t.Helper()
 

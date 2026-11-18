@@ -122,6 +122,7 @@ func newApplicationFixture(
 	t.Helper()
 
 	fixture := newJobFixture(t)
+	fixture.enableAutomation(t)
 	stub := newATSStub(t)
 
 	fixture.deps.Appliers = appliers.NewApplierRegistry(appliers.RegistryOptions{

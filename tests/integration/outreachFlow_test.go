@@ -46,6 +46,7 @@ func newOutreachFixture(t *testing.T) outreachFixture {
 	t.Helper()
 
 	fixture := newJobFixture(t)
+	fixture.enableAutomation(t)
 	account := fixture.connectMailbox(t, senderPassword)
 	require.Equal(
 		t,

@@ -45,8 +45,8 @@ func TestGetCandidateReturnsTheProfileWithDocumentedDefaults(t *testing.T) {
 	assert.Equal(t, "Alex Candidate", candidate.FullName)
 	assert.Nil(t, candidate.LinkedinProfileURL)
 	assert.InDelta(t, 0.80, candidate.MinMatchScore, 0.0001)
-	assert.True(t, candidate.AutoApplyEnabled)
-	assert.True(t, candidate.AutoOutreachEnabled)
+	assert.False(t, candidate.AutoApplyEnabled, "automatic applying is opt-in")
+	assert.False(t, candidate.AutoOutreachEnabled, "automatic outreach is opt-in")
 	assert.Equal(t, "UTC", candidate.Timezone)
 	assert.JSONEq(t, `{}`, string(candidate.Settings))
 }
@@ -128,7 +128,7 @@ func TestUpdateCandidateAppliesOnlyTheSuppliedFields(t *testing.T) {
 		"fullName":           "  Alex Updated  ",
 		"linkedinProfileUrl": "https://www.linkedin.com/in/alex",
 		"minMatchScore":      0.9,
-		"autoApplyEnabled":   false,
+		"autoApplyEnabled":   true,
 		"timezone":           "Asia/Kolkata",
 		"settings": map[string]any{
 			"emailTracking":      true,
@@ -143,8 +143,8 @@ func TestUpdateCandidateAppliesOnlyTheSuppliedFields(t *testing.T) {
 	require.NotNil(t, updated.LinkedinProfileURL)
 	assert.Equal(t, "https://www.linkedin.com/in/alex", *updated.LinkedinProfileURL)
 	assert.InDelta(t, 0.9, updated.MinMatchScore, 0.0001)
-	assert.False(t, updated.AutoApplyEnabled)
-	assert.True(t, updated.AutoOutreachEnabled, "a field that was not sent must keep its value")
+	assert.True(t, updated.AutoApplyEnabled)
+	assert.False(t, updated.AutoOutreachEnabled, "a field that was not sent must keep its value")
 	assert.Equal(t, "Asia/Kolkata", updated.Timezone)
 	assert.JSONEq(t, `{"emailTracking":true}`, string(updated.Settings),
 		"settings merge, and the application profile only changes through its own endpoint")
