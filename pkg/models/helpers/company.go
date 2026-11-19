@@ -7,7 +7,10 @@ import (
 
 var (
 	companyNameSeparatorPattern = regexp.MustCompile(`[^a-z0-9]+`)
-	companyLegalSuffixPattern   = regexp.MustCompile(
+	companyGenericSuffixPattern = regexp.MustCompile(
+		`(\s(technologies|technology|tech|enterprises|software|services|solutions|systems|consulting|consultancy|group|global|india))+$`,
+	)
+	companyLegalSuffixPattern = regexp.MustCompile(
 		`(\s(inc|incorporated|llc|llp|ltd|limited|corp|corporation|co|company|plc|gmbh|ag|sa|bv|nv|pvt|private|pte|pty))+$`,
 	)
 )
@@ -26,4 +29,29 @@ func NormalizeCompanyName(name string) string {
 	}
 
 	return normalized
+}
+
+// CompanyNamesMatch tells whether two names identify the same company: spacing and legal or generic
+// trailing words ("Technologies", "Pvt Ltd") are ignored, but any other difference is not.
+func CompanyNamesMatch(first, second string) bool {
+	left, right := NormalizeCompanyName(first), NormalizeCompanyName(second)
+	if left == "" || right == "" {
+		return false
+	}
+
+	if strings.ReplaceAll(left, " ", "") == strings.ReplaceAll(right, " ", "") {
+		return true
+	}
+
+	return withoutGenericSuffix(left) == withoutGenericSuffix(right)
+}
+
+func withoutGenericSuffix(name string) string {
+	if stripped := strings.TrimSpace(
+		companyGenericSuffixPattern.ReplaceAllString(" "+name, ""),
+	); stripped != "" {
+		return stripped
+	}
+
+	return name
 }

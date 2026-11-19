@@ -22,11 +22,9 @@ func (p *ApolloProvider) ResolveCompanyDomain(
 		return "", err
 	}
 
-	wanted := modelHelpers.NormalizeCompanyName(companyName)
-
 	for _, organization := range append(response.Organizations, response.Accounts...) {
 		if organization.PrimaryDomain != "" &&
-			modelHelpers.NormalizeCompanyName(organization.Name) == wanted {
+			modelHelpers.CompanyNamesMatch(organization.Name, companyName) {
 			return modelHelpers.NormalizeDomain(organization.PrimaryDomain), nil
 		}
 	}

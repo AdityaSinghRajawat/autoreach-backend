@@ -424,7 +424,8 @@ func TestHunterResolvesACompanyDomainOnlyForAnExactNameMatchAtNoCost(t *testing.
 			{"domain": "acmefitness.com", "company_name": "ACME Fitness Pvt"},
 			{"domain": "acmestaffing.com", "company_name": "ACME Staffing"},
 		},
-		"Gojek Tech": {{"domain": "gojek.com", "company_name": "Gojek"}},
+		"Gojek Tech":           {{"domain": "gojek.com", "company_name": "Gojek"}},
+		"Digirex Technologies": {{"domain": "akamai.com", "company_name": "Akamai Technologies"}},
 	}
 
 	registry := providers.NewProviderRegistry([]config.ProviderPolicy{stub.HunterPolicy()}, "")
@@ -439,7 +440,16 @@ func TestHunterResolvesACompanyDomainOnlyForAnExactNameMatchAtNoCost(t *testing.
 
 	domain, err = resolver.ResolveCompanyDomain(context.Background(), "Gojek Tech")
 	require.NoError(t, err)
+	assert.Equal(t, "gojek.com", domain, "a generic trailing word does not change the company")
+
+	domain, err = resolver.ResolveCompanyDomain(context.Background(), "Digirex Technologies")
+	require.NoError(t, err)
 	assert.Empty(t, domain, "a different company name is not accepted")
+
+	domain, err = resolver.ResolveCompanyDomain(context.Background(), "pi")
+	require.NoError(t, err)
+	assert.Empty(t, domain, "Hunter rejects names under three characters, so none is sent")
+	assert.Equal(t, 3, stub.Calls("hunter.domainFinder"), "no call was made for the short name")
 
 	domain, err = resolver.ResolveCompanyDomain(context.Background(), "Unknown Co")
 	require.NoError(t, err)
@@ -447,4 +457,40 @@ func TestHunterResolvesACompanyDomainOnlyForAnExactNameMatchAtNoCost(t *testing.
 
 	assert.Zero(t, config.GetDomainLookupCredits(config.ProviderHunter), "Domain Finder is free")
 	assert.Positive(t, config.GetDomainLookupCredits(config.ProviderApollo))
+}
+
+func TestCompanyNamesMatchIgnoresSpacingAndGenericWordsButNotDifferentCompanies(t *testing.T) {
+	matching := [][2]string{
+		{"Code Vyasa", "CodeVyasa"},
+		{"Benison Technologies", "Benison"},
+		{"Awign Enterprises", "Awign"},
+		{"Acme, Inc.", "ACME Inc"},
+		{"Extreme Networks India Private", "Extreme Networks"},
+	}
+	for _, pair := range matching {
+		assert.True(
+			t,
+			modelHelpers.CompanyNamesMatch(pair[0], pair[1]),
+			"%q vs %q",
+			pair[0],
+			pair[1],
+		)
+	}
+
+	different := [][2]string{
+		{"Digirex Technologies", "Akamai Technologies"},
+		{"Extreme Networks India Private", "Mistral Networks India Private Limited"},
+		{"Datamatics Global Services Limited", "Datamatics Staffing Services"},
+		{"Technologies", "Services"},
+		{"", ""},
+	}
+	for _, pair := range different {
+		assert.False(
+			t,
+			modelHelpers.CompanyNamesMatch(pair[0], pair[1]),
+			"%q vs %q",
+			pair[0],
+			pair[1],
+		)
+	}
 }

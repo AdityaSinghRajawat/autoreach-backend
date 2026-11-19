@@ -36,6 +36,7 @@ const (
 	ingestBatchSize             = 500
 	companyDomainLookupCredits  = 1
 	companyDomainCandidates     = 5
+	hunterMinCompanyNameLength  = 3
 )
 
 type boardJobKinds struct {
@@ -122,7 +123,7 @@ func loadJobSourceConfig() {
 		companyDomainLookups: getEnvIntWithDefault("COMPANY_DOMAIN_LOOKUPS_PER_POLL", 50),
 		companyDomainRetryAfter: getEnvDurationWithDefault(
 			"COMPANY_DOMAIN_RETRY_AFTER",
-			30*24*time.Hour,
+			7*24*time.Hour,
 		),
 	}
 }
@@ -155,6 +156,7 @@ func GetMaxExternalJobIDLength() int         { return maxExternalJobIDLength }
 func GetMaxJobSourceErrorLength() int        { return maxJobSourceError }
 func GetIngestBatchSize() int                { return ingestBatchSize }
 func GetCompanyDomainCandidates() int        { return companyDomainCandidates }
+func GetHunterMinCompanyNameLength() int     { return hunterMinCompanyNameLength }
 
 func GetJobSourcePollInterval() time.Duration   { return jobSourceConfigI.pollInterval }
 func GetJobSourceStaleAfter() time.Duration     { return jobSourceConfigI.staleAfter }
