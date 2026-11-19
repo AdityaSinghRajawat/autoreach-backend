@@ -87,6 +87,8 @@ type aiConfig struct {
 	timeout            time.Duration
 	maxInputChars      int
 	chatModel          string
+	cooldownDefault    time.Duration
+	cooldownMax        time.Duration
 }
 
 type matchConfig struct {
@@ -207,6 +209,8 @@ func loadEnvConfig() envConfig {
 			timeout:            getEnvDurationWithDefault("AI_TIMEOUT", 30*time.Second),
 			maxInputChars:      getEnvIntWithDefault("AI_EMBEDDING_MAX_INPUT_CHARS", 24000),
 			chatModel:          getEnvWithDefault("AI_CHAT_MODEL", "gpt-4o-mini"),
+			cooldownDefault:    getEnvDurationWithDefault("AI_COOLDOWN_DEFAULT", time.Minute),
+			cooldownMax:        getEnvDurationWithDefault("AI_COOLDOWN_MAX", 24*time.Hour),
 		},
 		app: appConfig{
 			env:      getEnvWithDefault("APP_ENV", constI.app.envLocal),
@@ -413,13 +417,15 @@ func GetReconcilerInterval() time.Duration    { return envConfigI.worker.reconci
 func GetReconcilerStaleAfter() time.Duration  { return envConfigI.worker.reconcilerStaleAfter }
 func GetReconcilerBatchSize() int             { return envConfigI.worker.reconcilerBatchSize }
 
-func GetAIAPIKey() string              { return envConfigI.ai.apiKey }
-func GetAIBaseURL() string             { return envConfigI.ai.baseURL }
-func GetAIEmbeddingModel() string      { return envConfigI.ai.embeddingModel }
-func GetAIEmbeddingDimensions() int    { return envConfigI.ai.embeddingDimension }
-func GetAITimeout() time.Duration      { return envConfigI.ai.timeout }
-func GetAIEmbeddingMaxInputChars() int { return envConfigI.ai.maxInputChars }
-func GetAIChatModel() string           { return envConfigI.ai.chatModel }
+func GetAIAPIKey() string                 { return envConfigI.ai.apiKey }
+func GetAIBaseURL() string                { return envConfigI.ai.baseURL }
+func GetAIEmbeddingModel() string         { return envConfigI.ai.embeddingModel }
+func GetAIEmbeddingDimensions() int       { return envConfigI.ai.embeddingDimension }
+func GetAITimeout() time.Duration         { return envConfigI.ai.timeout }
+func GetAIEmbeddingMaxInputChars() int    { return envConfigI.ai.maxInputChars }
+func GetAIChatModel() string              { return envConfigI.ai.chatModel }
+func GetAICooldownDefault() time.Duration { return envConfigI.ai.cooldownDefault }
+func GetAICooldownMax() time.Duration     { return envConfigI.ai.cooldownMax }
 
 func GetBackgroundMaxGoroutines() int { return envConfigI.concurrency.backgroundMaxGoroutines }
 

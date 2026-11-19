@@ -78,6 +78,8 @@ var (
 	ErrMethodNotAllowed                = errors.New("method not allowed")
 	ErrRateLimitExceeded               = errors.New("rate limit exceeded")
 	ErrModelReplyMissing               = errors.New("model returned no reply")
+	ErrAIPaused                        = errors.New("ai provider is paused until its quota resets")
+	ErrAIRateLimited                   = errors.New("ai request budget for this period is spent")
 	ErrModelReplyIncomplete            = errors.New("model reply was refused or cut off")
 	ErrCredentialEncryptionUnavailable = errors.New(
 		"channel credential encryption is not configured",

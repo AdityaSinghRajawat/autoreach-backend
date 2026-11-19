@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -159,15 +160,36 @@ func (s *Server) aggregate(groupKey string, tasks []*asynq.Task) *asynq.Task {
 	return asynq.NewTask(string(aggregated.TaskID), encoded, options...)
 }
 
-func retryDelay(retryCount int, _ error, task *asynq.Task) time.Duration {
+func retryDelay(retryCount int, err error, task *asynq.Task) time.Duration {
+	if wait, deferred := utils.RetryAfterOf(err); deferred {
+		return wait + rand.N(config.GetAIRetryJitter())
+	}
+
 	return workerConfigs.RetryDelay(workerConfigs.WorkerTaskID(task.Type()), retryCount)
 }
 
+// A task told to wait is not failing, so waiting does not use up its retries.
 func isFailure(err error) bool {
+	if _, deferred := utils.RetryAfterOf(err); deferred {
+		return false
+	}
+
 	return err != nil
 }
 
 func logTaskError(ctx context.Context, task *asynq.Task, err error) {
+	if wait, deferred := utils.RetryAfterOf(err); deferred {
+		utils.LogDebug(
+			ctx,
+			"task deferred",
+			"task_id", task.Type(),
+			"retry_in", wait.Round(time.Second).String(),
+			"reason", err.Error(),
+		)
+
+		return
+	}
+
 	retryCount, _ := asynq.GetRetryCount(ctx)
 	maxRetry, _ := asynq.GetMaxRetry(ctx)
 	utils.LogError(

@@ -12,13 +12,18 @@ import (
 
 func (d *Dependencies) initIntegrations() error {
 	if d.Embedder == nil || d.ChatCompleter == nil {
-		openAI := aiIntegration.NewAIIntegration(config.GetAIBaseURL())
+		aiClient := aiIntegration.NewGuard(
+			aiIntegration.NewAIIntegration(config.GetAIBaseURL()),
+			d.RateLimiter,
+			d.RedisUtil,
+			config.GetRateLimitPolicy(config.RateLimitPolicyAI),
+		)
 		if d.Embedder == nil {
-			d.Embedder = openAI
+			d.Embedder = aiClient
 		}
 
 		if d.ChatCompleter == nil {
-			d.ChatCompleter = openAI
+			d.ChatCompleter = aiClient
 		}
 	}
 

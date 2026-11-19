@@ -44,6 +44,21 @@ type ChatCompleter interface {
 	ChatModel() string
 }
 
+type AIClient interface {
+	Embedder
+	ChatCompleter
+}
+
+type ExpiringKeyStore interface {
+	SetKey(ctx context.Context, key string, value any, expiration time.Duration) error
+	GetTTL(ctx context.Context, key string) (time.Duration, error)
+}
+
+// Lets background work that would only fail skip a provider that is paused.
+type EmbeddingGate interface {
+	EmbeddingsPausedFor(ctx context.Context) time.Duration
+}
+
 type CompanyDomainResolver interface {
 	ResolveCompanyDomains(ctx context.Context, companyNames []string) (map[string]string, error)
 }

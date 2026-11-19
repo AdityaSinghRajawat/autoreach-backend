@@ -39,12 +39,14 @@ const (
 	RateLimitPolicyOutreachCreate    RateLimitPolicyName = "outreach_create"
 	RateLimitPolicyApplicationCreate RateLimitPolicyName = "application_create"
 	RateLimitPolicyPublicLink        RateLimitPolicyName = "public_link"
+	RateLimitPolicyAI                RateLimitPolicyName = "ai"
 
 	rateLimitEnvPrefix = "RATE_LIMIT_"
 	day                = 24 * time.Hour
 )
 
 var rateLimitDefaultsI = []RateLimitPolicy{
+	{Name: RateLimitPolicyAI, Limit: 0, Period: time.Minute, Burst: 1},
 	{Name: RateLimitPolicyIP, Limit: 1200, Period: time.Minute, Burst: 200, Key: RateLimitKeyIP},
 	// Generous because mail providers fetch tracking pixels for many recipients from shared IPs.
 	{

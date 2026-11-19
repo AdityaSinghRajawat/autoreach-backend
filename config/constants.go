@@ -43,6 +43,7 @@ type redisConstants struct {
 	keyDelimiter       string
 	keyPrefix          string
 	rateLimitNamespace string
+	cooldownNamespace  string
 }
 
 type loggerConstants struct {
@@ -156,6 +157,7 @@ var constI = constants{
 		keyDelimiter:       ":",
 		keyPrefix:          "autoreach",
 		rateLimitNamespace: "rate_limit",
+		cooldownNamespace:  "cooldown",
 	},
 	logger: loggerConstants{
 		maxSizeMB:  100,
@@ -195,6 +197,7 @@ func GetRedisConnectTimeout() time.Duration { return constI.redis.connectTimeout
 func GetKeyDelimiter() string               { return constI.redis.keyDelimiter }
 func GetKeyPrefix() string                  { return constI.redis.keyPrefix }
 func GetRateLimitNamespace() string         { return constI.redis.rateLimitNamespace }
+func GetCooldownNamespace() string          { return constI.redis.cooldownNamespace }
 
 func GetLogMaxSizeMB() int  { return constI.logger.maxSizeMB }
 func GetLogMaxBackups() int { return constI.logger.maxBackups }

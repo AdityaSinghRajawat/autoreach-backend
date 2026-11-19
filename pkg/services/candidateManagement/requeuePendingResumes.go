@@ -6,10 +6,16 @@ import (
 	"sync/atomic"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 func (s *CandidateService) RequeuePendingResumes(ctx context.Context) (int, *config.CustomError) {
+	if gate, gated := s.embedder.(sharedTypes.EmbeddingGate); gated &&
+		gate.EmbeddingsPausedFor(ctx) > 0 {
+		return 0, nil
+	}
+
 	staleBefore := utils.GetCurrTimeStamp().Add(-config.GetReconcilerStaleAfter())
 
 	resumeIDs, err := s.resumeRepo.ListStalePendingIDs(
