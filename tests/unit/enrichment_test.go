@@ -416,3 +416,35 @@ func TestPaidDiscoveryIsCappedPerSearchAndReservesItsCredits(t *testing.T) {
 		"other providers charge when the contact is looked up",
 	)
 }
+
+func TestHunterResolvesACompanyDomainOnlyForAnExactNameMatchAtNoCost(t *testing.T) {
+	stub := helpers.NewEnrichmentStub(t)
+	stub.HunterDomains = map[string][]map[string]any{
+		"Acme Staffing Pvt Ltd": {
+			{"domain": "acmefitness.com", "company_name": "ACME Fitness Pvt"},
+			{"domain": "acmestaffing.com", "company_name": "ACME Staffing"},
+		},
+		"Gojek Tech": {{"domain": "gojek.com", "company_name": "Gojek"}},
+	}
+
+	registry := providers.NewProviderRegistry([]config.ProviderPolicy{stub.HunterPolicy()}, "")
+	require.Len(t, registry, 1)
+
+	resolver, isResolver := registry[0].(providers.DomainResolver)
+	require.True(t, isResolver)
+
+	domain, err := resolver.ResolveCompanyDomain(context.Background(), "Acme Staffing Pvt Ltd")
+	require.NoError(t, err)
+	assert.Equal(t, "acmestaffing.com", domain, "a look-alike ahead of the match is skipped")
+
+	domain, err = resolver.ResolveCompanyDomain(context.Background(), "Gojek Tech")
+	require.NoError(t, err)
+	assert.Empty(t, domain, "a different company name is not accepted")
+
+	domain, err = resolver.ResolveCompanyDomain(context.Background(), "Unknown Co")
+	require.NoError(t, err)
+	assert.Empty(t, domain)
+
+	assert.Zero(t, config.GetDomainLookupCredits(config.ProviderHunter), "Domain Finder is free")
+	assert.Positive(t, config.GetDomainLookupCredits(config.ProviderApollo))
+}

@@ -12,6 +12,15 @@ type (
 		} `json:"data"`
 	}
 
+	DomainFinderResponse struct {
+		Data []DomainCandidate `json:"data"`
+	}
+
+	DomainCandidate struct {
+		Domain      string `json:"domain"`
+		CompanyName string `json:"company_name"`
+	}
+
 	Email struct {
 		Value        string        `json:"value"`
 		FirstName    string        `json:"first_name"`

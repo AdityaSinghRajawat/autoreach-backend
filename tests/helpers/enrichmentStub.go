@@ -27,6 +27,7 @@ type EnrichmentStub struct {
 	SignalHireSearch   int
 	HunterStatus       int
 	HunterEmails       []map[string]any
+	HunterDomains      map[string][]map[string]any
 	People             []map[string]any
 	Matches            map[string]map[string]any
 	Profiles           map[string]map[string]any
@@ -57,6 +58,7 @@ func NewEnrichmentStub(t *testing.T) *EnrichmentStub {
 	mux.HandleFunc("POST /signalhire/candidate/search", stub.handleSignalHire)
 	mux.HandleFunc("POST /signalhire/candidate/searchByQuery", stub.handleSignalHireSearch)
 	mux.HandleFunc("GET /hunter/domain-search", stub.handleHunterSearch)
+	mux.HandleFunc("GET /hunter/domain-finder", stub.handleHunterDomainFinder)
 
 	stub.Server = httptest.NewServer(mux)
 	t.Cleanup(stub.Server.Close)
@@ -268,6 +270,26 @@ func (s *EnrichmentStub) handleHunterSearch(writer http.ResponseWriter, request 
 	}
 
 	writeJSON(writer, status, map[string]any{"data": map[string]any{"emails": emails}})
+}
+
+func (s *EnrichmentStub) handleHunterDomainFinder(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	status := s.record("hunter.domainFinder", s.HunterStatus)
+	if request.Header.Get("X-API-KEY") == "" {
+		status = http.StatusUnauthorized
+	}
+
+	candidates := s.HunterDomains[request.URL.Query().Get("company")]
+	if candidates == nil {
+		candidates = []map[string]any{}
+	}
+
+	writeJSON(writer, status, map[string]any{"data": candidates})
 }
 
 func SignalHireRequestID(sequence int) string {

@@ -61,6 +61,7 @@ var (
 	providerDefaultDailyCreditsI    = map[string]int{ProviderHunter: 5}
 	providerDefaultPeoplePerSearchI = map[string]int{ProviderHunter: 3}
 	providerDiscoveryCreditsI       = map[string]int{ProviderHunter: 1}
+	providerDomainLookupCreditsI    = map[string]int{ProviderHunter: 0}
 )
 
 const defaultProviderDailyCredits = 200
@@ -188,6 +189,15 @@ func (p ProviderPolicy) DiscoveryLimit(requested int) int {
 // Providers that charge per person found while searching (Hunter) pay up front for the worst case.
 func GetDiscoveryCredits(code string, people int) int {
 	return providerDiscoveryCreditsI[code] * people
+}
+
+// Hunter's Domain Finder is free; other providers charge the standard lookup price.
+func GetDomainLookupCredits(code string) int {
+	if credits, found := providerDomainLookupCreditsI[code]; found {
+		return credits
+	}
+
+	return companyDomainLookupCredits
 }
 
 func (p ProviderPolicy) RateLimitPolicy() RateLimitPolicy {

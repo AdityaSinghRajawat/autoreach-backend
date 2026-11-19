@@ -134,7 +134,7 @@ What you need to set depends on what you want to use:
 | Matching resumes to jobs | `AI_API_KEY` (9) |
 | Finding recruiters and hiring managers | At least one of `HUNTER_API_KEY` (free plan available), `APOLLO_API_KEY`, `SIGNALHIRE_API_KEY` (plus `PUBLIC_BASE_URL` and `SIGNALHIRE_WEBHOOK_SECRET`), `CONTACTOUT_API_KEY` (12) |
 | Connecting a candidate's mailbox for email outreach | `CHANNEL_CREDENTIAL_KEYS` (13); `PUBLIC_BASE_URL` (1) for one-click unsubscribe and tracking links |
-| Adzuna job searches | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` (11) and an Apollo key for company domains |
+| Adzuna job searches | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` (11) and a Hunter or Apollo key for company domains (Hunter's lookup is free) |
 | Submitting applications through an ATS | `GREENHOUSE_BOARD_KEYS` or `LEVER_SITE_KEYS`, issued by the employer (15) |
 | Storing resumes in S3, R2 or MinIO | `STORAGE_DRIVER=s3` and the `S3_*` settings (18) |
 | Production | `APP_ENV=production`, `INTERNAL_SHARED_SECRET`, `CHANNEL_CREDENTIAL_KEYS`, real database and Redis passwords; see [docs/RUNBOOK.md](docs/RUNBOOK.md) |

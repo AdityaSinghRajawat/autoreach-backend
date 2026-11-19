@@ -101,7 +101,7 @@ func (s *EnrichmentService) lookUpCompanyDomain(
 	err := s.callProvider(
 		ctx,
 		resolver,
-		config.GetCompanyDomainLookupCredits(),
+		config.GetDomainLookupCredits(resolver.Code()),
 		func(ctx context.Context) error {
 			var lookupErr error
 

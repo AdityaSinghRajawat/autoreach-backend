@@ -154,7 +154,6 @@ func GetUserAgentHeader() string             { return userAgentHeader }
 func GetMaxExternalJobIDLength() int         { return maxExternalJobIDLength }
 func GetMaxJobSourceErrorLength() int        { return maxJobSourceError }
 func GetIngestBatchSize() int                { return ingestBatchSize }
-func GetCompanyDomainLookupCredits() int     { return companyDomainLookupCredits }
 func GetCompanyDomainCandidates() int        { return companyDomainCandidates }
 
 func GetJobSourcePollInterval() time.Duration   { return jobSourceConfigI.pollInterval }
