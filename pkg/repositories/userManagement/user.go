@@ -8,6 +8,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	userModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/userManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const userColumns = `id, email, password_hash, roles, is_active, email_verified_at, created_at,
@@ -72,10 +73,10 @@ func (r *UserRepo) findOne(
 		SELECT `+userColumns+` FROM `+r.usersTable+` WHERE `+condition+` LIMIT 1
 	`, argument)
 
-	return db.FindOne(row, scanUser, operation)
+	return utils.ScanOptionalRow(row, scanUser, operation)
 }
 
-func scanUser(row db.RowScanner) (*userModel.User, error) {
+func scanUser(row utils.RowScanner) (*userModel.User, error) {
 	user := userModel.User{}
 
 	err := row.Scan(

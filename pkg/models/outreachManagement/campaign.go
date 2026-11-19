@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
@@ -32,7 +30,7 @@ func NewCampaign() *Campaign {
 	now := utils.GetCurrTimeStamp()
 
 	return &Campaign{
-		ID:        uuid.NewString(),
+		ID:        utils.GenerateUUID(),
 		Status:    modelHelpers.CampaignStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,

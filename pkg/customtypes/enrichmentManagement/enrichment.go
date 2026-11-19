@@ -3,12 +3,14 @@ package enrichmentManagement
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type DiscoveryQuery struct {
@@ -25,6 +27,8 @@ type Person struct {
 	Title            string
 	LinkedinURL      string
 	CompanyName      string
+	Email            string
+	EmailVerified    bool
 }
 
 type SelectedPerson struct {
@@ -71,8 +75,32 @@ type WebhookAckResponse struct {
 	Received bool `json:"received"`
 }
 
+func DailyCreditsKey(providerCode string) string {
+	return utils.BuildKey(
+		config.GetKeyDelimiter(),
+		config.GetKeyPrefix(),
+		config.GetEnrichmentCreditNamespace(),
+		providerCode,
+		utils.GetCurrTimeStamp().Format(time.DateOnly),
+	)
+}
+
 func (p Person) HasLinkedin() bool {
 	return p.LinkedinURL != ""
+}
+
+func (p Person) HasEmail() bool {
+	return p.Email != ""
+}
+
+func (p Person) KnownDetails() *ContactDetails {
+	return &ContactDetails{
+		FullName:      p.FullName,
+		Title:         p.Title,
+		Email:         p.Email,
+		EmailVerified: p.EmailVerified,
+		LinkedinURL:   p.LinkedinURL,
+	}
 }
 
 // A provider can look a person up by LinkedIn URL, or by its own ID for people it found itself.

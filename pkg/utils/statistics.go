@@ -3,8 +3,6 @@ package utils
 import (
 	"math"
 	"slices"
-
-	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
 
 func Percentile(values []float64, fraction float64) float64 {
@@ -40,15 +38,4 @@ func CosineSimilarity(left, right []float32) float64 {
 	}
 
 	return dot / (math.Sqrt(leftNorm) * math.Sqrt(rightNorm))
-}
-
-func SuggestCalibration(goodSimilarities, badSimilarities []float64) (low, high float64) {
-	low = Percentile(badSimilarities, config.GetCalibrationBadPercentile())
-	anchor := Percentile(goodSimilarities, config.GetCalibrationGoodPercentile())
-
-	if anchor <= low {
-		return 0, 1
-	}
-
-	return low, low + (anchor-low)/config.GetCalibrationTargetScore()
 }

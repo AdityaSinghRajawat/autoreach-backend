@@ -54,7 +54,7 @@ func (s *CandidateService) ProcessResume(
 
 	embeddings, err := s.embedder.CreateEmbeddings(
 		ctx,
-		[]string{truncateRunes(resume.RawText, config.GetAIEmbeddingMaxInputChars())},
+		[]string{utils.TruncateRunes(resume.RawText, config.GetAIEmbeddingMaxInputChars())},
 	)
 	if err != nil {
 		return s.handleEmbeddingFailure(ctx, resume, err)
@@ -244,13 +244,4 @@ func failureReason(cause error) string {
 	}
 
 	return config.GetPublicMessageForErrCode(config.GetErrCodeUpstreamRejected())
-}
-
-func truncateRunes(text string, limit int) string {
-	characters := []rune(text)
-	if len(characters) > limit {
-		characters = characters[:limit]
-	}
-
-	return string(characters)
 }

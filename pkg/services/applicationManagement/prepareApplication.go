@@ -167,7 +167,7 @@ func (s *ApplicationService) buildSubmission(
 		)
 	}
 
-	submission.FirstName, submission.LastName = splitName(candidate.FullName)
+	submission.FirstName, submission.LastName = utils.SplitFullName(candidate.FullName)
 	submission.Email = candidate.Email
 
 	answers, missing := prepareAnswers(form, profile, candidate, submission.Resume != nil)

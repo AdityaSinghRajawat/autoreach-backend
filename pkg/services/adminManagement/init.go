@@ -1,40 +1,36 @@
 package adminManagement
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	dashboardRepo "github.com/AdityaSinghRajawat/autoreach-backend/pkg/repositories/dashboardManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
-type CreditReader interface {
-	GetDaily(ctx context.Context, namespace, name string) (int64, error)
-}
-
 type AdminServiceDependencies struct {
 	WorkerInspector workerConfigs.IWorkerInspector
-	CreditReader    CreditReader
+	RedisUtil       *utils.RedisUtil
 	MetricsRepo     *dashboardRepo.MetricsRepo
 }
 
 type AdminService struct {
 	workerInspector workerConfigs.IWorkerInspector
-	creditReader    CreditReader
+	redisUtil       *utils.RedisUtil
 	metricsRepo     *dashboardRepo.MetricsRepo
 }
 
 func NewAdminService(dependencies AdminServiceDependencies) (*AdminService, error) {
 	if dependencies.WorkerInspector == nil ||
-		dependencies.CreditReader == nil ||
+		dependencies.RedisUtil == nil ||
 		dependencies.MetricsRepo == nil {
 		return nil, fmt.Errorf("new admin service: %w", config.ErrMissingDependency)
 	}
 
 	return &AdminService{
 		workerInspector: dependencies.WorkerInspector,
-		creditReader:    dependencies.CreditReader,
+		redisUtil:       dependencies.RedisUtil,
 		metricsRepo:     dependencies.MetricsRepo,
 	}, nil
 }

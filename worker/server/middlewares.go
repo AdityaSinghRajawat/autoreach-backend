@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
@@ -58,7 +56,7 @@ func workerLoggerMiddleware(
 
 		correlationID := message.Metadata[workerConfigs.MetadataCorrelationID]
 		if correlationID == "" {
-			correlationID = uuid.NewString()
+			correlationID = utils.GenerateUUID()
 		}
 
 		ctx = utils.WithLogger(ctx, logger.With(

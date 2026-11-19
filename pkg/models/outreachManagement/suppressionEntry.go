@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
@@ -21,7 +19,7 @@ type SuppressionEntry struct {
 }
 
 func NewSuppressionEntry() *SuppressionEntry {
-	return &SuppressionEntry{ID: uuid.NewString(), CreatedAt: utils.GetCurrTimeStamp()}
+	return &SuppressionEntry{ID: utils.GenerateUUID(), CreatedAt: utils.GetCurrTimeStamp()}
 }
 
 func (s *SuppressionEntry) Validate() error {

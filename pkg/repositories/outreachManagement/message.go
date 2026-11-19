@@ -13,6 +13,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const messageColumns = `id, candidate_id, contact_id, job_id, campaign_id, channel_account_id,
@@ -76,7 +77,7 @@ func (r *MessageRepo) InsertPlanned(
 	ctx context.Context,
 	messages []*outreachModel.Message,
 ) (int, error) {
-	order := db.LockOrder(messages, func(message *outreachModel.Message) string {
+	order := utils.SortedIndexesByKey(messages, func(message *outreachModel.Message) string {
 		return fmt.Sprintf(
 			"%s|%s|%s|%s|%04d",
 			message.CandidateID,
@@ -353,7 +354,7 @@ func (r *MessageRepo) FindLinkedinInvite(
 ) (*outreachModel.Message, error) {
 	return r.findOne(
 		ctx,
-		`candidate_id = $1 AND contact_id = $2 AND channel = `+db.Enum(
+		`candidate_id = $1 AND contact_id = $2 AND channel = `+utils.BuildSQLEnumList(
 			modelHelpers.OutreachChannelLinkedinConnect,
 		)+`
 		ORDER BY created_at DESC LIMIT 1`,
@@ -386,7 +387,7 @@ func (r *MessageRepo) PauseForContact(
 ) error {
 	return r.transition(
 		ctx,
-		`candidate_id = $2 AND contact_id = $3 AND status = `+db.Enum(
+		`candidate_id = $2 AND contact_id = $3 AND status = `+utils.BuildSQLEnumList(
 			modelHelpers.OutreachStatusPending,
 		),
 		modelHelpers.OutreachStatusPaused,
@@ -403,7 +404,7 @@ func (r *MessageRepo) CancelForContact(
 ) error {
 	return r.transition(
 		ctx,
-		`candidate_id = $2 AND contact_id = $3 AND status IN (`+db.Enum(
+		`candidate_id = $2 AND contact_id = $3 AND status IN (`+utils.BuildSQLEnumList(
 			modelHelpers.OutreachStatusPending,
 			modelHelpers.OutreachStatusPaused,
 		)+`)`,
@@ -421,7 +422,7 @@ func (r *MessageRepo) SetCampaignPaused(
 ) error {
 	return r.transition(
 		ctx,
-		`campaign_id = $2 AND status = `+db.Enum(modelHelpers.OutreachStatusPending),
+		`campaign_id = $2 AND status = `+utils.BuildSQLEnumList(modelHelpers.OutreachStatusPending),
 		modelHelpers.OutreachStatusPaused,
 		now,
 		campaignID,
@@ -435,13 +436,13 @@ func (r *MessageRepo) SetCampaignResumed(
 ) error {
 	return r.transition(
 		ctx,
-		`campaign_id = $2 AND status = `+db.Enum(
+		`campaign_id = $2 AND status = `+utils.BuildSQLEnumList(
 			modelHelpers.OutreachStatusPaused,
 		)+` AND NOT EXISTS (
 			SELECT 1 FROM `+r.messagesTable+` AS ended
 			WHERE ended.candidate_id = `+r.messagesTable+`.candidate_id
 				AND ended.contact_id = `+r.messagesTable+`.contact_id
-				AND ended.status IN (`+db.Enum(
+				AND ended.status IN (`+utils.BuildSQLEnumList(
 			modelHelpers.OutreachStatusReplied,
 			modelHelpers.OutreachStatusBounced,
 		)+`))`,
@@ -458,7 +459,7 @@ func (r *MessageRepo) SetCampaignCancelled(
 ) error {
 	return r.transition(
 		ctx,
-		`campaign_id = $2 AND status IN (`+db.Enum(
+		`campaign_id = $2 AND status IN (`+utils.BuildSQLEnumList(
 			modelHelpers.OutreachStatusPending,
 			modelHelpers.OutreachStatusPaused,
 		)+`)`,
@@ -494,7 +495,7 @@ func (r *MessageRepo) transition(
 	arguments ...any,
 ) error {
 	_, err := r.postgres.Executor(ctx).Exec(ctx, `
-		UPDATE `+r.messagesTable+` SET status = `+db.Enum(status)+`, updated_at = $1 WHERE `+condition,
+		UPDATE `+r.messagesTable+` SET status = `+utils.BuildSQLEnumList(status)+`, updated_at = $1 WHERE `+condition,
 		append([]any{now}, arguments...)...)
 	if err != nil {
 		return fmt.Errorf("update outreach messages to %s: %w", status, err)
@@ -511,7 +512,7 @@ func (r *MessageRepo) findOne(
 	row := r.postgres.Executor(ctx).QueryRow(ctx, `
 		SELECT `+messageColumns+` FROM `+r.messagesTable+` WHERE `+condition, arguments...)
 
-	return db.FindOne(row, scanMessage, "find outreach message")
+	return utils.ScanOptionalRow(row, scanMessage, "find outreach message")
 }
 
 func (r *MessageRepo) list(
@@ -549,7 +550,7 @@ func messageArguments(message *outreachModel.Message) []any {
 	}
 }
 
-func scanMessage(row db.RowScanner) (*outreachModel.Message, error) {
+func scanMessage(row utils.RowScanner) (*outreachModel.Message, error) {
 	message := outreachModel.Message{}
 
 	err := row.Scan(

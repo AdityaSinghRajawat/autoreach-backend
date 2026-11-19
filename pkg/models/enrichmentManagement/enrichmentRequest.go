@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
@@ -15,7 +13,7 @@ type EnrichmentRequest struct {
 	ID                string                        `db:"id"                  validate:"required,uuid"`
 	JobID             string                        `db:"job_id"              validate:"required,uuid"`
 	ContactID         string                        `db:"contact_id"          validate:"required,uuid"`
-	Provider          string                        `db:"provider"            validate:"required,oneof=APOLLO SIGNALHIRE CONTACTOUT"`
+	Provider          string                        `db:"provider"            validate:"required,oneof=APOLLO SIGNALHIRE CONTACTOUT HUNTER"`
 	Status            modelHelpers.EnrichmentStatus `db:"status"              validate:"required,oneof=PENDING COMPLETED FAILED"`
 	ExternalRequestID string                        `db:"external_request_id" validate:"required,max=255"`
 	CreditsUsed       int                           `db:"credits_used"        validate:"gte=0"`
@@ -29,7 +27,7 @@ func NewEnrichmentRequest() *EnrichmentRequest {
 	now := utils.GetCurrTimeStamp()
 
 	return &EnrichmentRequest{
-		ID:        uuid.NewString(),
+		ID:        utils.GenerateUUID(),
 		Status:    modelHelpers.EnrichmentStatusPending,
 		CreatedAt: now,
 		UpdatedAt: now,

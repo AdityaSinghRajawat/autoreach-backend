@@ -14,6 +14,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const jobPostingColumns = `id, job_hash, source::text, company_name, company_domain, job_title,
@@ -72,13 +73,16 @@ func (r *JobPostingRepo) UpsertMany(
 			salary_max = COALESCE(EXCLUDED.salary_max, existing.salary_max),
 			salary_currency = COALESCE(EXCLUDED.salary_currency, existing.salary_currency),
 			posted_at = COALESCE(existing.posted_at, EXCLUDED.posted_at),
-			status = ` + db.Enum(modelHelpers.JobStatusActive) + `,
+			status = ` + utils.BuildSQLEnumList(modelHelpers.JobStatusActive) + `,
 			job_source_id = COALESCE(EXCLUDED.job_source_id, existing.job_source_id),
 			last_seen_at = EXCLUDED.last_seen_at,
 			updated_at = EXCLUDED.updated_at
 		RETURNING id, (embedding IS NULL) AS needs_embedding`
 
-	order := db.LockOrder(jobs, func(job *jobModel.JobPosting) string { return job.JobHash })
+	order := utils.SortedIndexesByKey(
+		jobs,
+		func(job *jobModel.JobPosting) string { return job.JobHash },
+	)
 
 	batch := &pgx.Batch{}
 
@@ -118,7 +122,7 @@ func (r *JobPostingRepo) FindByID(ctx context.Context, jobID string) (*jobModel.
 		SELECT `+jobPostingColumns+` FROM `+r.jobPostingsTable+` WHERE id = $1 LIMIT 1
 	`, jobID)
 
-	return db.FindOne(row, scanJobPosting, "find job posting")
+	return utils.ScanOptionalRow(row, scanJobPosting, "find job posting")
 }
 
 func (r *JobPostingRepo) ListByIDs(
@@ -197,7 +201,7 @@ func (r *JobPostingRepo) UpdateEmbeddings(
 		return 0, nil
 	}
 
-	order := db.LockOrder(
+	order := utils.SortedIndexesByKey(
 		updates,
 		func(update jobTypes.JobEmbeddingUpdate) string { return update.ID },
 	)
@@ -210,7 +214,7 @@ func (r *JobPostingRepo) UpdateEmbeddings(
 			UPDATE `+r.jobPostingsTable+`
 			SET embedding = $2::vector, embedding_model = $3, embedded_at = $4, updated_at = $4
 			WHERE id = $1 AND description_hash = $5
-		`, update.ID, db.FormatVector(update.Embedding), model, embeddedAt, update.DescriptionHash)
+		`, update.ID, utils.FormatVectorLiteral(update.Embedding), model, embeddedAt, update.DescriptionHash)
 	}
 
 	results := r.postgres.Executor(ctx).SendBatch(ctx, batch)
@@ -269,7 +273,7 @@ func (r *JobPostingRepo) ListNearestActive(
 	return similarities, nil
 }
 
-func scanJobPosting(row db.RowScanner) (*jobModel.JobPosting, error) {
+func scanJobPosting(row utils.RowScanner) (*jobModel.JobPosting, error) {
 	job := jobModel.JobPosting{}
 
 	err := row.Scan(

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
@@ -41,7 +39,7 @@ func NewMessage() *Message {
 	now := utils.GetCurrTimeStamp()
 
 	return &Message{
-		ID:          uuid.NewString(),
+		ID:          utils.GenerateUUID(),
 		StepNumber:  1,
 		Channel:     modelHelpers.OutreachChannelEmail,
 		Status:      modelHelpers.OutreachStatusPending,

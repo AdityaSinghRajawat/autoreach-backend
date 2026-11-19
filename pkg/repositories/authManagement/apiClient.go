@@ -10,6 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const apiClientColumns = `id, name, key_prefix, key_hash, scopes, last_used_at, revoked_at,
@@ -64,7 +65,7 @@ func (r *APIClientRepo) FindActiveByPrefix(
 		LIMIT 1
 	`, keyPrefix)
 
-	return db.FindOne(row, scanAPIClient, "find api client by prefix")
+	return utils.ScanOptionalRow(row, scanAPIClient, "find api client by prefix")
 }
 
 func (r *APIClientRepo) List(ctx context.Context) ([]*authModel.APIClient, error) {
@@ -120,7 +121,7 @@ func (r *APIClientRepo) UpdateLastUsedAt(
 	return nil
 }
 
-func scanAPIClient(row db.RowScanner) (*authModel.APIClient, error) {
+func scanAPIClient(row utils.RowScanner) (*authModel.APIClient, error) {
 	client := authModel.APIClient{}
 
 	err := row.Scan(

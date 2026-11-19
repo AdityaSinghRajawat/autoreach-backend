@@ -7,6 +7,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type CreateJobSourceRequest struct {
@@ -64,10 +65,10 @@ func (r *CreateJobSourceRequest) ToJobSourceModel() *jobModel.JobSource {
 	source := jobModel.NewJobSource()
 	source.BoardType = modelHelpers.BoardType(r.BoardType)
 	source.BoardToken = strings.TrimSpace(r.BoardToken)
-	source.SearchQuery = trimmed(r.SearchQuery)
-	source.SearchLocation = trimmed(r.SearchLocation)
-	source.CompanyName = trimmed(r.CompanyName)
-	source.CompanyDomain = lowered(r.CompanyDomain)
+	source.SearchQuery = utils.TrimOptionalString(r.SearchQuery)
+	source.SearchLocation = utils.TrimOptionalString(r.SearchLocation)
+	source.CompanyName = utils.TrimOptionalString(r.CompanyName)
+	source.CompanyDomain = utils.TrimLowerOptionalString(r.CompanyDomain)
 
 	if r.BoardType != config.GetCareerPageBoardType() {
 		source.BoardToken = strings.ToLower(source.BoardToken)
@@ -91,19 +92,19 @@ func (r *UpdateJobSourceRequest) ToJobSourceModel(
 	source := *existing
 
 	if r.SearchQuery != nil {
-		source.SearchQuery = trimmed(r.SearchQuery)
+		source.SearchQuery = utils.TrimOptionalString(r.SearchQuery)
 	}
 
 	if r.SearchLocation != nil {
-		source.SearchLocation = trimmed(r.SearchLocation)
+		source.SearchLocation = utils.TrimOptionalString(r.SearchLocation)
 	}
 
 	if r.CompanyName != nil {
-		source.CompanyName = trimmed(r.CompanyName)
+		source.CompanyName = utils.TrimOptionalString(r.CompanyName)
 	}
 
 	if r.CompanyDomain != nil {
-		source.CompanyDomain = lowered(r.CompanyDomain)
+		source.CompanyDomain = utils.TrimLowerOptionalString(r.CompanyDomain)
 	}
 
 	if r.IsActive != nil {
@@ -142,24 +143,4 @@ func (j BoardJob) ToIngestJobItem(source *jobModel.JobSource) IngestJobItem {
 		ExternalJobID:  &externalID,
 		PostedAt:       j.PostedAt,
 	}
-}
-
-func trimmed(value *string) *string {
-	if value == nil {
-		return nil
-	}
-
-	text := strings.TrimSpace(*value)
-
-	return &text
-}
-
-func lowered(value *string) *string {
-	if value == nil {
-		return nil
-	}
-
-	text := strings.ToLower(strings.TrimSpace(*value))
-
-	return &text
 }

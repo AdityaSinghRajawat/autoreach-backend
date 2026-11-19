@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
@@ -26,7 +24,7 @@ type ContactSignal struct {
 func NewContactSignal() *ContactSignal {
 	now := utils.GetCurrTimeStamp()
 
-	return &ContactSignal{ID: uuid.NewString(), OccurredAt: now, CreatedAt: now, UpdatedAt: now}
+	return &ContactSignal{ID: utils.GenerateUUID(), OccurredAt: now, CreatedAt: now, UpdatedAt: now}
 }
 
 func (s *ContactSignal) UpdateTimestamp() {

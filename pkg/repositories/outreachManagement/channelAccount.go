@@ -10,6 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const channelAccountColumns = `id, candidate_id, channel_type, identifier, display_name, smtp_host,
@@ -81,7 +82,7 @@ func (r *ChannelAccountRepo) FindByCandidate(
 		WHERE candidate_id = $1 AND id = $2
 	`, candidateID, accountID)
 
-	return db.FindOne(row, scanChannelAccount, "find channel account")
+	return utils.ScanOptionalRow(row, scanChannelAccount, "find channel account")
 }
 
 func (r *ChannelAccountRepo) ListByCandidate(
@@ -118,7 +119,7 @@ func (r *ChannelAccountRepo) FindByID(
 		SELECT `+channelAccountColumns+` FROM `+r.channelAccountsTable+` WHERE id = $1
 	`, accountID)
 
-	return db.FindOne(row, scanChannelAccount, "find channel account")
+	return utils.ScanOptionalRow(row, scanChannelAccount, "find channel account")
 }
 
 func (r *ChannelAccountRepo) FindFirstActive(
@@ -130,7 +131,7 @@ func (r *ChannelAccountRepo) FindFirstActive(
 		WHERE candidate_id = $1 AND status = `+sqlChannelAccountStatusActive+` ORDER BY created_at LIMIT 1
 	`, candidateID)
 
-	return db.FindOne(row, scanChannelAccount, "find active channel account")
+	return utils.ScanOptionalRow(row, scanChannelAccount, "find active channel account")
 }
 
 func (r *ChannelAccountRepo) ListActiveIDs(ctx context.Context) ([]string, error) {
@@ -163,7 +164,7 @@ func (r *ChannelAccountRepo) Delete(
 	return tag.RowsAffected() == 1, nil
 }
 
-func scanChannelAccount(row db.RowScanner) (*outreachModel.ChannelAccount, error) {
+func scanChannelAccount(row utils.RowScanner) (*outreachModel.ChannelAccount, error) {
 	account := outreachModel.ChannelAccount{}
 
 	err := row.Scan(

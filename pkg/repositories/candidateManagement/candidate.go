@@ -8,6 +8,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const candidateColumns = `id, user_id, email, full_name, linkedin_profile_url,
@@ -99,10 +100,10 @@ func (r *CandidateRepo) findOne(
 		SELECT `+candidateColumns+` FROM `+r.candidatesTable+` WHERE `+condition+` LIMIT 1
 	`, argument)
 
-	return db.FindOne(row, scanCandidate, operation)
+	return utils.ScanOptionalRow(row, scanCandidate, operation)
 }
 
-func scanCandidate(row db.RowScanner) (*candidateModel.Candidate, error) {
+func scanCandidate(row utils.RowScanner) (*candidateModel.Candidate, error) {
 	candidate := candidateModel.Candidate{}
 
 	var settings []byte

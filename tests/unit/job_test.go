@@ -10,9 +10,9 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	jobTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/jobManagement"
-	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
 	workerAggregators "github.com/AdityaSinghRajawat/autoreach-backend/worker/aggregators"
@@ -132,8 +132,8 @@ func TestEmbeddingTextIsStructuredAndTruncated(t *testing.T) {
 }
 
 func TestFormatVectorProducesAPgvectorLiteral(t *testing.T) {
-	assert.Equal(t, "[]", db.FormatVector(nil))
-	assert.Equal(t, "[1,-0.5,0.25]", db.FormatVector([]float32{1, -0.5, 0.25}))
+	assert.Equal(t, "[]", utils.FormatVectorLiteral(nil))
+	assert.Equal(t, "[1,-0.5,0.25]", utils.FormatVectorLiteral([]float32{1, -0.5, 0.25}))
 }
 
 func TestEmbedAggregatorFoldsDeduplicatesAndSkipsMalformedMessages(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type CreateTemplateRequest struct {
@@ -26,7 +27,7 @@ func (r *CreateTemplateRequest) ToTemplateModel(candidateID string) *outreachMod
 	template.CandidateID = candidateID
 	template.Name = strings.TrimSpace(r.Name)
 	template.Channel = modelHelpers.OutreachChannel(r.Channel)
-	template.Subject = trimmedOrNil(r.Subject)
+	template.Subject = utils.TrimOptionalStringToNil(r.Subject)
 	template.Body = r.Body
 
 	return template
@@ -51,7 +52,7 @@ func (r *UpdateTemplateRequest) ToTemplateModel(
 	}
 
 	if r.Subject != nil {
-		template.Subject = trimmedOrNil(r.Subject)
+		template.Subject = utils.TrimOptionalStringToNil(r.Subject)
 	}
 
 	if r.Body != nil {
@@ -66,17 +67,4 @@ func (r *UpdateTemplateRequest) ToTemplateModel(
 	}
 
 	return &template
-}
-
-func trimmedOrNil(value *string) *string {
-	if value == nil {
-		return nil
-	}
-
-	trimmed := strings.TrimSpace(*value)
-	if trimmed == "" {
-		return nil
-	}
-
-	return &trimmed
 }

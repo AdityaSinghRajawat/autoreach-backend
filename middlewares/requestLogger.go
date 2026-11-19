@@ -17,10 +17,10 @@ func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 
 		correlationID := c.GetHeader(config.GetCorrelationIDHeader())
 		if _, err := uuid.Parse(correlationID); err != nil {
-			correlationID = uuid.NewString()
+			correlationID = utils.GenerateUUID()
 		}
 
-		requestID := uuid.NewString()
+		requestID := utils.GenerateUUID()
 
 		ctx := utils.WithLogger(
 			c.Request.Context(),

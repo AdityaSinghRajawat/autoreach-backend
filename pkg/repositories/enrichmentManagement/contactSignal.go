@@ -10,6 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type ContactSignalRepo struct {
@@ -113,12 +114,12 @@ func (r *ContactSignalRepo) FindByContact(
 	ctx context.Context,
 	contactID, signalID string,
 ) (*enrichmentModel.ContactSignal, error) {
-	return db.FindOne(r.postgres.Executor(ctx).QueryRow(ctx, `
+	return utils.ScanOptionalRow(r.postgres.Executor(ctx).QueryRow(ctx, `
 		SELECT `+contactSignalColumns+` FROM `+r.signalsTable+` WHERE id = $1 AND contact_id = $2
 	`, signalID, contactID), scanContactSignal, "find contact signal")
 }
 
-func scanContactSignal(row db.RowScanner) (*enrichmentModel.ContactSignal, error) {
+func scanContactSignal(row utils.RowScanner) (*enrichmentModel.ContactSignal, error) {
 	signal := enrichmentModel.ContactSignal{}
 	err := row.Scan(
 		&signal.ID,

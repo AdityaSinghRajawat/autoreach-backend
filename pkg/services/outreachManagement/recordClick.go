@@ -3,7 +3,6 @@ package outreachManagement
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
@@ -19,7 +18,7 @@ func (s *OutreachService) RecordClick(
 	message := s.trackedMessage(ctx, token)
 
 	if !utils.VerifySignature(trackingKey(), signature, token, link) || message == nil ||
-		!isWebLink(link) || !strings.Contains(message.BodyContent, link) {
+		!utils.IsHTTPURL(link) || !strings.Contains(message.BodyContent, link) {
 		return "", config.NewCustomError(
 			fmt.Errorf("record click: %w", config.ErrInvalidTrackingLink),
 			config.GetErrCodeNotFound(),
@@ -35,10 +34,4 @@ func (s *OutreachService) RecordClick(
 	}
 
 	return link, nil
-}
-
-func isWebLink(link string) bool {
-	parsed, err := url.Parse(link)
-
-	return err == nil && (parsed.Scheme == "https" || parsed.Scheme == "http") && parsed.Host != ""
 }

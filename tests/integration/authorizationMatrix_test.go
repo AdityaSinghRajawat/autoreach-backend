@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 )
 
@@ -70,7 +70,7 @@ func fillPath(path, candidateID string) string {
 			continue
 		}
 
-		segments[index] = uuid.NewString()
+		segments[index] = utils.GenerateUUID()
 		if name == config.GetCandidateIDParam() {
 			segments[index] = candidateID
 		}

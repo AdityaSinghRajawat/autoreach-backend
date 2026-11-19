@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -26,7 +24,7 @@ func NewEvent(messageID string, eventType modelHelpers.OutreachEventType) *Event
 	now := utils.GetCurrTimeStamp()
 
 	return &Event{
-		ID:         uuid.NewString(),
+		ID:         utils.GenerateUUID(),
 		MessageID:  messageID,
 		EventType:  eventType,
 		Metadata:   json.RawMessage(config.GetEmptyJSONObject()),

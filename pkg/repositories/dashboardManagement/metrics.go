@@ -8,6 +8,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	dashboardTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/dashboardManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type MetricsRepo struct {
@@ -65,22 +66,26 @@ func (r *MetricsRepo) CountForCandidate(
 		WHERE c.id = $1
 	`, candidateID)
 
-	return db.FindOne(row, func(row db.RowScanner) (*dashboardTypes.CandidateCounts, error) {
-		counts := dashboardTypes.CandidateCounts{}
-		err := row.Scan(
-			&counts.TotalJobsScraped,
-			&counts.JobsMatched,
-			&counts.ApplicationsSubmitted,
-			&counts.Interviews,
-			&counts.ContactsDiscovered,
-			&counts.ColdEmailsSent,
-			&counts.LinkedinRequestsSent,
-			&counts.LinkedinConnectionsAccepted,
-			&counts.RecruiterResponses,
-		)
+	return utils.ScanOptionalRow(
+		row,
+		func(row utils.RowScanner) (*dashboardTypes.CandidateCounts, error) {
+			counts := dashboardTypes.CandidateCounts{}
+			err := row.Scan(
+				&counts.TotalJobsScraped,
+				&counts.JobsMatched,
+				&counts.ApplicationsSubmitted,
+				&counts.Interviews,
+				&counts.ContactsDiscovered,
+				&counts.ColdEmailsSent,
+				&counts.LinkedinRequestsSent,
+				&counts.LinkedinConnectionsAccepted,
+				&counts.RecruiterResponses,
+			)
 
-		return &counts, err
-	}, "count candidate metrics")
+			return &counts, err
+		},
+		"count candidate metrics",
+	)
 }
 
 // CountEmailDeliveries counts cold emails sent since the given time, and how many of them bounced.

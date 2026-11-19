@@ -7,6 +7,7 @@ import (
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	adminTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/adminManagement"
+	enrichmentTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/enrichmentManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
@@ -18,11 +19,7 @@ func (s *AdminService) ListProviders(
 	response := &adminTypes.ProvidersResponse{}
 
 	for _, policy := range config.GetEnrichmentProviderPolicies() {
-		creditsUsed, err := s.creditReader.GetDaily(
-			ctx,
-			config.GetEnrichmentCreditNamespace(),
-			policy.Code,
-		)
+		creditsUsed, err := s.redisUtil.GetInt(ctx, enrichmentTypes.DailyCreditsKey(policy.Code))
 		if err != nil {
 			utils.LogWarn(
 				ctx,

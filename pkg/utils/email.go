@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"net/textproto"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/emersion/go-imap/v2"
@@ -323,4 +325,125 @@ func MailFailureReason(err error) string {
 	}
 
 	return config.ErrMailboxCheckFailed.Error()
+}
+
+type MXResolver interface {
+	LookupMX(ctx context.Context, domain string) ([]*net.MX, error)
+}
+
+type EmailVerifier struct {
+	resolver MXResolver
+}
+
+func NewEmailVerifier(resolver MXResolver) *EmailVerifier {
+	if resolver == nil {
+		resolver = net.DefaultResolver
+	}
+
+	return &EmailVerifier{resolver: resolver}
+}
+
+func (v *EmailVerifier) Verify(
+	ctx context.Context,
+	email string,
+	providerVerified bool,
+) modelHelpers.EmailVerificationStatus {
+	localPart, domain, valid := splitEmail(email)
+	if !valid || config.IsDisposableDomain(domain) {
+		return modelHelpers.EmailStatusInvalid
+	}
+
+	lookupCtx, cancel := context.WithTimeout(ctx, config.GetMXLookupTimeout())
+	defer cancel()
+
+	records, err := v.resolver.LookupMX(lookupCtx, domain)
+	if err != nil || len(records) == 0 {
+		return modelHelpers.EmailStatusInvalid
+	}
+
+	if config.IsRoleLocalPart(localPart) || !providerVerified {
+		return modelHelpers.EmailStatusRisky
+	}
+
+	return modelHelpers.EmailStatusVerified
+}
+
+func splitEmail(email string) (localPart, domain string, valid bool) {
+	parsed, err := mail.ParseAddress(email)
+	if err != nil || parsed.Address != email {
+		return "", "", false
+	}
+
+	localPart, domain, found := strings.Cut(email, "@")
+	if !found || localPart == "" || !strings.Contains(domain, ".") {
+		return "", "", false
+	}
+
+	return localPart, strings.ToLower(domain), true
+}
+
+// Sends from AutoReach's own address, not a candidate's mailbox.
+type SystemMailer struct {
+	emailUtil *EmailUtil
+}
+
+var _ sharedTypes.SystemMailer = (*SystemMailer)(nil)
+
+func NewSystemMailer(emailUtil *EmailUtil) (*SystemMailer, error) {
+	if emailUtil == nil {
+		return nil, fmt.Errorf("new system mailer: %w", config.ErrMissingDependency)
+	}
+
+	return &SystemMailer{emailUtil: emailUtil}, nil
+}
+
+func (m *SystemMailer) Send(
+	ctx context.Context,
+	toAddress string,
+	email sharedTypes.AccountEmail,
+) error {
+	if !config.IsSystemMailConfigured() {
+		return fmt.Errorf("send system mail: %w", config.ErrSystemMailNotConfigured)
+	}
+
+	server := sharedTypes.EmailServer{
+		Host:     config.GetSystemSMTPHost(),
+		Port:     config.GetSystemSMTPPort(),
+		Security: config.GetSystemSMTPSecurity(),
+	}
+
+	return m.emailUtil.SendEmail(ctx, sharedTypes.EmailAccount{
+		Address:  config.GetSystemMailAddress(),
+		Username: config.GetSystemSMTPUsername(),
+		Password: config.GetSystemSMTPPassword(),
+		SMTP:     server,
+		IMAP:     server,
+	}, sharedTypes.OutgoingEmail{
+		FromAddress: config.GetSystemMailAddress(),
+		FromName:    config.GetSystemMailName(),
+		ToAddress:   toAddress,
+		Subject:     email.Subject,
+		Body:        email.Text,
+		HTMLBody:    email.HTML,
+		MessageID:   NewEmailMessageID(config.GetSystemMailAddress()),
+		Date:        GetCurrTimeStamp(),
+	})
+}
+
+// SendAccountEmailInBackground keeps response time from revealing whether an account exists.
+func SendAccountEmailInBackground(
+	ctx context.Context,
+	mailer sharedTypes.SystemMailer,
+	userID, address string,
+	email sharedTypes.AccountEmail,
+) {
+	if mailer == nil {
+		return
+	}
+
+	RunInBackground(ctx, "send account email", func(ctx context.Context) {
+		if err := mailer.Send(ctx, address, email); err != nil {
+			LogWarn(ctx, "account email not sent", "user_id", userID, "error", err.Error())
+		}
+	})
 }

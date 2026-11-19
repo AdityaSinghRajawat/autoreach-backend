@@ -80,7 +80,7 @@ func (s *OutreachService) handleInbound(
 ) *config.CustomError {
 	references, address := email.ReferencedIDs, email.FromAddress
 	if email.IsBounce {
-		references, address = email.BouncedMessageIDs, firstOrEmpty(email.BouncedAddresses)
+		references, address = email.BouncedMessageIDs, utils.FirstOrZero(email.BouncedAddresses)
 	}
 
 	message, err := s.matchOutreachMessage(ctx, account, references, address)
@@ -125,12 +125,4 @@ func (s *OutreachService) matchOutreachMessage(
 	}
 
 	return s.messageRepo.FindLatestSentToAddress(ctx, account.ID, address)
-}
-
-func firstOrEmpty(values []string) string {
-	if len(values) == 0 {
-		return ""
-	}
-
-	return values[0]
 }

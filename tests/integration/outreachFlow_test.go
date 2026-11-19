@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -835,7 +834,7 @@ func TestAnAdminCanApplyASingleCandidatesSignal(t *testing.T) {
 	assert.True(t, fixture.globallySuppressed(t, contactAddress))
 
 	missing := helpers.Do(t, fixture.router, http.MethodPost,
-		signalsPath+"/"+uuid.NewString()+"/apply", nil, bearer(token))
+		signalsPath+"/"+utils.GenerateUUID()+"/apply", nil, bearer(token))
 	assert.Equal(t, http.StatusNotFound, missing.Recorder.Code)
 }
 
@@ -846,7 +845,7 @@ func (f jobFixture) seedSignalFromAnotherCandidate(
 ) string {
 	t.Helper()
 
-	other := register(t, f.router, "another-"+uuid.NewString()[:8]+"@example.com")
+	other := register(t, f.router, "another-"+utils.GenerateUUID()[:8]+"@example.com")
 	seeded := enrichmentModel.NewContactSignal()
 	seeded.ContactID = signal.ContactID
 	seeded.CandidateID = *other.User.CandidateID

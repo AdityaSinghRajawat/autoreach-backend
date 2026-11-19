@@ -9,6 +9,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const templateColumns = `id, candidate_id, name, channel, subject, body, status, approved_at,
@@ -64,7 +65,7 @@ func (r *TemplateRepo) FindByCandidate(
 		SELECT `+templateColumns+` FROM `+r.templatesTable+` WHERE candidate_id = $1 AND id = $2
 	`, candidateID, templateID)
 
-	return db.FindOne(row, scanTemplate, "find template")
+	return utils.ScanOptionalRow(row, scanTemplate, "find template")
 }
 
 func (r *TemplateRepo) ListByCandidate(
@@ -121,7 +122,7 @@ func (r *TemplateRepo) list(
 	return templates, nil
 }
 
-func scanTemplate(row db.RowScanner) (*outreachModel.Template, error) {
+func scanTemplate(row utils.RowScanner) (*outreachModel.Template, error) {
 	template := outreachModel.Template{}
 
 	err := row.Scan(

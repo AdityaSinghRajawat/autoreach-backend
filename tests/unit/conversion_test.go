@@ -42,7 +42,7 @@ func validIngestItem() jobTypes.IngestJobItem {
 
 func existingCandidate() *candidateModel.Candidate {
 	candidate := candidateModel.NewCandidate()
-	candidate.UserID = uuid.NewString()
+	candidate.UserID = utils.GenerateUUID()
 	candidate.Email = "alex@example.com"
 	candidate.FullName = "Alex Candidate"
 	candidate.LinkedinProfileURL = pointerTo("https://www.linkedin.com/in/alex")
@@ -174,7 +174,7 @@ func TestTheModelRejectsWhatConversionDoesNotCheck(t *testing.T) {
 	require.Error(t, unknownRole.Validate())
 
 	token := authModel.NewRefreshToken(-time.Minute)
-	token.UserID = uuid.NewString()
+	token.UserID = utils.GenerateUUID()
 	token.TokenHash = testKeyHash
 	require.Error(t, token.Validate(), "a refresh token must expire after it is created")
 }

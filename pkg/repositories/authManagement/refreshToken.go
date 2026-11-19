@@ -8,6 +8,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	authModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/authManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type RefreshTokenRepo struct {
@@ -59,7 +60,7 @@ func (r *RefreshTokenRepo) FindByHash(
 		LIMIT 1
 	`, tokenHash)
 
-	return db.FindOne(row, scanRefreshToken, "find refresh token")
+	return utils.ScanOptionalRow(row, scanRefreshToken, "find refresh token")
 }
 
 func (r *RefreshTokenRepo) MarkRevoked(
@@ -117,7 +118,7 @@ func (r *RefreshTokenRepo) markRevoked(
 	return tag.RowsAffected(), nil
 }
 
-func scanRefreshToken(row db.RowScanner) (*authModel.RefreshToken, error) {
+func scanRefreshToken(row utils.RowScanner) (*authModel.RefreshToken, error) {
 	token := authModel.RefreshToken{}
 
 	err := row.Scan(

@@ -11,6 +11,7 @@ import (
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	applicationModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/applicationManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const applicationColumns = `id, candidate_id, job_id, resume_id, match_score, status, ats_type, apply_url,
@@ -234,10 +235,10 @@ func (r *ApplicationRepo) findOne(
 	row := r.postgres.Executor(ctx).QueryRow(ctx, `
 		SELECT `+applicationColumns+` FROM `+r.applicationsTable+` WHERE `+condition, arguments...)
 
-	return db.FindOne(row, scanApplication, "find application")
+	return utils.ScanOptionalRow(row, scanApplication, "find application")
 }
 
-func scanApplication(row db.RowScanner) (*applicationModel.Application, error) {
+func scanApplication(row utils.RowScanner) (*applicationModel.Application, error) {
 	application := applicationModel.Application{}
 
 	var preparedAnswers, missingAnswers, executionLogs []byte

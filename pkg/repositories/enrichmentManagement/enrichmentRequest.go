@@ -7,6 +7,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const enrichmentRequestColumns = `id, job_id, contact_id, provider, status, external_request_id,
@@ -64,10 +65,10 @@ func (r *EnrichmentRequestRepo) FindPendingByExternalID(
 		LIMIT 1
 	`, provider, externalRequestID)
 
-	return db.FindOne(row, scanEnrichmentRequest, "find pending enrichment request")
+	return utils.ScanOptionalRow(row, scanEnrichmentRequest, "find pending enrichment request")
 }
 
-func scanEnrichmentRequest(row db.RowScanner) (*enrichmentModel.EnrichmentRequest, error) {
+func scanEnrichmentRequest(row utils.RowScanner) (*enrichmentModel.EnrichmentRequest, error) {
 	request := enrichmentModel.EnrichmentRequest{}
 
 	err := row.Scan(

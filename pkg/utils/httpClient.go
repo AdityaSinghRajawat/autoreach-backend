@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +23,7 @@ import (
 type APIError struct {
 	StatusCode int
 	Body       string
+	RetryAfter time.Duration
 }
 
 func (e *APIError) Error() string {
@@ -171,7 +174,14 @@ func (c *HTTPClient) send(
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
 		excerpt, _ := io.ReadAll(io.LimitReader(response.Body, config.GetMaxErrorBodyBytes()))
 
-		return &APIError{StatusCode: response.StatusCode, Body: string(excerpt)}
+		return &APIError{
+			StatusCode: response.StatusCode,
+			Body:       string(excerpt),
+			RetryAfter: ParseRetryAfter(
+				response.Header.Get(config.GetRetryAfterHeader()),
+				string(excerpt),
+			),
+		}
 	}
 
 	if result == nil {
@@ -213,4 +223,58 @@ func ClassifyUpstreamError(err error) config.CustomErrorCode {
 	}
 
 	return config.GetErrCodeServiceUnavailable()
+}
+
+var (
+	retryDelayJSONI = regexp.MustCompile(`"retryDelay"\s*:\s*"([0-9.]+)s"`)
+	retryInTextI    = regexp.MustCompile(`(?i)retry in ([0-9hms.]+)`)
+)
+
+// RetryAfterError tells the caller when trying again can succeed, so waiting is not a failure.
+type RetryAfterError struct {
+	Err   error
+	After time.Duration
+}
+
+func (e *RetryAfterError) Error() string {
+	return fmt.Sprintf("%v (retry in %s)", e.Err, e.After.Round(time.Second))
+}
+
+func (e *RetryAfterError) Unwrap() error {
+	return e.Err
+}
+
+func RetryAfterOf(err error) (time.Duration, bool) {
+	var retryAfter *RetryAfterError
+	if errors.As(err, &retryAfter) {
+		return retryAfter.After, true
+	}
+
+	return 0, false
+}
+
+// Reads the wait from the Retry-After header, or from the message providers put in the body.
+func ParseRetryAfter(header, body string) time.Duration {
+	if seconds, err := strconv.Atoi(strings.TrimSpace(header)); err == nil && seconds > 0 {
+		return time.Duration(seconds) * time.Second
+	}
+
+	if when, err := http.ParseTime(header); err == nil && time.Until(when) > 0 {
+		return time.Until(when)
+	}
+
+	if match := retryDelayJSONI.FindStringSubmatch(body); match != nil {
+		if seconds, err := strconv.ParseFloat(match[1], 64); err == nil && seconds > 0 {
+			return time.Duration(seconds * float64(time.Second))
+		}
+	}
+
+	if match := retryInTextI.FindStringSubmatch(body); match != nil {
+		if wait, err := time.ParseDuration(strings.TrimRight(match[1], ".")); err == nil &&
+			wait > 0 {
+			return wait
+		}
+	}
+
+	return 0
 }

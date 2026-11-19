@@ -87,6 +87,16 @@ func NewRateLimiter(client *redis.Client) (*RateLimiter, error) {
 	return &RateLimiter{client: client}, nil
 }
 
+func rateLimitKey(policy config.RateLimitPolicy, subject string) string {
+	return BuildKey(
+		config.GetKeyDelimiter(),
+		config.GetKeyPrefix(),
+		config.GetRateLimitNamespace(),
+		string(policy.Name),
+		subject,
+	)
+}
+
 func (r *RateLimiter) Allow(
 	ctx context.Context,
 	policy config.RateLimitPolicy,
@@ -100,7 +110,7 @@ func (r *RateLimiter) Allow(
 	values, err := gcraScriptI.Run(
 		ctx,
 		r.client,
-		[]string{BuildKey(config.GetRateLimitNamespace(), string(policy.Name), subject)},
+		[]string{rateLimitKey(policy, subject)},
 		policy.Limit,
 		policy.Period.Milliseconds(),
 		max(policy.Burst, 1),
@@ -137,7 +147,7 @@ func (r *RateLimiter) Refund(
 	if err := refundScriptI.Run(
 		ctx,
 		r.client,
-		[]string{BuildKey(config.GetRateLimitNamespace(), string(policy.Name), subject)},
+		[]string{rateLimitKey(policy, subject)},
 		policy.Limit,
 		policy.Period.Milliseconds(),
 		cost,

@@ -80,7 +80,17 @@ func (cm *CronManager) runOncePerInterval(
 	interval time.Duration,
 	work func(ctx context.Context),
 ) {
-	claimed, err := cm.redisUtil.ClaimSlot(ctx, name, config.GetCronClaimHold(interval))
+	claimed, err := cm.redisUtil.SetIfNotExists(
+		ctx,
+		utils.BuildKey(
+			config.GetKeyDelimiter(),
+			config.GetKeyPrefix(),
+			config.GetLockNamespace(),
+			name,
+		),
+		utils.GenerateUUID(),
+		config.GetCronClaimHold(interval),
+	)
 	if err != nil {
 		utils.LogError(ctx, err, "cron_job", name)
 

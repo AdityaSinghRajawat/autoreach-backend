@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
 )
@@ -26,7 +24,7 @@ func NewJobMatch() *JobMatch {
 	now := utils.GetCurrTimeStamp()
 
 	return &JobMatch{
-		ID:        uuid.NewString(),
+		ID:        utils.GenerateUUID(),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}

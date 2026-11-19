@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
@@ -41,7 +39,7 @@ func NewChannelAccount() *ChannelAccount {
 	now := utils.GetCurrTimeStamp()
 
 	return &ChannelAccount{
-		ID:          uuid.NewString(),
+		ID:          utils.GenerateUUID(),
 		ChannelType: modelHelpers.ChannelTypeEmail,
 		Status:      modelHelpers.ChannelAccountStatusUnverified,
 		DailyLimit:  config.GetMaxDailyEmailsPerSender(),

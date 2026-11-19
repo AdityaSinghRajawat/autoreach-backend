@@ -4,22 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
-
-func BuildKey(parts ...string) string {
-	segments := make([]string, 0, len(parts)+1)
-	segments = append(segments, config.GetKeyPrefix())
-	segments = append(segments, parts...)
-
-	return strings.Join(segments, config.GetKeyDelimiter())
-}
 
 var takeSeatScriptI = redis.NewScript(`
 local now = tonumber(ARGV[1])
@@ -44,64 +34,114 @@ func NewRedisUtil(client *redis.Client) (*RedisUtil, error) {
 	return &RedisUtil{client: client}, nil
 }
 
-// Never released, so the claim covers the whole slot after the work finishes.
-func (r *RedisUtil) ClaimSlot(ctx context.Context, name string, ttl time.Duration) (bool, error) {
-	claimed, err := r.client.SetNX(ctx, BuildKey(config.GetLockNamespace(), name), uuid.NewString(), ttl).
-		Result()
-	if err != nil {
-		return false, fmt.Errorf("claim slot %s: %w", name, err)
-	}
-
-	return claimed, nil
-}
-
-func (r *RedisUtil) IncrementDaily(
+func (r *RedisUtil) SetKey(
 	ctx context.Context,
-	namespace, name string,
-	amount int64,
-) (int64, error) {
-	key := BuildKey(namespace, name, GetCurrTimeStamp().Format(time.DateOnly))
-
-	pipeline := r.client.TxPipeline()
-	counter := pipeline.IncrBy(ctx, key, amount)
-	pipeline.Expire(ctx, key, config.GetDailyCounterTTL())
-
-	if _, err := pipeline.Exec(ctx); err != nil {
-		return 0, fmt.Errorf("increment daily counter %s: %w", name, err)
+	key string,
+	value any,
+	expiration time.Duration,
+) error {
+	if err := r.client.Set(ctx, key, value, expiration).Err(); err != nil {
+		return fmt.Errorf("set key %s: %w", key, err)
 	}
 
-	return counter.Val(), nil
+	return nil
 }
 
-func (r *RedisUtil) GetDaily(ctx context.Context, namespace, name string) (int64, error) {
-	value, err := r.client.Get(ctx, BuildKey(namespace, name, GetCurrTimeStamp().Format(time.DateOnly))).
-		Int64()
+func (r *RedisUtil) SetIfNotExists(
+	ctx context.Context,
+	key string,
+	value any,
+	expiration time.Duration,
+) (bool, error) {
+	created, err := r.client.SetNX(ctx, key, value, expiration).Result()
+	if err != nil {
+		return false, fmt.Errorf("set key %s if not exists: %w", key, err)
+	}
+
+	return created, nil
+}
+
+// A missing key reads as an empty string.
+func (r *RedisUtil) GetKey(ctx context.Context, key string) (string, error) {
+	value, err := r.client.Get(ctx, key).Result()
 	if errors.Is(err, redis.Nil) {
-		return 0, nil
+		return "", nil
 	}
 
 	if err != nil {
-		return 0, fmt.Errorf("read daily counter %s: %w", name, err)
+		return "", fmt.Errorf("get key %s: %w", key, err)
 	}
 
 	return value, nil
 }
 
+// A missing key reads as 0.
+func (r *RedisUtil) GetInt(ctx context.Context, key string) (int64, error) {
+	value, err := r.client.Get(ctx, key).Int64()
+	if errors.Is(err, redis.Nil) {
+		return 0, nil
+	}
+
+	if err != nil {
+		return 0, fmt.Errorf("get integer key %s: %w", key, err)
+	}
+
+	return value, nil
+}
+
+// A missing key, or one that never expires, has no time left.
+func (r *RedisUtil) GetTTL(ctx context.Context, key string) (time.Duration, error) {
+	left, err := r.client.PTTL(ctx, key).Result()
+	if err != nil {
+		return 0, fmt.Errorf("get ttl of key %s: %w", key, err)
+	}
+
+	return max(left, 0), nil
+}
+
+func (r *RedisUtil) DeleteKey(ctx context.Context, key string) error {
+	if err := r.client.Del(ctx, key).Err(); err != nil {
+		return fmt.Errorf("delete key %s: %w", key, err)
+	}
+
+	return nil
+}
+
+// The expiry is set in the same transaction, so a counter never outlives its window.
+func (r *RedisUtil) IncrementKey(
+	ctx context.Context,
+	key string,
+	amount int64,
+	expiration time.Duration,
+) (int64, error) {
+	pipeline := r.client.TxPipeline()
+	counter := pipeline.IncrBy(ctx, key, amount)
+
+	if expiration > 0 {
+		pipeline.Expire(ctx, key, expiration)
+	}
+
+	if _, err := pipeline.Exec(ctx); err != nil {
+		return 0, fmt.Errorf("increment key %s: %w", key, err)
+	}
+
+	return counter.Val(), nil
+}
+
 // Seats expire on their own, so a crashed process cannot keep one.
 func (r *RedisUtil) TakeSeat(
 	ctx context.Context,
-	name string,
+	key string,
 	limit int,
 	ttl time.Duration,
 ) (bool, func(), error) {
-	key := BuildKey(config.GetSeatNamespace(), name)
-	seat := uuid.NewString()
+	seat := GenerateUUID()
 	now := GetCurrTimeStamp()
 
 	taken, err := takeSeatScriptI.Run(ctx, r.client, []string{key},
 		now.UnixMilli(), limit, now.Add(ttl).UnixMilli(), seat, ttl.Milliseconds()).Int()
 	if err != nil {
-		return false, nil, fmt.Errorf("take seat %s: %w", name, err)
+		return false, nil, fmt.Errorf("take seat %s: %w", key, err)
 	}
 
 	if taken == 0 {

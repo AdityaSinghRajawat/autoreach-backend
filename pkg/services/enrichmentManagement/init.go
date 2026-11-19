@@ -1,7 +1,6 @@
 package enrichmentManagement
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
@@ -15,10 +14,6 @@ import (
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 )
 
-type CreditCounter interface {
-	IncrementDaily(ctx context.Context, namespace, name string, amount int64) (int64, error)
-}
-
 type EnrichmentServiceDependencies struct {
 	JobPostingRepo        *jobRepo.JobPostingRepo
 	JobMatchRepo          *matchingRepo.JobMatchRepo
@@ -28,7 +23,7 @@ type EnrichmentServiceDependencies struct {
 	TransactionManager    db.TransactionManager
 	WorkerClient          workerConfigs.IWorkerClient
 	RateLimiter           sharedTypes.Limiter
-	CreditCounter         CreditCounter
+	RedisUtil             *utils.RedisUtil
 	EmailVerifier         *utils.EmailVerifier
 	Providers             []providers.Provider
 }
@@ -42,7 +37,7 @@ type EnrichmentService struct {
 	transactionManager    db.TransactionManager
 	workerClient          workerConfigs.IWorkerClient
 	rateLimiter           sharedTypes.Limiter
-	creditCounter         CreditCounter
+	redisUtil             *utils.RedisUtil
 	emailVerifier         *utils.EmailVerifier
 	providers             []providers.Provider
 	circuitBreakers       map[string]*utils.CircuitBreaker
@@ -57,7 +52,7 @@ func NewEnrichmentService(dependencies EnrichmentServiceDependencies) (*Enrichme
 		dependencies.TransactionManager == nil ||
 		dependencies.WorkerClient == nil ||
 		dependencies.RateLimiter == nil ||
-		dependencies.CreditCounter == nil ||
+		dependencies.RedisUtil == nil ||
 		dependencies.EmailVerifier == nil {
 		return nil, fmt.Errorf("new enrichment service: %w", config.ErrMissingDependency)
 	}
@@ -76,7 +71,7 @@ func NewEnrichmentService(dependencies EnrichmentServiceDependencies) (*Enrichme
 		transactionManager:    dependencies.TransactionManager,
 		workerClient:          dependencies.WorkerClient,
 		rateLimiter:           dependencies.RateLimiter,
-		creditCounter:         dependencies.CreditCounter,
+		redisUtil:             dependencies.RedisUtil,
 		emailVerifier:         dependencies.EmailVerifier,
 		providers:             dependencies.Providers,
 		circuitBreakers:       circuitBreakers,

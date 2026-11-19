@@ -11,6 +11,7 @@ import (
 	matchingTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/matchingManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const resumeColumns = `id, candidate_id, file_name, storage_key, content_type, size_bytes,
@@ -74,7 +75,7 @@ func (r *ResumeRepo) FindByID(
 		SELECT `+resumeColumns+` FROM `+r.resumesTable+` WHERE id = $1 LIMIT 1
 	`, resumeID)
 
-	return db.FindOne(row, scanResume, "find resume")
+	return utils.ScanOptionalRow(row, scanResume, "find resume")
 }
 
 func (r *ResumeRepo) ListByCandidate(
@@ -138,7 +139,7 @@ func (r *ResumeRepo) UpdateEmbedding(
 		SET embedding = $2::vector, embedding_model = $3, parse_status = `+sqlResumeStatusEmbedded+`,
 			failure_reason = NULL, updated_at = $4
 		WHERE id = $1
-	`, resumeID, db.FormatVector(embedding), model, embeddedAt)
+	`, resumeID, utils.FormatVectorLiteral(embedding), model, embeddedAt)
 	if err != nil {
 		return fmt.Errorf("update resume embedding: %w", err)
 	}
@@ -196,7 +197,7 @@ func (r *ResumeRepo) FindEmbedding(
 		LIMIT 1
 	`, resumeID)
 
-	return db.FindOne(row, scanResumeEmbedding, "find resume embedding")
+	return utils.ScanOptionalRow(row, scanResumeEmbedding, "find resume embedding")
 }
 
 func (r *ResumeRepo) ListActiveSimilaritiesToJob(
@@ -227,7 +228,7 @@ func (r *ResumeRepo) ListActiveSimilaritiesToJob(
 	return similarities, nil
 }
 
-func scanResume(row db.RowScanner) (*candidateModel.Resume, error) {
+func scanResume(row utils.RowScanner) (*candidateModel.Resume, error) {
 	resume := candidateModel.Resume{}
 
 	var parsedMetadata []byte
@@ -247,7 +248,7 @@ func scanResume(row db.RowScanner) (*candidateModel.Resume, error) {
 	return &resume, nil
 }
 
-func scanResumeEmbedding(row db.RowScanner) (*matchingTypes.ResumeEmbedding, error) {
+func scanResumeEmbedding(row utils.RowScanner) (*matchingTypes.ResumeEmbedding, error) {
 	embedding := matchingTypes.ResumeEmbedding{}
 
 	err := row.Scan(

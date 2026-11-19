@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	matchingTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/matchingManagement"
 	aiIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/ai"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
@@ -133,7 +134,7 @@ func truncate(text string, maxChars int) string {
 }
 
 func printReport(good, bad []float64) {
-	low, high := utils.SuggestCalibration(good, bad)
+	low, high := matchingTypes.SuggestCalibration(good, bad)
 
 	fmt.Println()
 	fmt.Println()

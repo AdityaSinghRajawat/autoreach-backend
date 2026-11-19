@@ -11,6 +11,7 @@ import (
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const (
@@ -111,7 +112,7 @@ func (r *CompanyContactRepo) FindByID(
 		LIMIT 1
 	`, contactID)
 
-	return db.FindOne(row, scanCompanyContact, "find company contact")
+	return utils.ScanOptionalRow(row, scanCompanyContact, "find company contact")
 }
 
 func (r *CompanyContactRepo) ListByIDs(
@@ -142,7 +143,7 @@ func (r *CompanyContactRepo) FindExisting(
 		contact.CompanyDomain, contact.WorkEmail,
 	)
 
-	return db.FindOne(row, scanCompanyContact, "find existing company contact")
+	return utils.ScanOptionalRow(row, scanCompanyContact, "find existing company contact")
 }
 
 func (r *CompanyContactRepo) ListFreshByCompany(
@@ -253,7 +254,7 @@ func (r *CompanyContactRepo) list(
 	return contacts, nil
 }
 
-func scanCompanyContact(row db.RowScanner) (*enrichmentModel.CompanyContact, error) {
+func scanCompanyContact(row utils.RowScanner) (*enrichmentModel.CompanyContact, error) {
 	contact := enrichmentModel.CompanyContact{}
 
 	var metadata []byte

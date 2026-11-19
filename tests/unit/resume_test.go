@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -105,7 +104,7 @@ func TestFileNamesAreReducedToASafeBaseName(t *testing.T) {
 func TestUploadResumeRequestConvertsToAResumeEntity(t *testing.T) {
 	setup.Config(t)
 
-	candidateID := uuid.NewString()
+	candidateID := utils.GenerateUUID()
 	content := helpers.BuildPDF(t, "Alex Candidate")
 	request := candidateTypes.UploadResumeRequest{}
 	request.SetFile("../secret/Alex Resume.pdf", content)
@@ -167,8 +166,8 @@ func TestMatchScoreCalibrationAndStorageThreshold(t *testing.T) {
 	assert.InDelta(t, 0, config.CalibrateMatchScore(-0.2), 0.0001)
 	assert.InDelta(t, 1, config.CalibrateMatchScore(1.3), 0.0001)
 
-	match := matchingTypes.JobSimilarity{JobID: uuid.NewString(), Similarity: 1.0000001}.
-		ToJobMatchModel(uuid.NewString(), uuid.NewString())
+	match := matchingTypes.JobSimilarity{JobID: utils.GenerateUUID(), Similarity: 1.0000001}.
+		ToJobMatchModel(utils.GenerateUUID(), utils.GenerateUUID())
 	assert.InDelta(t, 1, match.RawSimilarity, 0.0001)
 	require.NoError(t, match.Validate(), "floating point overshoot must not fail validation")
 
@@ -196,7 +195,7 @@ func TestPercentileCosineAndCalibrationSuggestion(t *testing.T) {
 
 	good := []float64{0.50, 0.55, 0.60, 0.65, 0.70}
 	bad := []float64{0.20, 0.25, 0.30, 0.35, 0.40}
-	low, high := utils.SuggestCalibration(good, bad)
+	low, high := matchingTypes.SuggestCalibration(good, bad)
 
 	assert.InDelta(t, 0.30, low, 0.0001, "the median bad pair maps to zero")
 	assert.InDelta(
@@ -207,7 +206,7 @@ func TestPercentileCosineAndCalibrationSuggestion(t *testing.T) {
 		"the lower-quartile good pair maps to 0.80",
 	)
 
-	low, high = utils.SuggestCalibration(bad, good)
+	low, high = matchingTypes.SuggestCalibration(bad, good)
 	assert.InDelta(t, 0, low, 0.0001, "labels that do not separate leave the score unchanged")
 	assert.InDelta(t, 1, high, 0.0001)
 }

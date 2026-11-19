@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -33,7 +31,7 @@ func NewJobSource() *JobSource {
 	now := utils.GetCurrTimeStamp()
 
 	return &JobSource{
-		ID:        uuid.NewString(),
+		ID:        utils.GenerateUUID(),
 		Region:    modelHelpers.JobSourceRegionGlobal,
 		IsActive:  true,
 		CreatedAt: now,

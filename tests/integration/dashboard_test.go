@@ -12,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	dashboardTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/dashboardManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 )
 
@@ -47,8 +47,8 @@ func (f jobFixture) seedDashboard(t *testing.T) dashboardSeed {
 		require.NoError(t, err)
 	}
 
-	resumeID, contactOne, contactTwo, contactThree := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
-	emailOne, emailTwo, invite, applicationID := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+	resumeID, contactOne, contactTwo, contactThree := utils.GenerateUUID(), utils.GenerateUUID(), utils.GenerateUUID(), utils.GenerateUUID()
+	emailOne, emailTwo, invite, applicationID := utils.GenerateUUID(), utils.GenerateUUID(), utils.GenerateUUID(), utils.GenerateUUID()
 
 	exec(
 		`INSERT INTO candidate_resumes (id, candidate_id, file_name, storage_key, content_type, size_bytes,
@@ -371,8 +371,17 @@ func TestACandidateCannotHoldMoreThanTheAllowedNumberOfStreams(t *testing.T) {
 	fixture := newJobFixture(t)
 
 	for range config.GetActivityStreamsPerCandidate() {
-		seated, _, err := fixture.deps.RedisUtil.TakeSeat(context.Background(), fixture.candidateID,
-			config.GetActivityStreamsPerCandidate(), time.Minute)
+		seated, _, err := fixture.deps.RedisUtil.TakeSeat(
+			context.Background(),
+			utils.BuildKey(
+				config.GetKeyDelimiter(),
+				config.GetKeyPrefix(),
+				config.GetSeatNamespace(),
+				fixture.candidateID,
+			),
+			config.GetActivityStreamsPerCandidate(),
+			time.Minute,
+		)
 		require.NoError(t, err)
 		require.True(t, seated)
 	}

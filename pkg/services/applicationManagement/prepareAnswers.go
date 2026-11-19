@@ -6,6 +6,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	applicationTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/applicationManagement"
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 func prepareAnswers(
@@ -80,7 +81,7 @@ func knownFieldValue(
 	candidate *candidateModel.Candidate,
 	hasResume bool,
 ) string {
-	firstName, lastName := splitName(candidate.FullName)
+	firstName, lastName := utils.SplitFullName(candidate.FullName)
 
 	switch name {
 	case "first_name":
@@ -142,13 +143,4 @@ func linkedinURL(
 	}
 
 	return *candidate.LinkedinProfileURL
-}
-
-func splitName(fullName string) (string, string) {
-	fields := strings.Fields(fullName)
-	if len(fields) == 0 {
-		return "", ""
-	}
-
-	return fields[0], strings.Join(fields[1:], " ")
 }

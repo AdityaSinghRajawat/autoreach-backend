@@ -12,6 +12,7 @@ import (
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	matchingModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/matchingManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type JobMatchRepo struct {
@@ -39,7 +40,7 @@ func (r *JobMatchRepo) UpsertMany(ctx context.Context, matches []*matchingModel.
 		return nil
 	}
 
-	order := db.LockOrder(matches, func(match *matchingModel.JobMatch) string {
+	order := utils.SortedIndexesByKey(matches, func(match *matchingModel.JobMatch) string {
 		return match.CandidateID + match.JobID
 	})
 

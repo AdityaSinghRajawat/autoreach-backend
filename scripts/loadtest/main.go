@@ -18,8 +18,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -298,7 +296,7 @@ func runApply(ctx context.Context, settings options) error {
 }
 
 func register(ctx context.Context, baseURL string) (session, error) {
-	email := "loadtest-" + uuid.NewString()[:8] + "@example.com"
+	email := "loadtest-" + utils.GenerateUUID()[:8] + "@example.com"
 	body, _ := json.Marshal(
 		map[string]string{"email": email, "password": loadtestPassword, "fullName": "Load Test"},
 	)

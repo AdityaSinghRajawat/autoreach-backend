@@ -12,8 +12,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 )
@@ -33,7 +31,7 @@ func NewEmailMessageID(fromAddress string) string {
 		domain = "localhost"
 	}
 
-	return "<" + uuid.NewString() + "@" + domain + ">"
+	return "<" + GenerateUUID() + "@" + domain + ">"
 }
 
 // Plain text by default: it keeps cold email out of spam folders.

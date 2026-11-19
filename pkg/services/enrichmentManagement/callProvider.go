@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
+	enrichmentTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/enrichmentManagement"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
@@ -55,11 +56,11 @@ func (s *EnrichmentService) reserveCredits(
 		return true
 	}
 
-	used, err := s.creditCounter.IncrementDaily(
+	used, err := s.redisUtil.IncrementKey(
 		ctx,
-		config.GetEnrichmentCreditNamespace(),
-		code,
+		enrichmentTypes.DailyCreditsKey(code),
 		int64(credits),
+		config.GetDailyCounterTTL(),
 	)
 	if err != nil {
 		utils.LogWarn(ctx, "credit budget unavailable, allowing call", "provider", code)

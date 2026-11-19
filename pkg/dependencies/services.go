@@ -95,7 +95,7 @@ func (d *Dependencies) initServices() error {
 			TransactionManager:    d.TransactionManager,
 			WorkerClient:          d.WorkerClient,
 			RateLimiter:           d.RateLimiter,
-			CreditCounter:         d.RedisUtil,
+			RedisUtil:             d.RedisUtil,
 			EmailVerifier:         d.EmailVerifier,
 			Providers:             d.EnrichmentProviders,
 		},
@@ -171,7 +171,7 @@ func (d *Dependencies) initServices() error {
 
 	admin, err := adminService.NewAdminService(adminService.AdminServiceDependencies{
 		WorkerInspector: d.WorkerInspector,
-		CreditReader:    d.RedisUtil,
+		RedisUtil:       d.RedisUtil,
 		MetricsRepo:     d.Repositories.Metrics,
 	})
 	if err != nil {

@@ -31,7 +31,14 @@ func (s *DashboardService) StreamActivity(
 		cursor = parsed
 	}
 
-	seated, release, err := s.redisUtil.TakeSeat(ctx, candidateID,
+	seatKey := utils.BuildKey(
+		config.GetKeyDelimiter(),
+		config.GetKeyPrefix(),
+		config.GetSeatNamespace(),
+		candidateID,
+	)
+
+	seated, release, err := s.redisUtil.TakeSeat(ctx, seatKey,
 		config.GetActivityStreamsPerCandidate(),
 		config.GetActivityStreamMaxDuration()+config.GetActivityStreamHeartbeat())
 	if err != nil {

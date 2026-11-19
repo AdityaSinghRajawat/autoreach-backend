@@ -10,6 +10,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const jobSourceColumns = `id, board_type, board_token, search_query, search_location, region, company_name,
@@ -76,7 +77,7 @@ func (r *JobSourceRepo) FindByID(
 		SELECT `+jobSourceColumns+` FROM `+r.jobSourcesTable+` WHERE id = $1
 	`, sourceID)
 
-	return db.FindOne(row, scanJobSource, "find job source")
+	return utils.ScanOptionalRow(row, scanJobSource, "find job source")
 }
 
 func (r *JobSourceRepo) List(ctx context.Context) ([]*jobModel.JobSource, error) {
@@ -190,7 +191,7 @@ func (r *JobSourceRepo) CloseUnseen(
 	return int(tag.RowsAffected()), nil
 }
 
-func scanJobSource(row db.RowScanner) (*jobModel.JobSource, error) {
+func scanJobSource(row utils.RowScanner) (*jobModel.JobSource, error) {
 	source := jobModel.JobSource{}
 
 	err := row.Scan(

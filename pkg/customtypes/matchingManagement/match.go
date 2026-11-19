@@ -6,7 +6,20 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	sharedTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/shared"
 	matchingModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/matchingManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
+
+// Picks the similarity range that maps a median bad pair to 0 and a lower-quartile good pair to the target score.
+func SuggestCalibration(goodSimilarities, badSimilarities []float64) (low, high float64) {
+	low = utils.Percentile(badSimilarities, config.GetCalibrationBadPercentile())
+	anchor := utils.Percentile(goodSimilarities, config.GetCalibrationGoodPercentile())
+
+	if anchor <= low {
+		return 0, 1
+	}
+
+	return low, low + (anchor-low)/config.GetCalibrationTargetScore()
+}
 
 type ListMatchedJobsParams struct {
 	sharedTypes.PageParams

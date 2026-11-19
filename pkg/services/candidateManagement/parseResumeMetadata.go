@@ -46,7 +46,7 @@ func (s *CandidateService) extractResumeProfile(
 			{Role: config.GetChatRoleSystem(), Content: config.GetResumeParsingInstructions()},
 			{
 				Role:    config.GetChatRoleUser(),
-				Content: truncateRunes(text, config.GetResumeParsingMaxInputChars()),
+				Content: utils.TruncateRunes(text, config.GetResumeParsingMaxInputChars()),
 			},
 		},
 		ResponseSchema: &sharedTypes.ChatResponseSchema{
@@ -68,12 +68,16 @@ func (s *CandidateService) extractResumeProfile(
 
 func normalizeResumeProfile(profile candidateTypes.ResumeProfile) candidateTypes.ResumeProfile {
 	normalized := candidateTypes.ResumeProfile{
-		Skills: uniqueValues(
+		Skills: utils.UniqueTrimmedValues(
 			profile.Skills,
 			strings.ToLower,
 			config.GetResumeParsingMaxSkills(),
 		),
-		JobTitles: uniqueValues(profile.JobTitles, nil, config.GetResumeParsingMaxJobTitles()),
+		JobTitles: utils.UniqueTrimmedValues(
+			profile.JobTitles,
+			nil,
+			config.GetResumeParsingMaxJobTitles(),
+		),
 		Education: make([]candidateTypes.ResumeEducation, 0, len(profile.Education)),
 	}
 
@@ -99,23 +103,6 @@ func normalizeResumeProfile(profile candidateTypes.ResumeProfile) candidateTypes
 	}
 
 	return normalized
-}
-
-func uniqueValues(values []string, transform func(string) string, limit int) []string {
-	unique := make([]string, 0, min(len(values), limit))
-
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if transform != nil {
-			value = transform(value)
-		}
-
-		if value != "" && !slices.Contains(unique, value) && len(unique) < limit {
-			unique = append(unique, value)
-		}
-	}
-
-	return unique
 }
 
 func matchDictionarySkills(text string) []string {

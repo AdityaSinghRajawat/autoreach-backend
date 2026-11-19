@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
@@ -24,7 +22,7 @@ type CompanyContact struct {
 	WorkEmail               *string                              `db:"work_email"                json:"workEmail"               validate:"omitnil,email,max=255"`
 	PhoneNumber             *string                              `db:"phone_number"              json:"phoneNumber"             validate:"omitnil,max=50"`
 	LinkedinURL             *string                              `db:"linkedin_url"              json:"linkedinUrl"             validate:"omitnil,max=500,validate_linkedin_url"`
-	EnrichmentProvider      string                               `db:"enrichment_provider"       json:"enrichmentProvider"      validate:"required,oneof=APOLLO SIGNALHIRE CONTACTOUT"`
+	EnrichmentProvider      string                               `db:"enrichment_provider"       json:"enrichmentProvider"      validate:"required,oneof=APOLLO SIGNALHIRE CONTACTOUT HUNTER"`
 	ProviderPersonID        *string                              `db:"provider_person_id"        json:"-"                       validate:"omitnil,max=255"`
 	IsEmailVerified         bool                                 `db:"is_email_verified"         json:"isEmailVerified"`
 	EmailVerificationStatus modelHelpers.EmailVerificationStatus `db:"email_verification_status" json:"emailVerificationStatus" validate:"required,oneof=UNVERIFIED VERIFIED RISKY INVALID"`
@@ -41,7 +39,7 @@ func NewCompanyContact() *CompanyContact {
 	now := utils.GetCurrTimeStamp()
 
 	return &CompanyContact{
-		ID:                      uuid.NewString(),
+		ID:                      utils.GenerateUUID(),
 		EmailVerificationStatus: modelHelpers.EmailStatusUnverified,
 		EnrichmentMetadata:      json.RawMessage(config.GetEmptyJSONObject()),
 		CreatedAt:               now,

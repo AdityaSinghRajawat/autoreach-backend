@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	authTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/authManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/setup"
 )
@@ -110,7 +110,7 @@ func TestTrackingAndUnsubscribeLinksAreRateLimitedPerIP(t *testing.T) {
 
 	for _, path := range []string{
 		config.GetTrackingOpenPath() + "unknown-token",
-		config.GetUnsubscribePath() + uuid.NewString(),
+		config.GetUnsubscribePath() + utils.GenerateUUID(),
 	} {
 		exchange := helpers.Do(t, router, http.MethodGet, path, nil, nil)
 		assert.Contains(

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
 )
@@ -26,7 +24,7 @@ func NewAPIClient() *APIClient {
 	now := utils.GetCurrTimeStamp()
 
 	return &APIClient{
-		ID:        uuid.NewString(),
+		ID:        utils.GenerateUUID(),
 		Scopes:    []string{},
 		CreatedAt: now,
 		UpdatedAt: now,

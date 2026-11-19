@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
-	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
@@ -402,7 +401,7 @@ func randomVector(base []float32, spread float32) string {
 		}
 	}
 
-	return db.FormatVector(vector)
+	return utils.FormatVectorLiteral(vector)
 }
 
 func printReport(settings options, result report) {

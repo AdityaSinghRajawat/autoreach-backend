@@ -13,6 +13,7 @@ import (
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	matchingModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/matchingManagement"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 // UserDataExportRepo reads everything a user's candidate profile owns, each table joined through
@@ -118,7 +119,7 @@ func listOwnedByUser[T any](
 	userID string,
 ) ([]*T, error) {
 	rows, err := r.postgres.Executor(ctx).Query(ctx, `
-		SELECT `+db.Columns[T]("owned")+`
+		SELECT `+utils.BuildSelectColumns[T]("owned")+`
 		FROM `+config.GetTableName(table)+` AS owned
 		JOIN `+r.candidatesTable+` AS candidate ON candidate.id = owned.candidate_id
 		WHERE candidate.user_id = $1

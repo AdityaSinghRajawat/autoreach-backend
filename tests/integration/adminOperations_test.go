@@ -10,16 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	adminTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/adminManagement"
+	enrichmentTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/enrichmentManagement"
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/tests/helpers"
 	workerConfigs "github.com/AdityaSinghRajawat/autoreach-backend/worker/configs"
 	workerCustomTypes "github.com/AdityaSinghRajawat/autoreach-backend/worker/customtypes"
@@ -45,7 +46,7 @@ func TestDeadTaskCanBeListedAndRetriedFromTheAPI(t *testing.T) {
 	fixture := newJobFixture(t)
 	token := loginAdmin(t, fixture.router)
 	inspector := testInspector(t)
-	sourceID := uuid.NewString()
+	sourceID := utils.GenerateUUID()
 
 	published, err := fixture.deps.WorkerClient.Publish(
 		context.Background(),
@@ -133,11 +134,11 @@ func TestProviderStatusReportsCreditsAndDeliverability(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err := fixture.deps.RedisUtil.IncrementDaily(
+	_, err := fixture.deps.RedisUtil.IncrementKey(
 		ctx,
-		config.GetEnrichmentCreditNamespace(),
-		config.ProviderApollo,
+		enrichmentTypes.DailyCreditsKey(config.ProviderApollo),
 		7,
+		config.GetDailyCounterTTL(),
 	)
 	require.NoError(t, err)
 	_, err = fixture.deps.Postgres.GetPool().Exec(ctx,
@@ -455,7 +456,7 @@ func TestPublishingTheSameWorkTwiceQueuesItOnce(t *testing.T) {
 
 	params := workerConfigs.PublishParams{
 		TaskID:  workerConfigs.TaskPollJobSource,
-		Payload: workerCustomTypes.PollJobSourcePayload{SourceID: uuid.NewString()},
+		Payload: workerCustomTypes.PollJobSourcePayload{SourceID: utils.GenerateUUID()},
 	}
 
 	first, err := fixture.deps.WorkerClient.Publish(context.Background(), params)

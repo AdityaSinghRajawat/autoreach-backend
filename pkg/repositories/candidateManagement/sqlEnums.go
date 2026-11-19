@@ -1,13 +1,13 @@
 package candidateManagement
 
 import (
-	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 var (
-	sqlJobStatusActive      = db.Enum(modelHelpers.JobStatusActive)
-	sqlResumeStatusEmbedded = db.Enum(modelHelpers.ResumeStatusEmbedded)
-	sqlResumeStatusParsed   = db.Enum(modelHelpers.ResumeStatusParsed)
-	sqlResumeStatusUploaded = db.Enum(modelHelpers.ResumeStatusUploaded)
+	sqlJobStatusActive      = utils.BuildSQLEnumList(modelHelpers.JobStatusActive)
+	sqlResumeStatusEmbedded = utils.BuildSQLEnumList(modelHelpers.ResumeStatusEmbedded)
+	sqlResumeStatusParsed   = utils.BuildSQLEnumList(modelHelpers.ResumeStatusParsed)
+	sqlResumeStatusUploaded = utils.BuildSQLEnumList(modelHelpers.ResumeStatusUploaded)
 )

@@ -4,8 +4,23 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 )
+
+// Empty parts are skipped, so an optional segment never leaves a doubled delimiter.
+func BuildKey(delimiter string, parts ...string) string {
+	kept := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		if part != "" {
+			kept = append(kept, part)
+		}
+	}
+
+	return strings.Join(kept, delimiter)
+}
 
 func ValidateStorageKey(key string) error {
 	if key == "" ||
@@ -21,4 +36,8 @@ func ValidateStorageKey(key string) error {
 	}
 
 	return nil
+}
+
+func GenerateUUID() string {
+	return uuid.NewString()
 }

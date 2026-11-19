@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
@@ -31,7 +29,7 @@ func NewCandidate() *Candidate {
 	now := utils.GetCurrTimeStamp()
 
 	return &Candidate{
-		ID:                  uuid.NewString(),
+		ID:                  utils.GenerateUUID(),
 		MinMatchScore:       config.GetDefaultMinMatchScore(),
 		AutoApplyEnabled:    false,
 		AutoOutreachEnabled: false,

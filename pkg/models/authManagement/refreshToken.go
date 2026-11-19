@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/validations"
 )
@@ -24,8 +22,8 @@ func NewRefreshToken(lifetime time.Duration) *RefreshToken {
 	now := utils.GetCurrTimeStamp()
 
 	return &RefreshToken{
-		ID:        uuid.NewString(),
-		FamilyID:  uuid.NewString(),
+		ID:        utils.GenerateUUID(),
+		FamilyID:  utils.GenerateUUID(),
 		ExpiresAt: now.Add(lifetime),
 		CreatedAt: now,
 	}

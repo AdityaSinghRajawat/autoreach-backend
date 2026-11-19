@@ -8,6 +8,7 @@ import (
 	candidateModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/candidateManagement"
 	enrichmentModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/enrichmentManagement"
 	jobModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/jobManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 type MessageContext struct {
@@ -20,13 +21,13 @@ type MessageContext struct {
 func (c MessageContext) PlaceholderValues() map[string]string {
 	values := map[string]string{
 		config.PlaceholderCandidateName:      c.Candidate.FullName,
-		config.PlaceholderCandidateFirstName: firstName(c.Candidate.FullName),
+		config.PlaceholderCandidateFirstName: utils.GetFirstName(c.Candidate.FullName),
 		config.PlaceholderContactName:        c.Contact.FullName,
-		config.PlaceholderContactFirstName:   firstName(c.Contact.FullName),
+		config.PlaceholderContactFirstName:   utils.GetFirstName(c.Contact.FullName),
 		config.PlaceholderContactTitle:       c.Contact.Title,
 		config.PlaceholderCompanyName:        c.Job.CompanyName,
 		config.PlaceholderJobTitle:           c.Job.JobTitle,
-		config.PlaceholderMatchingSkills:     joinSkills(c.matchingSkills()),
+		config.PlaceholderMatchingSkills:     utils.JoinWithAnd(c.matchingSkills()),
 	}
 
 	if c.Candidate.LinkedinProfileURL != nil {
@@ -52,24 +53,4 @@ func (c MessageContext) matchingSkills() []string {
 	}
 
 	return matching
-}
-
-func firstName(fullName string) string {
-	fields := strings.Fields(fullName)
-	if len(fields) == 0 {
-		return ""
-	}
-
-	return fields[0]
-}
-
-func joinSkills(skills []string) string {
-	switch len(skills) {
-	case 0:
-		return ""
-	case 1:
-		return skills[0]
-	default:
-		return strings.Join(skills[:len(skills)-1], ", ") + " and " + skills[len(skills)-1]
-	}
 }

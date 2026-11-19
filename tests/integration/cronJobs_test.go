@@ -10,8 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/cronJobs"
 	modelHelpers "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/helpers"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 func (f jobFixture) cronManager(t *testing.T) *cronJobs.CronManager {
@@ -33,18 +35,27 @@ func (f jobFixture) cronManager(t *testing.T) *cronJobs.CronManager {
 func TestACronClaimHoldsForItsWholeSlotOnEveryReplica(t *testing.T) {
 	deps := newJobFixture(t).deps
 	ctx := context.Background()
+	slotKey := utils.BuildKey(
+		config.GetKeyDelimiter(),
+		config.GetKeyPrefix(),
+		config.GetLockNamespace(),
+		"cron:test",
+	)
+	claim := func() (bool, error) {
+		return deps.RedisUtil.SetIfNotExists(ctx, slotKey, "claimed", 300*time.Millisecond)
+	}
 
-	first, err := deps.RedisUtil.ClaimSlot(ctx, "cron:test", 300*time.Millisecond)
+	first, err := claim()
 	require.NoError(t, err)
 	assert.True(t, first)
 
-	second, err := deps.RedisUtil.ClaimSlot(ctx, "cron:test", 300*time.Millisecond)
+	second, err := claim()
 	require.NoError(t, err)
 	assert.False(t, second, "another replica's tick inside the slot skips the job")
 
 	time.Sleep(350 * time.Millisecond)
 
-	next, err := deps.RedisUtil.ClaimSlot(ctx, "cron:test", 300*time.Millisecond)
+	next, err := claim()
 	require.NoError(t, err)
 	assert.True(t, next, "the next slot can be claimed once this one expires")
 }

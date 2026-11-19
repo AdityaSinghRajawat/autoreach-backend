@@ -9,6 +9,7 @@ import (
 	"github.com/AdityaSinghRajawat/autoreach-backend/config"
 	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/db"
 	outreachModel "github.com/AdityaSinghRajawat/autoreach-backend/pkg/models/outreachManagement"
+	"github.com/AdityaSinghRajawat/autoreach-backend/pkg/utils"
 )
 
 const (
@@ -102,7 +103,7 @@ func (r *CampaignRepo) FindByCandidate(
 		SELECT `+campaignColumns+` FROM `+r.campaignsTable+` WHERE candidate_id = $1 AND id = $2
 	`, candidateID, campaignID)
 
-	return db.FindOne(row, scanCampaign, "find campaign")
+	return utils.ScanOptionalRow(row, scanCampaign, "find campaign")
 }
 
 func (r *CampaignRepo) ListByCandidate(
@@ -138,7 +139,7 @@ func (r *CampaignRepo) FindActive(
 		SELECT `+campaignColumns+` FROM `+r.campaignsTable+` WHERE candidate_id = $1 AND status = `+sqlCampaignStatusActive+`
 	`, candidateID)
 
-	return db.FindOne(row, scanCampaign, "find active campaign")
+	return utils.ScanOptionalRow(row, scanCampaign, "find active campaign")
 }
 
 func (r *CampaignRepo) ListSteps(
@@ -169,7 +170,7 @@ func (r *CampaignRepo) ListSteps(
 	return steps, nil
 }
 
-func scanCampaign(row db.RowScanner) (*outreachModel.Campaign, error) {
+func scanCampaign(row utils.RowScanner) (*outreachModel.Campaign, error) {
 	campaign := outreachModel.Campaign{}
 
 	err := row.Scan(
