@@ -485,11 +485,11 @@ func TestExhaustedCreditBudgetSkipsThePaidLookup(t *testing.T) {
 	fixture := newEnrichmentFixture(t)
 	policy, _ := config.GetEnrichmentProviderPolicy(config.ProviderApollo)
 
-	_, err := fixture.deps.RedisUtil.IncrementDaily(
+	_, err := fixture.deps.RedisUtil.IncrementKey(
 		context.Background(),
-		config.GetEnrichmentCreditNamespace(),
-		config.ProviderApollo,
+		enrichmentTypes.DailyCreditsKey(config.ProviderApollo),
 		int64(policy.DailyCredits),
+		config.GetDailyCounterTTL(),
 	)
 	require.NoError(t, err)
 
@@ -664,4 +664,77 @@ func TestMatchesAboveTheThresholdAreHandedToEnrichmentOnceAndOnlyWhenOutreachIsO
 	_, customErr = fixture.deps.Services.Matching.MatchResume(context.Background(), resume.ID)
 	require.Nil(t, customErr)
 	assert.Equal(t, []string{nearJobID}, fannedOut())
+}
+
+func TestHunterFindsDecisionMakersWithTheirEmailsWithoutAnyOtherLookup(t *testing.T) {
+	fixture := newEnrichmentFixture(t)
+	fixture.stub.Set(func(stub *helpers.EnrichmentStub) {
+		stub.HunterEmails = []map[string]any{
+			{
+				"value": "sarah@acme.com", "first_name": "Sarah", "last_name": "Li",
+				"position": "Engineering Manager", "linkedin": "sarah-li",
+				"verification": map[string]any{"status": "valid"},
+			},
+			{
+				"value": "omar@acme.com", "first_name": "Omar", "last_name": "Khan",
+				"position":     "Senior Technical Recruiter",
+				"verification": map[string]any{"status": "accept_all"},
+			},
+			{
+				"value":      "dana@acme.com",
+				"first_name": "Dana",
+				"last_name":  "P.",
+				"position":   "Director of Marketing",
+			},
+		}
+	})
+
+	fixture.deps.EnrichmentProviders = providers.NewProviderRegistry(
+		append([]config.ProviderPolicy{fixture.stub.HunterPolicy()}, fixture.stub.Policies()...),
+		config.GetSignalHireCallbackURL(),
+	)
+	require.NoError(t, fixture.deps.Wire())
+	fixture.router = routes.NewRoutes(fixture.deps)
+
+	result := fixture.enrich(t)
+
+	assert.Equal(t, 2, result.Saved)
+	assert.Zero(t, result.PendingAsync, "Hunter already returned the emails")
+	assert.Zero(
+		t,
+		fixture.stub.Calls("apollo.search"),
+		"a successful first discovery stops the search",
+	)
+	assert.Zero(t, fixture.stub.Calls("apollo.match"))
+	assert.Zero(t, fixture.stub.Calls("contactout.enrich"))
+	assert.Zero(t, fixture.stub.Calls("signalhire.request"))
+
+	queries := fixture.stub.HunterQueries()
+	require.Len(t, queries, 1)
+	assert.Equal(
+		t,
+		"3",
+		queries[0].Get("limit"),
+		"the provider's own cap applies, not the global search size",
+	)
+
+	reserved, err := fixture.deps.RedisUtil.GetInt(
+		context.Background(), enrichmentTypes.DailyCreditsKey(config.ProviderHunter),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), reserved, "the worst case is reserved before the search runs")
+
+	contacts := fixture.jobContacts(t)
+
+	sarah := contactByName(t, contacts, "Sarah Li")
+	require.NotNil(t, sarah.WorkEmail)
+	assert.Equal(t, "sarah@acme.com", *sarah.WorkEmail)
+	assert.Equal(t, config.ProviderHunter, sarah.EnrichmentProvider)
+	assert.True(t, sarah.IsEmailVerified)
+	require.NotNil(t, sarah.LinkedinURL)
+	assert.Equal(t, "https://www.linkedin.com/in/sarah-li", *sarah.LinkedinURL)
+
+	omar := contactByName(t, contacts, "Omar Khan")
+	require.NotNil(t, omar.WorkEmail)
+	assert.False(t, omar.IsEmailVerified)
 }

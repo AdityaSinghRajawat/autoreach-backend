@@ -71,6 +71,7 @@ type calibrationConstants struct {
 
 type validationConstants struct {
 	linkedinHost        string
+	linkedinProfilePath string
 	atsTypeFieldName    string
 	salaryMinFieldName  string
 	defaultIssue        string
@@ -81,6 +82,8 @@ type validationConstants struct {
 type vendorConstants struct {
 	apolloAPIKeyHeader       string
 	apolloVerifiedStatus     string
+	hunterAPIKeyHeader       string
+	hunterVerifiedStatus     string
 	contactOutTokenHeader    string
 	signalHireAPIKeyHeader   string
 	signalHireStatusSuccess  string
@@ -157,10 +160,11 @@ var calibrationConstI = calibrationConstants{
 }
 
 var validationConstI = validationConstants{
-	linkedinHost:       "linkedin.com",
-	atsTypeFieldName:   "ATSType",
-	salaryMinFieldName: "SalaryMin",
-	defaultIssue:       "is invalid",
+	linkedinHost:        "linkedin.com",
+	linkedinProfilePath: "https://www.linkedin.com/in/",
+	atsTypeFieldName:    "ATSType",
+	salaryMinFieldName:  "SalaryMin",
+	defaultIssue:        "is invalid",
 	issues: map[string]string{
 		"required":                   "is required",
 		"email":                      "must be a valid email address",
@@ -198,6 +202,8 @@ var validationConstI = validationConstants{
 var vendorConstI = vendorConstants{
 	apolloAPIKeyHeader:       "X-Api-Key",
 	apolloVerifiedStatus:     "verified",
+	hunterAPIKeyHeader:       "X-API-KEY",
+	hunterVerifiedStatus:     "valid",
 	contactOutTokenHeader:    "token",
 	signalHireAPIKeyHeader:   "apikey",
 	signalHireStatusSuccess:  "success",
@@ -271,6 +277,7 @@ func GetCalibrationGoodPercentile() float64 { return calibrationConstI.goodPerce
 func GetCalibrationTargetScore() float64    { return calibrationConstI.targetScore }
 
 func GetLinkedinHost() string           { return validationConstI.linkedinHost }
+func GetLinkedinProfilePath() string    { return validationConstI.linkedinProfilePath }
 func GetATSTypeFieldName() string       { return validationConstI.atsTypeFieldName }
 func GetSalaryMinFieldName() string     { return validationConstI.salaryMinFieldName }
 func GetDefaultValidationIssue() string { return validationConstI.defaultIssue }
@@ -289,6 +296,8 @@ func GetParameterisedValidationIssue(tag string) (string, bool) {
 
 func GetApolloAPIKeyHeader() string        { return vendorConstI.apolloAPIKeyHeader }
 func GetApolloVerifiedEmailStatus() string { return vendorConstI.apolloVerifiedStatus }
+func GetHunterAPIKeyHeader() string        { return vendorConstI.hunterAPIKeyHeader }
+func GetHunterVerifiedEmailStatus() string { return vendorConstI.hunterVerifiedStatus }
 func GetContactOutTokenHeader() string     { return vendorConstI.contactOutTokenHeader }
 func GetSignalHireAPIKeyHeader() string    { return vendorConstI.signalHireAPIKeyHeader }
 func GetSignalHireStatusSuccess() string   { return vendorConstI.signalHireStatusSuccess }

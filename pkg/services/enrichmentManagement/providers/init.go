@@ -7,9 +7,11 @@ import (
 	enrichmentTypes "github.com/AdityaSinghRajawat/autoreach-backend/pkg/customtypes/enrichmentManagement"
 	apolloIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/enrichment/apollo"
 	contactoutIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/enrichment/contactout"
+	hunterIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/enrichment/hunter"
 	signalhireIntegration "github.com/AdityaSinghRajawat/autoreach-backend/pkg/integrations/enrichment/signalhire"
 	apolloProvider "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers/apollo"
 	contactoutProvider "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers/contactout"
+	hunterProvider "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers/hunter"
 	signalhireProvider "github.com/AdityaSinghRajawat/autoreach-backend/pkg/services/enrichmentManagement/providers/signalhire"
 )
 
@@ -76,6 +78,8 @@ func newProvider(policy config.ProviderPolicy, signalHireCallbackURL string) Pro
 			signalhireIntegration.NewSignalHireIntegration(policy),
 			signalHireCallbackURL,
 		)
+	case config.ProviderHunter:
+		return hunterProvider.NewHunterProvider(hunterIntegration.NewHunterIntegration(policy))
 	case config.ProviderContactOut:
 		return contactoutProvider.NewContactOutProvider(
 			contactoutIntegration.NewContactOutIntegration(policy),

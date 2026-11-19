@@ -9,6 +9,7 @@ const (
 	ProviderApollo     = "APOLLO"
 	ProviderSignalHire = "SIGNALHIRE"
 	ProviderContactOut = "CONTACTOUT"
+	ProviderHunter     = "HUNTER"
 
 	creditCostPerLookup       = 1
 	signalHireWebhookPath     = "/webhooks/signalhire"
@@ -27,6 +28,9 @@ type ProviderPolicy struct {
 	RateWindow   time.Duration
 	RateBurst    int
 	DailyCredits int
+
+	// People returned by one discovery call; 0 means ENRICHMENT_PEOPLE_PER_SEARCH.
+	PeoplePerSearch int
 }
 
 type enrichmentConfig struct {
@@ -52,8 +56,14 @@ var (
 		ProviderApollo:     "https://api.apollo.io/api/v1",
 		ProviderSignalHire: "https://www.signalhire.com/api/v1",
 		ProviderContactOut: "https://api.contactout.com/v1",
+		ProviderHunter:     "https://api.hunter.io/v2",
 	}
+	providerDefaultDailyCreditsI    = map[string]int{ProviderHunter: 5}
+	providerDefaultPeoplePerSearchI = map[string]int{ProviderHunter: 3}
+	providerDiscoveryCreditsI       = map[string]int{ProviderHunter: 1}
 )
+
+const defaultProviderDailyCredits = 200
 
 func loadEnrichmentConfig() {
 	timeout := getEnvDurationWithDefault("ENRICHMENT_HTTP_TIMEOUT", 8*time.Second)
@@ -68,13 +78,17 @@ func loadEnrichmentConfig() {
 			RateLimit:    getEnvIntWithDefault(code+"_RATE_LIMIT", 50),
 			RateWindow:   getEnvDurationWithDefault(code+"_RATE_WINDOW", time.Minute),
 			RateBurst:    max(getEnvIntWithDefault(code+"_RATE_BURST", 10), 1),
-			DailyCredits: getEnvIntWithDefault(code+"_DAILY_CREDITS", 200),
+			DailyCredits: getEnvIntWithDefault(code+"_DAILY_CREDITS", dailyCreditsDefault(code)),
+			PeoplePerSearch: getEnvIntWithDefault(
+				code+"_PEOPLE_PER_SEARCH",
+				providerDefaultPeoplePerSearchI[code],
+			),
 		}
 	}
 
 	order := getEnvListWithDefault(
 		"ENRICHMENT_PROVIDERS",
-		[]string{ProviderApollo, ProviderSignalHire, ProviderContactOut},
+		[]string{ProviderHunter, ProviderApollo, ProviderSignalHire, ProviderContactOut},
 	)
 
 	known := make([]string, 0, len(order))
@@ -153,6 +167,27 @@ func GetSignalHireCallbackURL() string {
 
 	return enrichmentConfigI.publicBaseURL + constI.http.apiBasePath + signalHireWebhookPath +
 		"?" + webhookTokenParam + "=" + enrichmentConfigI.signalHireWebhookSecret
+}
+
+func dailyCreditsDefault(code string) int {
+	if credits, found := providerDefaultDailyCreditsI[code]; found {
+		return credits
+	}
+
+	return defaultProviderDailyCredits
+}
+
+func (p ProviderPolicy) DiscoveryLimit(requested int) int {
+	if p.PeoplePerSearch > 0 {
+		return min(requested, p.PeoplePerSearch)
+	}
+
+	return requested
+}
+
+// Providers that charge per person found while searching (Hunter) pay up front for the worst case.
+func GetDiscoveryCredits(code string, people int) int {
+	return providerDiscoveryCreditsI[code] * people
 }
 
 func (p ProviderPolicy) RateLimitPolicy() RateLimitPolicy {

@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +25,8 @@ type EnrichmentStub struct {
 	ContactOutStatus   int
 	SignalHireStatus   int
 	SignalHireSearch   int
+	HunterStatus       int
+	HunterEmails       []map[string]any
 	People             []map[string]any
 	Matches            map[string]map[string]any
 	Profiles           map[string]map[string]any
@@ -33,6 +36,7 @@ type EnrichmentStub struct {
 	signalHireItems    []string
 	signalHireRequests int
 	signalHireQueries  []map[string]any
+	hunterQueries      []url.Values
 }
 
 func NewEnrichmentStub(t *testing.T) *EnrichmentStub {
@@ -52,6 +56,7 @@ func NewEnrichmentStub(t *testing.T) *EnrichmentStub {
 	mux.HandleFunc("GET /contactout/linkedin/enrich", stub.handleContactOut)
 	mux.HandleFunc("POST /signalhire/candidate/search", stub.handleSignalHire)
 	mux.HandleFunc("POST /signalhire/candidate/searchByQuery", stub.handleSignalHireSearch)
+	mux.HandleFunc("GET /hunter/domain-search", stub.handleHunterSearch)
 
 	stub.Server = httptest.NewServer(mux)
 	t.Cleanup(stub.Server.Close)
@@ -77,6 +82,27 @@ func (s *EnrichmentStub) Policies() []config.ProviderPolicy {
 		policy(config.ProviderSignalHire, "/signalhire"),
 		policy(config.ProviderContactOut, "/contactout"),
 	}
+}
+
+// HunterPolicy is separate from Policies so existing providers keep their positions.
+func (s *EnrichmentStub) HunterPolicy() config.ProviderPolicy {
+	return config.ProviderPolicy{
+		Code:            config.ProviderHunter,
+		APIKey:          "test-hunter",
+		BaseURL:         s.Server.URL + "/hunter",
+		Timeout:         5 * time.Second,
+		RateLimit:       1000,
+		RateWindow:      time.Minute,
+		DailyCredits:    1000,
+		PeoplePerSearch: 3,
+	}
+}
+
+func (s *EnrichmentStub) HunterQueries() []url.Values {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	return append([]url.Values(nil), s.hunterQueries...)
 }
 
 func (s *EnrichmentStub) Calls(name string) int {
@@ -223,6 +249,25 @@ func (s *EnrichmentStub) handleSignalHireSearch(writer http.ResponseWriter, requ
 		status,
 		map[string]any{"requestId": 1, "total": len(profiles), "profiles": profiles},
 	)
+}
+
+func (s *EnrichmentStub) handleHunterSearch(writer http.ResponseWriter, request *http.Request) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	status := s.record("hunter.search", s.HunterStatus)
+	if request.Header.Get("X-API-KEY") == "" {
+		status = http.StatusUnauthorized
+	}
+
+	s.hunterQueries = append(s.hunterQueries, request.URL.Query())
+
+	emails := s.HunterEmails
+	if emails == nil {
+		emails = []map[string]any{}
+	}
+
+	writeJSON(writer, status, map[string]any{"data": map[string]any{"emails": emails}})
 }
 
 func SignalHireRequestID(sequence int) string {

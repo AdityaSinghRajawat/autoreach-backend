@@ -136,10 +136,17 @@ func (s *EnrichmentService) discoverPeople(
 
 		var people []enrichmentTypes.Person
 
-		err := s.callProvider(ctx, provider, 0, func(ctx context.Context) error {
+		providerQuery := query
+		if policy, found := config.GetEnrichmentProviderPolicy(provider.Code()); found {
+			providerQuery.Limit = policy.DiscoveryLimit(query.Limit)
+		}
+
+		credits := config.GetDiscoveryCredits(provider.Code(), providerQuery.Limit)
+
+		err := s.callProvider(ctx, provider, credits, func(ctx context.Context) error {
 			var err error
 
-			people, err = discoverer.DiscoverPeople(ctx, query)
+			people, err = discoverer.DiscoverPeople(ctx, providerQuery)
 
 			return err
 		})
@@ -285,6 +292,10 @@ func (s *EnrichmentService) findContactDetails(
 	ctx context.Context,
 	person enrichmentTypes.Person,
 ) (*enrichmentTypes.ContactDetails, string) {
+	if person.HasEmail() {
+		return person.KnownDetails(), person.Source
+	}
+
 	var (
 		fallback     *enrichmentTypes.ContactDetails
 		fallbackCode string

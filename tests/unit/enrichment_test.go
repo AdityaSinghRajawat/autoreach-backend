@@ -310,3 +310,109 @@ func TestPersonConvertsToACompanyContact(t *testing.T) {
 		).Validate(),
 	)
 }
+
+func TestHunterReturnsPeopleWithTheirEmailsAndSkipsIncompleteOnes(t *testing.T) {
+	stub := helpers.NewEnrichmentStub(t)
+	stub.HunterEmails = []map[string]any{
+		{
+			"value": "Sarah.Li@Acme.com", "first_name": "Sarah", "last_name": "Li",
+			"position": "Engineering Manager", "linkedin": "sarah-li",
+			"verification": map[string]any{"status": "valid"},
+		},
+		{
+			"value": "omar@acme.com", "first_name": "Omar", "last_name": "Khan",
+			"position": "Recruiter", "linkedin": "https://www.linkedin.com/in/omar-khan/",
+			"verification": map[string]any{"status": "accept_all"},
+		},
+		{
+			"value":      "lee@acme.com",
+			"first_name": "Lee",
+			"last_name":  "Park",
+			"position":   "Hiring Manager",
+			"linkedin":   "not a handle!",
+		},
+		{"value": "dana@acme.com", "first_name": "Dana", "last_name": "", "position": "Director"},
+	}
+
+	registry := providers.NewProviderRegistry([]config.ProviderPolicy{stub.HunterPolicy()}, "")
+	require.Len(t, registry, 1)
+
+	discoverer, isDiscoverer := registry[0].(providers.Discoverer)
+	require.True(t, isDiscoverer)
+	assert.NotImplements(t, (*providers.ContactFinder)(nil), registry[0])
+
+	people, err := discoverer.DiscoverPeople(context.Background(), enrichmentTypes.DiscoveryQuery{
+		CompanyDomain: "acme.com",
+		CompanyName:   "Acme",
+		Titles:        []string{"recruiter", "engineering manager"},
+		Limit:         3,
+	})
+
+	require.NoError(t, err)
+	require.Len(t, people, 3, "a person without a full name cannot be contacted")
+	assert.Equal(t, config.ProviderHunter, people[0].Source)
+	assert.Equal(t, "sarah.li@acme.com", people[0].Email)
+	assert.Equal(t, people[0].Email, people[0].ProviderPersonID)
+	assert.True(t, people[0].EmailVerified)
+	assert.Equal(t, "https://www.linkedin.com/in/sarah-li", people[0].LinkedinURL)
+	assert.False(
+		t,
+		people[1].EmailVerified,
+		"an accept-all domain does not prove the mailbox exists",
+	)
+	assert.Equal(t, "https://www.linkedin.com/in/omar-khan", people[1].LinkedinURL)
+	assert.Empty(t, people[2].LinkedinURL, "a value that is not a profile handle is dropped")
+
+	queries := stub.HunterQueries()
+	require.Len(t, queries, 1)
+	assert.Equal(t, "acme.com", queries[0].Get("domain"))
+	assert.Equal(t, "recruiter,engineering manager", queries[0].Get("job_titles"))
+	assert.Equal(t, "3", queries[0].Get("limit"))
+	assert.Equal(t, "personal", queries[0].Get("type"))
+
+	stub.Set(
+		func(stub *helpers.EnrichmentStub) { stub.HunterStatus = http.StatusUnavailableForLegalReasons },
+	)
+
+	none, err := discoverer.DiscoverPeople(
+		context.Background(),
+		enrichmentTypes.DiscoveryQuery{CompanyDomain: "acme.com", Limit: 3},
+	)
+	require.NoError(t, err)
+	assert.Empty(t, none, "people who asked not to be processed are never returned")
+
+	stub.Set(func(stub *helpers.EnrichmentStub) { stub.HunterStatus = http.StatusTooManyRequests })
+
+	_, err = discoverer.DiscoverPeople(
+		context.Background(),
+		enrichmentTypes.DiscoveryQuery{CompanyDomain: "acme.com", Limit: 3},
+	)
+
+	var apiErr *utils.APIError
+	require.ErrorAs(t, err, &apiErr)
+	assert.True(t, apiErr.IsTransient())
+}
+
+func TestPaidDiscoveryIsCappedPerSearchAndReservesItsCredits(t *testing.T) {
+	capped := config.ProviderPolicy{PeoplePerSearch: 3}
+	assert.Equal(t, 3, capped.DiscoveryLimit(10))
+	assert.Equal(t, 2, capped.DiscoveryLimit(2))
+	assert.Equal(
+		t,
+		10,
+		config.ProviderPolicy{}.DiscoveryLimit(10),
+		"no cap means the global search size",
+	)
+
+	assert.Equal(
+		t,
+		3,
+		config.GetDiscoveryCredits(config.ProviderHunter, 3),
+		"Hunter charges for each person found",
+	)
+	assert.Zero(
+		t,
+		config.GetDiscoveryCredits(config.ProviderApollo, 10),
+		"other providers charge when the contact is looked up",
+	)
+}
