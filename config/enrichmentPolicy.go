@@ -64,7 +64,33 @@ var (
 	providerDomainLookupCreditsI    = map[string]int{ProviderHunter: 0}
 )
 
-const defaultProviderDailyCredits = 200
+const (
+	defaultProviderDailyCredits = 200
+	defaultProviderRateLimit    = 50
+	defaultProviderRateBurst    = 10
+)
+
+// Hunter allows about 500 requests a minute, and a poll resolves one domain per company.
+var (
+	providerDefaultRateLimitI = map[string]int{ProviderHunter: 400}
+	providerDefaultRateBurstI = map[string]int{ProviderHunter: 20}
+)
+
+func rateLimitDefault(code string) int {
+	if limit, found := providerDefaultRateLimitI[code]; found {
+		return limit
+	}
+
+	return defaultProviderRateLimit
+}
+
+func rateBurstDefault(code string) int {
+	if burst, found := providerDefaultRateBurstI[code]; found {
+		return burst
+	}
+
+	return defaultProviderRateBurst
+}
 
 func loadEnrichmentConfig() {
 	timeout := getEnvDurationWithDefault("ENRICHMENT_HTTP_TIMEOUT", 8*time.Second)
@@ -76,9 +102,9 @@ func loadEnrichmentConfig() {
 			APIKey:       getEnvWithDefault(code+"_API_KEY", ""),
 			BaseURL:      getEnvWithDefault(code+"_BASE_URL", defaultURL),
 			Timeout:      timeout,
-			RateLimit:    getEnvIntWithDefault(code+"_RATE_LIMIT", 50),
+			RateLimit:    getEnvIntWithDefault(code+"_RATE_LIMIT", rateLimitDefault(code)),
 			RateWindow:   getEnvDurationWithDefault(code+"_RATE_WINDOW", time.Minute),
-			RateBurst:    max(getEnvIntWithDefault(code+"_RATE_BURST", 10), 1),
+			RateBurst:    max(getEnvIntWithDefault(code+"_RATE_BURST", rateBurstDefault(code)), 1),
 			DailyCredits: getEnvIntWithDefault(code+"_DAILY_CREDITS", dailyCreditsDefault(code)),
 			PeoplePerSearch: getEnvIntWithDefault(
 				code+"_PEOPLE_PER_SEARCH",
