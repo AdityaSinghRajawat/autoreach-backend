@@ -93,7 +93,8 @@ All under `/api/v1/admin`, with an admin token.
 | Enrichment stops finding contacts | provider credit budget used up, rate limited or circuit open | `GET /providers`; raise `<PROVIDER>_DAILY_CREDITS` or wait for the daily reset; check the vendor's status page |
 | Bounce rate jumps | bad contact data or a burned mailbox | pause campaigns (`PATCH` campaign `status: PAUSED`), check `GET /providers` deliverability, review the mailbox in the provider's console |
 | `outreach_queue` backlog | send windows or daily caps holding messages | expected outside send hours; check `OUTREACH_SEND_WINDOW_*` and the 30/day cap |
-| `embedding_queue` dead tasks | AI provider key, quota or outage | fix the key or wait, then retry the dead tasks |
+| `embedding_queue` dead tasks | AI provider key or outage | fix the key or wait, then retry the dead tasks |
+| `task deferred` in the worker log, jobs not embedded | AI provider quota (429) or `RATE_LIMIT_AI` pacing | nothing to do: AI calls pause until the provider's reset (the log shows when) and deferred tasks resume then without using their retries |
 | Worker restarts in a loop | missing production setting | `docker compose logs worker`; the first line names the missing variable |
 | Applications stuck in `QUEUED` | prepare tasks exhausted their retries while an ATS was down | the stuck-work reconciler re-queues them; or retry the dead tasks |
 | Redis lost | volume loss | start Redis empty, then restart server and worker so the queues are listed again in `GET /admin/queues` (tasks are processed either way); the reconciler and cron jobs rebuild queued work from Postgres |

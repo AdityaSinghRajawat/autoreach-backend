@@ -132,7 +132,7 @@ What you need to set depends on what you want to use:
 |---|---|
 | Anything at all | `JWT_SECRET` (6) |
 | Matching resumes to jobs | `AI_API_KEY` (9) |
-| Finding recruiters and hiring managers | At least one of `APOLLO_API_KEY`, `SIGNALHIRE_API_KEY` (plus `PUBLIC_BASE_URL` and `SIGNALHIRE_WEBHOOK_SECRET`), `CONTACTOUT_API_KEY` (12) |
+| Finding recruiters and hiring managers | At least one of `HUNTER_API_KEY` (free plan available), `APOLLO_API_KEY`, `SIGNALHIRE_API_KEY` (plus `PUBLIC_BASE_URL` and `SIGNALHIRE_WEBHOOK_SECRET`), `CONTACTOUT_API_KEY` (12) |
 | Connecting a candidate's mailbox for email outreach | `CHANNEL_CREDENTIAL_KEYS` (13); `PUBLIC_BASE_URL` (1) for one-click unsubscribe and tracking links |
 | Adzuna job searches | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` (11) and an Apollo key for company domains |
 | Submitting applications through an ATS | `GREENHOUSE_BOARD_KEYS` or `LEVER_SITE_KEYS`, issued by the employer (15) |
@@ -237,10 +237,10 @@ Implemented and covered by tests:
 - **Foundation:** authentication with refresh tokens, role-based authorisation checked on every route, rate limits, API clients for job feeds.
 - **Jobs:** ingestion with deduplication, polling of Greenhouse, Lever, Ashby, SmartRecruiters and Workday boards, Adzuna searches and career pages (boards checked against live sites with `make test-live`), batched embeddings.
 - **Candidates:** resume upload with PDF/DOCX parsing, AI resume parsing, embeddings, and matching in both directions.
-- **Contacts:** enrichment through Apollo, ContactOut and SignalHire with rate limits, daily credit budgets and circuit breakers; contacts kept current from replies, bounces, LinkedIn responses and re-enrichment; erasure on request and optional anonymizing retention.
+- **Contacts:** enrichment through Hunter, Apollo, ContactOut and SignalHire with rate limits, daily credit budgets and circuit breakers; contacts kept current from replies, bounces, LinkedIn responses and re-enrichment; erasure on request and optional anonymizing retention.
 - **Outreach:** email campaigns with send windows, daily caps, reply and bounce handling, unsubscribe and optional tracking; assisted LinkedIn invites and messages.
 - **Applications:** assisted apply for Greenhouse and Lever.
 - **Dashboard and operations:** metrics, funnel and a live activity feed; queue, dead-task, provider and suppression administration; Prometheus metrics per pipeline stage.
 - **Production hardening:** hardened Docker image and Compose stack, dependency and secret scans in CI, runbook and security checklist. Measured: 1,800 API requests/s at p95 21 ms, and about 220,000 applications/hour against a stub ATS, with server and worker each under 100 MB.
 
-Not yet verified against live services: the Apollo, ContactOut and SignalHire clients and the Adzuna client (tested against stub servers only), and the vector search benchmark at 500,000 jobs, which needs a host with about 12 GB of RAM.
+Not yet verified against live services: the Hunter, Apollo, ContactOut and SignalHire clients and the Adzuna client (tested against stub servers only), and the vector search benchmark at 500,000 jobs, which needs a host with about 12 GB of RAM.
